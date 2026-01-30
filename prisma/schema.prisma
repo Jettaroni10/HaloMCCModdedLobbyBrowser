@@ -127,6 +127,7 @@ model Lobby {
   game                   Game
   mode                   String
   map                    String
+  mapImageUrl            String?
   region                 Region
   platform               Platform     @default(STEAM)
   voice                  Voice

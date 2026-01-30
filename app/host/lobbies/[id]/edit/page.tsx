@@ -46,6 +46,7 @@ export default async function EditLobbyPage({ params }: PageProps) {
           workshopItemUrls: lobby.workshopItemUrls,
           requiresEacOff: lobby.requiresEacOff,
           modNotes: lobby.modNotes,
+          mapImageUrl: lobby.mapImageUrl,
         }}
       />
     </div>

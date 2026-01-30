@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import HostLobbyForm from "./HostLobbyForm";
+import MapImageUploader from "./MapImageUploader";
 
 type HostLobbyEditFormProps = {
   lobbyId: string;
@@ -21,6 +22,7 @@ type HostLobbyEditFormProps = {
     workshopItemUrls: string[];
     requiresEacOff: boolean;
     modNotes: string | null;
+    mapImageUrl: string | null;
   };
 };
 
@@ -51,11 +53,17 @@ export default function HostLobbyEditForm({
   }
 
   return (
-    <HostLobbyForm
-      defaultValues={defaultValues}
-      submitLabel="Save changes"
-      onSubmit={handleSubmit}
-    />
+    <div className="space-y-6">
+      <MapImageUploader
+        lobbyId={lobbyId}
+        initialImageUrl={defaultValues.mapImageUrl}
+      />
+      <HostLobbyForm
+        defaultValues={defaultValues}
+        submitLabel="Save changes"
+        onSubmit={handleSubmit}
+      />
+    </div>
   );
 }
 

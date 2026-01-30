@@ -11,7 +11,7 @@ export default async function NewLobbyPage() {
         Publish only what you want players to see. No automatic invites are
         sent.
       </p>
-      <HostLobbyForm submitLabel="Publish lobby" />
+      <HostLobbyForm submitLabel="Publish lobby" enableMapImage={true} />
     </div>
   );
 }

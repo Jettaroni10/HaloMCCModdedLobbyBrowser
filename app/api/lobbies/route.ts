@@ -12,6 +12,11 @@ import {
 import { Games, Regions, Vibes, Voices } from "@/lib/types";
 import { isRateLimited, recordRateLimitEvent } from "@/lib/rate-limit";
 import { addXp } from "@/lib/xp";
+import {
+  removeLobbyImage,
+  saveLobbyImage,
+  validateLobbyImage,
+} from "@/lib/lobby-images";
 
 const LIMITS = {
   title: 80,
@@ -29,16 +34,6 @@ function sanitizeTags(input: unknown) {
     .map((tag) => normalizeText(tag, LIMITS.tag))
     .filter(Boolean)
     .slice(0, LIMITS.tagsMax);
-}
-
-async function readBody(request: Request) {
-  const contentType = request.headers.get("content-type") ?? "";
-  if (contentType.includes("application/json")) {
-    return request.json();
-  }
-  const formData = await request.formData();
-  const entries = Object.fromEntries(formData.entries());
-  return entries;
 }
 
 export async function POST(request: Request) {
@@ -63,7 +58,33 @@ export async function POST(request: Request) {
     );
   }
 
-  const body = await readBody(request);
+  const contentType = request.headers.get("content-type") ?? "";
+  let body: Record<string, unknown> = {};
+  let mapImageFile: File | null = null;
+
+  if (contentType.includes("multipart/form-data")) {
+    const formData = await request.formData();
+    const file = formData.get("mapImage");
+    if (file instanceof File && file.size > 0) {
+      mapImageFile = file;
+    }
+    const entries: Record<string, FormDataEntryValue> = {};
+    formData.forEach((value, key) => {
+      if (key !== "mapImage") {
+        entries[key] = value;
+      }
+    });
+    body = entries;
+  } else if (contentType.includes("application/json")) {
+    body = (await request.json()) as Record<string, unknown>;
+  }
+
+  if (mapImageFile) {
+    const validationError = validateLobbyImage(mapImageFile);
+    if (validationError) {
+      return NextResponse.json({ error: validationError }, { status: 400 });
+    }
+  }
 
   const title = normalizeText(body.title, LIMITS.title);
   const mode = normalizeText(body.mode, LIMITS.mode);
@@ -109,63 +130,77 @@ export async function POST(request: Request) {
   }
   const now = new Date();
   const expiresAt = new Date(now.getTime() + 30 * 60 * 1000);
-  const lobby = await prisma.$transaction(async (tx) => {
-    const created = await tx.lobby.create({
-      data: {
-        hostUserId: user.id,
-        title,
-        game,
-        mode,
-        map,
-        region,
-        platform,
-        voice,
-        vibe,
-        tags,
-        rulesNote,
-        friendsOnly,
-        slotsTotal,
-        isModded,
-        workshopCollectionUrl,
-        workshopItemUrls,
-        requiresEacOff,
-        modNotes: modNotes || null,
-        lastHeartbeatAt: now,
-        expiresAt,
-      },
-    });
+  let savedImageUrl: string | null = null;
+  try {
+    if (mapImageFile) {
+      const saved = await saveLobbyImage(mapImageFile);
+      savedImageUrl = saved.mapImageUrl;
+    }
 
-    await tx.lobbyMember.create({
-      data: {
-        lobbyId: created.id,
-        userId: user.id,
-        slotNumber: 1,
-      },
-    });
-
-    await tx.conversation.create({
-      data: {
-        type: "LOBBY",
-        lobbyId: created.id,
-        participants: {
-          create: { userId: user.id },
+    const lobby = await prisma.$transaction(async (tx) => {
+      const created = await tx.lobby.create({
+        data: {
+          hostUserId: user.id,
+          title,
+          game,
+          mode,
+          map,
+          mapImageUrl: savedImageUrl,
+          region,
+          platform,
+          voice,
+          vibe,
+          tags,
+          rulesNote,
+          friendsOnly,
+          slotsTotal,
+          isModded,
+          workshopCollectionUrl,
+          workshopItemUrls,
+          requiresEacOff,
+          modNotes: modNotes || null,
+          lastHeartbeatAt: now,
+          expiresAt,
         },
-      },
+      });
+
+      await tx.lobbyMember.create({
+        data: {
+          lobbyId: created.id,
+          userId: user.id,
+          slotNumber: 1,
+        },
+      });
+
+      await tx.conversation.create({
+        data: {
+          type: "LOBBY",
+          lobbyId: created.id,
+          participants: {
+            create: { userId: user.id },
+          },
+        },
+      });
+
+      return created;
     });
 
-    return created;
-  });
+    await recordRateLimitEvent(user.id, "create_lobby");
+    await addXp(user.id, 25, "HOST_LOBBY_CREATED", { lobbyId: lobby.id });
 
-  await recordRateLimitEvent(user.id, "create_lobby");
-  await addXp(user.id, 25, "HOST_LOBBY_CREATED", { lobbyId: lobby.id });
-
-  const isJson = (request.headers.get("content-type") ?? "").includes(
-    "application/json"
-  );
-  if (isJson) {
-    return NextResponse.json(lobby, { status: 201 });
+    const isJson = (request.headers.get("content-type") ?? "").includes(
+      "application/json"
+    );
+    if (isJson) {
+      return NextResponse.json(lobby, { status: 201 });
+    }
+    return NextResponse.redirect(new URL("/host", request.url));
+  } catch (error) {
+    if (savedImageUrl) {
+      await removeLobbyImage(savedImageUrl);
+    }
+    throw error;
   }
-  return NextResponse.redirect(new URL("/host", request.url));
 }
 
 export async function GET(request: Request) {

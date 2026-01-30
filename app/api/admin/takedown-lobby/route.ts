@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, isAdminUser } from "@/lib/auth";
 import { normalizeText } from "@/lib/validation";
+import { removeLobbyImage } from "@/lib/lobby-images";
 
 async function readBody(request: Request) {
   const contentType = request.headers.get("content-type") ?? "";
@@ -25,10 +26,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "lobbyId is required." }, { status: 400 });
   }
 
+  const lobby = await prisma.lobby.findUnique({ where: { id: lobbyId } });
+  if (!lobby) {
+    return NextResponse.json({ error: "Lobby not found." }, { status: 404 });
+  }
+
   const updated = await prisma.lobby.update({
     where: { id: lobbyId },
-    data: { isActive: false },
+    data: { isActive: false, mapImageUrl: null },
   });
+
+  await removeLobbyImage(lobby.mapImageUrl);
 
   const isJson = (request.headers.get("content-type") ?? "").includes(
     "application/json"

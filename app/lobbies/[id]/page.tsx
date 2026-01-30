@@ -8,6 +8,7 @@ import LobbyRosterLive from "@/components/LobbyRosterLive";
 import ReportForm from "@/components/ReportForm";
 import HostLobbyNotifications from "@/components/HostLobbyNotifications";
 import LobbyChat from "@/components/LobbyChat";
+import MapPreview from "@/components/MapPreview";
 
 type LobbyPageProps = {
   params: { id: string };
@@ -155,6 +156,15 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
           </span>
         </div>
       </div>
+
+      <section className="rounded-md border border-ink/10 bg-sand p-6">
+        <MapPreview imageUrl={lobby.mapImageUrl} />
+        <p className="mt-3 text-xs text-ink/60">
+          {lobby.mapImageUrl
+            ? "Map image uploaded by host"
+            : "Map image preview not provided."}
+        </p>
+      </section>
 
       {canSeeRoster && (
         <LobbyRosterLive

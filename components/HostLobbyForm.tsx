@@ -1,8 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Games, Regions, Vibes, Voices } from "@/lib/types";
 import TagsInput from "./TagsInput";
+import { downscaleImageFile } from "@/lib/image-client";
 
 type HostLobbyFormProps = {
   defaultValues?: {
@@ -26,6 +28,7 @@ type HostLobbyFormProps = {
   action?: string;
   method?: "post" | "get";
   onSubmit?: React.FormEventHandler<HTMLFormElement>;
+  enableMapImage?: boolean;
 };
 
 export default function HostLobbyForm({
@@ -34,14 +37,68 @@ export default function HostLobbyForm({
   action = "/api/lobbies",
   method = "post",
   onSubmit,
+  enableMapImage = false,
 }: HostLobbyFormProps) {
+  const router = useRouter();
   const defaultTags = useMemo(() => defaultValues?.tags ?? [], [defaultValues]);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    if (onSubmit) {
+      onSubmit(event);
+      return;
+    }
+    event.preventDefault();
+    setSubmitError(null);
+
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    if (enableMapImage) {
+      const file = formData.get("mapImage");
+      if (file instanceof File && file.size > 0) {
+        if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+          setSubmitError("Unsupported image format. Use JPG, PNG, or WebP.");
+          return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+          setSubmitError("Image is too large. Max 5 MB.");
+          return;
+        }
+        const processed = await downscaleImageFile(file);
+        formData.set("mapImage", processed);
+      } else {
+        formData.delete("mapImage");
+      }
+    } else {
+      formData.delete("mapImage");
+    }
+
+    const response = await fetch(action, {
+      method: method.toUpperCase(),
+      body: formData,
+    });
+
+    if (!response.ok) {
+      let message = "Unable to publish lobby.";
+      try {
+        const payload = (await response.json()) as { error?: string };
+        if (payload?.error) message = payload.error;
+      } catch {
+        // ignore JSON parse errors
+      }
+      setSubmitError(message);
+      return;
+    }
+
+    router.push("/host");
+  }
 
   return (
     <form
       action={action}
       method={method}
-      onSubmit={onSubmit}
+      encType="multipart/form-data"
+      onSubmit={handleSubmit}
       className="mt-6 space-y-5 rounded-md border border-ink/10 bg-sand p-6"
     >
       <label className="block text-sm font-semibold text-ink">
@@ -153,6 +210,23 @@ export default function HostLobbyForm({
         />
       </label>
 
+      {enableMapImage && (
+        <div className="rounded-sm border border-ink/10 bg-mist p-4">
+          <p className="text-sm font-semibold text-ink">
+            Map image (optional)
+          </p>
+          <p className="mt-1 text-xs text-ink/60">
+            JPG, PNG, or WebP up to 5 MB. We will resize large images.
+          </p>
+          <input
+            name="mapImage"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="mt-3 text-xs text-ink/70"
+          />
+        </div>
+      )}
+
       <div className="grid gap-4 md:grid-cols-2">
         <label className="block text-sm font-semibold text-ink">
           Slots total
@@ -222,6 +296,9 @@ export default function HostLobbyForm({
       >
         {submitLabel}
       </button>
+      {submitError && (
+        <p className="text-xs font-semibold text-clay">{submitError}</p>
+      )}
     </form>
   );
 }

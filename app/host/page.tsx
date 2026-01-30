@@ -3,11 +3,12 @@ import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import HostDashboard from "@/components/HostDashboard";
 
-export default async function HostDashboard() {
+export default async function HostPage() {
   const user = await requireAuth();
   const lobbies = await prisma.lobby.findMany({
     where: { hostUserId: user.id, isActive: true },
     orderBy: { lastHeartbeatAt: "desc" },
+    include: { _count: { select: { members: true } } },
   });
 
   const requests = await prisma.joinRequest.findMany({
@@ -20,6 +21,7 @@ export default async function HostDashboard() {
 
   const serializedLobbies = lobbies.map((lobby) => ({
     ...lobby,
+    slotsOpen: Math.max(0, lobby.slotsTotal - lobby._count.members),
     lastHeartbeatAt: lobby.lastHeartbeatAt.toISOString(),
     expiresAt: lobby.expiresAt.toISOString(),
     createdAt: lobby.createdAt.toISOString(),
@@ -43,7 +45,7 @@ export default async function HostDashboard() {
         </div>
         <Link
           href="/host/new"
-          className="rounded-full bg-ink px-6 py-2 text-sm font-semibold text-sand hover:bg-ink/90"
+          className="rounded-sm bg-ink px-6 py-2 text-sm font-semibold text-sand hover:bg-ink/90"
         >
           Create lobby
         </Link>
@@ -56,3 +58,4 @@ export default async function HostDashboard() {
     </div>
   );
 }
+

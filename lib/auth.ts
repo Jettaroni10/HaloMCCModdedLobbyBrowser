@@ -11,8 +11,10 @@ export type SessionUser = Pick<
   | "handle"
   | "displayName"
   | "steamName"
-  | "xboxGamertag"
   | "reputationScore"
+  | "srLevel"
+  | "xpTotal"
+  | "xpThisLevel"
   | "isBanned"
 >;
 
@@ -96,8 +98,10 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
         handle: true,
         displayName: true,
         steamName: true,
-        xboxGamertag: true,
         reputationScore: true,
+        srLevel: true,
+        xpTotal: true,
+        xpThisLevel: true,
         isBanned: true,
       },
     });
@@ -117,8 +121,10 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
       handle: true,
       displayName: true,
       steamName: true,
-      xboxGamertag: true,
       reputationScore: true,
+      srLevel: true,
+      xpTotal: true,
+      xpThisLevel: true,
       isBanned: true,
     },
   });

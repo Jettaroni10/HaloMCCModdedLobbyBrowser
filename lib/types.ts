@@ -6,7 +6,7 @@ export const Regions = ["NA", "EU", "OCE", "SA", "AS"] as const;
 
 export type Region = (typeof Regions)[number];
 
-export const Platforms = ["STEAM", "XBOX_FUTURE"] as const;
+export const Platforms = ["STEAM"] as const;
 
 export type Platform = (typeof Platforms)[number];
 

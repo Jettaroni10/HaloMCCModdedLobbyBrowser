@@ -10,21 +10,41 @@ export async function GET() {
   }
 
   const encoder = new TextEncoder();
+  let closed = false;
 
   const stream = new ReadableStream({
     start(controller) {
+      const safeEnqueue = (payload: string) => {
+        if (closed) return;
+        try {
+          controller.enqueue(encoder.encode(payload));
+        } catch {
+          closed = true;
+        }
+      };
+
       const send = (event: string, data: unknown) => {
-        controller.enqueue(
-          encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
-        );
+        safeEnqueue(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
       };
 
       const handleRequestCreated = (payload: {
         hostUserId: string;
-        request: unknown;
+        requesterDisplayName: string;
+        request: {
+          id: string;
+          requesterHandleText: string;
+          lobby: { id: string };
+        } & Record<string, unknown>;
       }) => {
         if (payload.hostUserId !== user.id) return;
-        send("request_created", payload.request);
+        const requestData = {
+          ...payload.request,
+          requestId: payload.request.id,
+          lobbyId: payload.request.lobby.id,
+          requesterDisplayName: payload.requesterDisplayName,
+          requesterHandleText: payload.request.requesterHandleText,
+        };
+        send("request_created", requestData);
       };
 
       const handleLobbyExpired = (payload: {
@@ -39,14 +59,18 @@ export async function GET() {
       hostEvents.on("lobby_expired", handleLobbyExpired);
 
       const ping = setInterval(() => {
-        controller.enqueue(encoder.encode(`event: ping\ndata: ${Date.now()}\n\n`));
+        safeEnqueue(`event: ping\ndata: ${Date.now()}\n\n`);
       }, 15000);
 
       return () => {
+        closed = true;
         clearInterval(ping);
         hostEvents.off("request_created", handleRequestCreated);
         hostEvents.off("lobby_expired", handleLobbyExpired);
       };
+    },
+    cancel() {
+      closed = true;
     },
   });
 
@@ -58,3 +82,4 @@ export async function GET() {
     },
   });
 }
+

@@ -11,16 +11,13 @@ type HostLobbyEditFormProps = {
     mode: string;
     map: string;
     region: string;
-    platform: string;
     voice: string;
     vibe: string;
     tags: string[];
     rulesNote: string;
     slotsTotal: number | null;
-    slotsOpen: number | null;
     friendsOnly: boolean;
-    isModded: boolean;
-    workshopCollectionUrl: string | null;
+    workshopCollectionUrl: string;
     workshopItemUrls: string[];
     requiresEacOff: boolean;
     modNotes: string | null;
@@ -40,7 +37,6 @@ export default function HostLobbyEditForm({
       formData.entries()
     );
     payload.friendsOnly = formData.get("friendsOnly") === "on";
-    payload.isModded = formData.get("isModded") === "on";
     payload.requiresEacOff = formData.get("requiresEacOff") === "on";
 
     const response = await fetch(`/api/lobbies/${lobbyId}`, {
@@ -62,3 +58,4 @@ export default function HostLobbyEditForm({
     />
   );
 }
+

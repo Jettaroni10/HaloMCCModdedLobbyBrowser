@@ -44,7 +44,7 @@ export default function TagsInput({
             key={tag}
             type="button"
             onClick={() => removeTag(tag)}
-            className="rounded-full bg-ink/10 px-3 py-1 text-xs font-semibold text-ink hover:bg-ink/20"
+            className="rounded-sm bg-ink/10 px-3 py-1 text-xs font-semibold text-ink hover:bg-ink/20"
           >
             {tag} ×
           </button>
@@ -57,7 +57,7 @@ export default function TagsInput({
         onChange={(event) => setInput(event.target.value)}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
-        className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+        className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
       />
       <p className="mt-1 text-xs text-ink/50">
         Press Enter to add. Click a tag to remove.
@@ -65,3 +65,4 @@ export default function TagsInput({
     </div>
   );
 }
+

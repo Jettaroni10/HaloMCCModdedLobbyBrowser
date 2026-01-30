@@ -25,10 +25,6 @@ export async function POST(request: Request) {
     body?.steamName ?? formData?.get("steamName"),
     48
   );
-  const xboxGamertag = normalizeHandleText(
-    body?.xboxGamertag ?? formData?.get("xboxGamertag"),
-    48
-  );
 
   if (!displayName) {
     return NextResponse.json(
@@ -42,7 +38,6 @@ export async function POST(request: Request) {
     data: {
       displayName,
       steamName: steamName || null,
-      xboxGamertag: xboxGamertag || null,
     },
   });
 
@@ -54,3 +49,4 @@ export async function POST(request: Request) {
   }
   return NextResponse.redirect(new URL("/settings/profile", request.url));
 }
+

@@ -36,15 +36,12 @@ export default async function EditLobbyPage({ params }: PageProps) {
           mode: lobby.mode,
           map: lobby.map,
           region: lobby.region,
-          platform: lobby.platform,
           voice: lobby.voice,
           vibe: lobby.vibe,
           tags: lobby.tags,
           rulesNote: lobby.rulesNote,
           slotsTotal: lobby.slotsTotal,
-          slotsOpen: lobby.slotsOpen,
           friendsOnly: lobby.friendsOnly,
-          isModded: lobby.isModded,
           workshopCollectionUrl: lobby.workshopCollectionUrl,
           workshopItemUrls: lobby.workshopItemUrls,
           requiresEacOff: lobby.requiresEacOff,
@@ -54,3 +51,4 @@ export default async function EditLobbyPage({ params }: PageProps) {
     </div>
   );
 }
+

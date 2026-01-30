@@ -39,7 +39,7 @@ export default async function AdminPage() {
         {reports.map((report) => (
           <div
             key={report.id}
-            className="rounded-2xl border border-ink/10 bg-sand p-5"
+            className="rounded-sm border border-ink/10 bg-sand p-5"
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -61,7 +61,7 @@ export default async function AdminPage() {
                 >
                   <button
                     type="submit"
-                    className="rounded-full bg-ink px-3 py-1.5 text-xs font-semibold text-sand"
+                    className="rounded-sm bg-ink px-3 py-1.5 text-xs font-semibold text-sand"
                   >
                     Resolve
                   </button>
@@ -72,7 +72,7 @@ export default async function AdminPage() {
                 >
                   <button
                     type="submit"
-                    className="rounded-full border border-ink/20 px-3 py-1.5 text-xs font-semibold text-ink"
+                    className="rounded-sm border border-ink/20 px-3 py-1.5 text-xs font-semibold text-ink"
                   >
                     Dismiss
                   </button>
@@ -86,7 +86,7 @@ export default async function AdminPage() {
                     />
                     <button
                       type="submit"
-                      className="rounded-full border border-clay/40 px-3 py-1.5 text-xs font-semibold text-clay"
+                      className="rounded-sm border border-clay/40 px-3 py-1.5 text-xs font-semibold text-clay"
                     >
                       Ban user
                     </button>
@@ -101,7 +101,7 @@ export default async function AdminPage() {
                     />
                     <button
                       type="submit"
-                      className="rounded-full border border-clay/40 px-3 py-1.5 text-xs font-semibold text-clay"
+                      className="rounded-sm border border-clay/40 px-3 py-1.5 text-xs font-semibold text-clay"
                     >
                       Takedown lobby
                     </button>
@@ -125,7 +125,7 @@ export default async function AdminPage() {
         {lobbies.map((lobby) => (
           <div
             key={lobby.id}
-            className="rounded-2xl border border-ink/10 bg-sand p-5"
+            className="rounded-sm border border-ink/10 bg-sand p-5"
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -140,7 +140,7 @@ export default async function AdminPage() {
                 <input type="hidden" name="lobbyId" value={lobby.id} />
                 <button
                   type="submit"
-                  className="rounded-full border border-ink/20 px-4 py-1.5 text-xs font-semibold text-ink hover:border-ink/40"
+                  className="rounded-sm border border-ink/20 px-4 py-1.5 text-xs font-semibold text-ink hover:border-ink/40"
                 >
                   Close lobby
                 </button>
@@ -159,3 +159,4 @@ export default async function AdminPage() {
     </div>
   );
 }
+

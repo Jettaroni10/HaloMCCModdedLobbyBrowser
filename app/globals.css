@@ -3,17 +3,21 @@
 @tailwind utilities;
 
 :root {
-  --sand: 244 239 230;
-  --mist: 251 247 241;
-  --ink: 31 42 46;
-  --clay: 239 125 59;
-  --moss: 28 125 117;
+  --sand: 7 12 18;
+  --mist: 12 18 26;
+  --ink: 210 225 245;
+  --clay: 74 163 255;
+  --moss: 46 96 140;
 }
 
 body {
   color: rgb(var(--ink));
   background: rgb(var(--sand));
   min-height: 100vh;
+  font-family: "Bahnschrift", "DIN Condensed", "Arial Narrow", "Segoe UI",
+    sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 body::before {
@@ -22,9 +26,9 @@ body::before {
   inset: 0;
   z-index: -1;
   background:
-    radial-gradient(circle at top left, rgba(239, 125, 59, 0.15), transparent 55%),
-    radial-gradient(circle at 20% 60%, rgba(28, 125, 117, 0.15), transparent 55%),
-    linear-gradient(120deg, rgba(255, 255, 255, 0.7), rgba(244, 239, 230, 0.85));
+    radial-gradient(circle at top left, rgba(74, 163, 255, 0.08), transparent 50%),
+    radial-gradient(circle at 20% 60%, rgba(46, 96, 140, 0.12), transparent 55%),
+    linear-gradient(160deg, rgba(7, 12, 18, 0.95), rgba(12, 18, 26, 0.9));
 }
 
 @layer utilities {
@@ -32,3 +36,4 @@ body::before {
     text-wrap: balance;
   }
 }
+

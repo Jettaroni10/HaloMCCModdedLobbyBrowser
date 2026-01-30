@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { addXp, hasXpEvent } from "@/lib/xp";
 
 export async function POST(
   _request: Request,
@@ -33,5 +34,19 @@ export async function POST(
     },
   });
 
+  const activeMinutes = (now.getTime() - lobby.createdAt.getTime()) / 60000;
+  if (activeMinutes >= 20) {
+    const activeMeta = { lobbyId: lobby.id };
+    const alreadyAwarded = await hasXpEvent(
+      user.id,
+      "LOBBY_ACTIVE_20_MIN",
+      activeMeta
+    );
+    if (!alreadyAwarded) {
+      await addXp(user.id, 50, "LOBBY_ACTIVE_20_MIN", activeMeta);
+    }
+  }
+
   return NextResponse.json(updated);
 }
+

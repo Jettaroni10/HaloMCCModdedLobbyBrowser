@@ -9,7 +9,9 @@ import {
   parseNumber,
   parseStringArray,
 } from "@/lib/validation";
-import { Games, Platforms, Regions, Vibes, Voices } from "@/lib/types";
+import { Games, Regions, Vibes, Voices } from "@/lib/types";
+import { isRateLimited, recordRateLimitEvent } from "@/lib/rate-limit";
+import { addXp } from "@/lib/xp";
 
 const LIMITS = {
   title: 80,
@@ -48,6 +50,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Account is banned." }, { status: 403 });
   }
 
+  const createLimited = await isRateLimited(
+    user.id,
+    "create_lobby",
+    3,
+    60 * 1000
+  );
+  if (createLimited) {
+    return NextResponse.json(
+      { error: "Too many lobbies created. Try again shortly." },
+      { status: 429 }
+    );
+  }
+
   const body = await readBody(request);
 
   const title = normalizeText(body.title, LIMITS.title);
@@ -56,14 +71,14 @@ export async function POST(request: Request) {
   const rulesNote = normalizeText(body.rulesNote, LIMITS.rules);
   const game = parseEnum(body.game, Games);
   const region = parseEnum(body.region, Regions);
-  const platform = parseEnum(body.platform, Platforms);
+  const platform = "STEAM";
   const voice = parseEnum(body.voice, Voices);
   const vibe = parseEnum(body.vibe, Vibes);
   const tags = sanitizeTags(body.tags);
   const friendsOnly = parseBoolean(body.friendsOnly) ?? false;
-  const slotsTotal = clampInt(parseNumber(body.slotsTotal), 2, 32);
-  const slotsOpen = clampInt(parseNumber(body.slotsOpen), 0, 32);
-  const isModded = parseBoolean(body.isModded) ?? false;
+  const slotsTotalInput = clampInt(parseNumber(body.slotsTotal), 2, 32);
+  const slotsTotal = slotsTotalInput ?? 16;
+  const isModded = true;
   const workshopCollectionUrl = normalizeText(
     body.workshopCollectionUrl,
     LIMITS.workshopUrl
@@ -71,7 +86,7 @@ export async function POST(request: Request) {
   const workshopItemUrls = parseStringArray(body.workshopItemUrls)
     .map((url) => normalizeText(url, LIMITS.workshopUrl))
     .filter(Boolean);
-  const requiresEacOff = parseBoolean(body.requiresEacOff) ?? false;
+  const requiresEacOff = parseBoolean(body.requiresEacOff) ?? true;
   const modNotes = normalizeText(body.modNotes, LIMITS.modNotes);
 
   if (!title || !mode || !map || !rulesNote) {
@@ -80,51 +95,69 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
-  if (!game || !region || !platform || !voice || !vibe) {
+  if (!game || !region || !voice || !vibe) {
     return NextResponse.json(
       { error: "Invalid enum value." },
       { status: 400 }
     );
   }
-  if (
-    slotsTotal !== undefined &&
-    slotsOpen !== undefined &&
-    slotsOpen > slotsTotal
-  ) {
+  if (!workshopCollectionUrl) {
     return NextResponse.json(
-      { error: "slotsOpen cannot exceed slotsTotal." },
+      { error: "Workshop collection URL is required." },
       { status: 400 }
     );
   }
-
   const now = new Date();
   const expiresAt = new Date(now.getTime() + 30 * 60 * 1000);
+  const lobby = await prisma.$transaction(async (tx) => {
+    const created = await tx.lobby.create({
+      data: {
+        hostUserId: user.id,
+        title,
+        game,
+        mode,
+        map,
+        region,
+        platform,
+        voice,
+        vibe,
+        tags,
+        rulesNote,
+        friendsOnly,
+        slotsTotal,
+        isModded,
+        workshopCollectionUrl,
+        workshopItemUrls,
+        requiresEacOff,
+        modNotes: modNotes || null,
+        lastHeartbeatAt: now,
+        expiresAt,
+      },
+    });
 
-  const lobby = await prisma.lobby.create({
-    data: {
-      hostUserId: user.id,
-      title,
-      game,
-      mode,
-      map,
-      region,
-      platform,
-      voice,
-      vibe,
-      tags,
-      rulesNote,
-      friendsOnly,
-      slotsTotal: slotsTotal ?? null,
-      slotsOpen: slotsOpen ?? null,
-      isModded,
-      workshopCollectionUrl: isModded ? workshopCollectionUrl || null : null,
-      workshopItemUrls: isModded ? workshopItemUrls : [],
-      requiresEacOff: isModded ? requiresEacOff : false,
-      modNotes: isModded ? modNotes || null : null,
-      lastHeartbeatAt: now,
-      expiresAt,
-    },
+    await tx.lobbyMember.create({
+      data: {
+        lobbyId: created.id,
+        userId: user.id,
+        slotNumber: 1,
+      },
+    });
+
+    await tx.conversation.create({
+      data: {
+        type: "LOBBY",
+        lobbyId: created.id,
+        participants: {
+          create: { userId: user.id },
+        },
+      },
+    });
+
+    return created;
   });
+
+  await recordRateLimitEvent(user.id, "create_lobby");
+  await addXp(user.id, 25, "HOST_LOBBY_CREATED", { lobbyId: lobby.id });
 
   const isJson = (request.headers.get("content-type") ?? "").includes(
     "application/json"
@@ -139,11 +172,19 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const game = parseEnum(searchParams.get("game"), Games);
   const region = parseEnum(searchParams.get("region"), Regions);
-  const platform = parseEnum(searchParams.get("platform"), Platforms);
   const voice = parseEnum(searchParams.get("voice"), Voices);
   const vibe = parseEnum(searchParams.get("vibe"), Vibes);
-  const isModded = parseBoolean(searchParams.get("isModded"));
   const tags = sanitizeTags(searchParams.get("tags"));
+
+  const user = await getCurrentUser();
+  const blockedHostIds = user
+    ? await prisma.block
+        .findMany({
+          where: { blockedUserId: user.id },
+          select: { blockerUserId: true },
+        })
+        .then((rows) => rows.map((row) => row.blockerUserId))
+    : [];
 
   const now = new Date();
 
@@ -151,19 +192,34 @@ export async function GET(request: Request) {
     where: {
       isActive: true,
       expiresAt: { gt: now },
+      ...(blockedHostIds.length > 0
+        ? { hostUserId: { notIn: blockedHostIds } }
+        : {}),
       ...(game ? { game } : {}),
       ...(region ? { region } : {}),
-      ...(platform ? { platform } : {}),
       ...(voice ? { voice } : {}),
       ...(vibe ? { vibe } : {}),
-      ...(typeof isModded === "boolean" ? { isModded } : {}),
       ...(tags.length > 0 ? { tags: { hasSome: tags } } : {}),
     },
     orderBy: { lastHeartbeatAt: "desc" },
     include: {
       host: { select: { displayName: true } },
+      _count: { select: { members: true } },
     },
   });
 
-  return NextResponse.json(lobbies);
+  const normalized = lobbies.map((lobby) => ({
+    ...lobby,
+    slotsOpen: Math.max(0, lobby.slotsTotal - lobby._count.members),
+  }));
+
+  return NextResponse.json(
+    normalized.map((lobby) => {
+      // Avoid leaking internal count data.
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { _count, ...rest } = lobby;
+      return rest;
+    })
+  );
 }
+

@@ -87,7 +87,7 @@ export default function DevChecklist() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border border-ink/10 bg-mist p-4 text-sm text-ink/70">
+      <section className="rounded-sm border border-ink/10 bg-mist p-4 text-sm text-ink/70">
         <p className="font-semibold text-ink">Dev-only checklist</p>
         <p className="mt-1">
           This page is only visible in development. Use it to validate MVP
@@ -95,7 +95,7 @@ export default function DevChecklist() {
         </p>
       </section>
 
-      <section className="rounded-2xl border border-ink/10 bg-sand p-4">
+      <section className="rounded-sm border border-ink/10 bg-sand p-4">
         <h2 className="text-sm font-semibold uppercase tracking-[0.3em] text-ink/60">
           Quick links
         </h2>
@@ -119,7 +119,7 @@ export default function DevChecklist() {
         {ITEMS.map((item) => (
           <label
             key={item.id}
-            className="flex flex-col gap-2 rounded-2xl border border-ink/10 bg-sand p-4 text-sm text-ink/70"
+            className="flex flex-col gap-2 rounded-sm border border-ink/10 bg-sand p-4 text-sm text-ink/70"
           >
             <div className="flex items-start gap-3">
               <input
@@ -137,3 +137,4 @@ export default function DevChecklist() {
     </div>
   );
 }
+

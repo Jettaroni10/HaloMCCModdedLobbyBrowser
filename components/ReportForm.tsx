@@ -73,7 +73,7 @@ export default function ReportForm({
               onChange={(event) =>
                 setCategory(event.target.value as typeof category)
               }
-              className="mt-1 w-full rounded-lg border border-ink/10 bg-mist px-2 py-1 text-sm"
+              className="mt-1 w-full rounded-sm border border-ink/10 bg-mist px-2 py-1 text-sm"
             >
               {CATEGORIES.map((value) => (
                 <option key={value} value={value}>
@@ -89,13 +89,13 @@ export default function ReportForm({
               onChange={(event) => setDetails(event.target.value)}
               rows={3}
               required
-              className="mt-1 w-full rounded-lg border border-ink/10 bg-mist px-2 py-1 text-sm"
+              className="mt-1 w-full rounded-sm border border-ink/10 bg-mist px-2 py-1 text-sm"
             />
           </label>
           <div className="flex items-center gap-2">
             <button
               type="submit"
-              className="rounded-full bg-ink px-3 py-1 text-xs font-semibold text-sand"
+              className="rounded-sm bg-ink px-3 py-1 text-xs font-semibold text-sand"
             >
               Submit report
             </button>
@@ -108,3 +108,4 @@ export default function ReportForm({
     </div>
   );
 }
+

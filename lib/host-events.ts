@@ -2,11 +2,11 @@ import { EventEmitter } from "events";
 
 type RequestCreatedPayload = {
   hostUserId: string;
+  requesterDisplayName: string;
   request: {
     id: string;
     requesterUserId: string;
     requesterHandleText: string;
-    requesterPlatform: string;
     note: string | null;
     confirmedSubscribed: boolean;
     confirmedEacOff: boolean;

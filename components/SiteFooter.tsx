@@ -20,7 +20,7 @@ export default function SiteFooter() {
             </Link>
           </div>
         </div>
-        <div className="rounded-2xl border border-ink/10 bg-sand px-4 py-3 text-ink">
+        <div className="rounded-sm border border-ink/10 bg-sand px-4 py-3 text-ink">
           <p className="font-semibold">
             Not affiliated with Microsoft, Xbox, 343 Industries, or Halo.
           </p>
@@ -37,3 +37,4 @@ export default function SiteFooter() {
     </footer>
   );
 }
+

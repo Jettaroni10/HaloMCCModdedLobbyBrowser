@@ -11,7 +11,7 @@ export default function SiteHeader({ user, isAdmin }: SiteHeaderProps) {
     <header className="border-b border-ink/10 bg-sand/80 backdrop-blur">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-clay text-ink flex items-center justify-center font-semibold">
+          <div className="h-10 w-10 rounded-sm bg-clay text-ink flex items-center justify-center font-semibold">
             IC
           </div>
           <div>
@@ -30,6 +30,11 @@ export default function SiteHeader({ user, isAdmin }: SiteHeaderProps) {
           <Link href="/host" className="hover:text-ink/80">
             Host
           </Link>
+          {user && (
+            <Link href="/friends" className="hover:text-ink/80">
+              Friends
+            </Link>
+          )}
           <Link href="/legal" className="hover:text-ink/80">
             Legal
           </Link>
@@ -41,12 +46,15 @@ export default function SiteHeader({ user, isAdmin }: SiteHeaderProps) {
           {user ? (
             <>
               <Link href="/settings/profile" className="hover:text-ink/80">
-                {user.displayName || "Profile"}
+                <span>{user.displayName || "Profile"}</span>
+                <span className="ml-2 rounded-sm border border-ink/20 px-2 py-0.5 text-[10px] font-semibold text-ink/70">
+                  SR{user.srLevel ?? 1}
+                </span>
               </Link>
               <form action="/api/auth/logout" method="post">
                 <button
                   type="submit"
-                  className="rounded-full border border-ink/20 px-4 py-1.5 text-ink hover:border-ink/40"
+                  className="rounded-sm border border-ink/20 px-4 py-1.5 text-ink hover:border-ink/40"
                 >
                   Sign out
                 </button>
@@ -59,7 +67,7 @@ export default function SiteHeader({ user, isAdmin }: SiteHeaderProps) {
               </Link>
               <Link
                 href="/signup"
-                className="rounded-full bg-ink px-4 py-1.5 text-sand hover:bg-ink/90"
+                className="rounded-sm bg-ink px-4 py-1.5 text-sand hover:bg-ink/90"
               >
                 Create account
               </Link>
@@ -70,3 +78,4 @@ export default function SiteHeader({ user, isAdmin }: SiteHeaderProps) {
     </header>
   );
 }
+

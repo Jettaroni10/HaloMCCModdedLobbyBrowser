@@ -2,6 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import ReportForm from "./ReportForm";
+import {
+  useHostEvents,
+  type HostRequestCreatedEvent,
+  type HostLobbyExpiredEvent,
+} from "./useHostEvents";
 
 type LobbySummary = {
   id: string;
@@ -10,7 +15,6 @@ type LobbySummary = {
   mode: string;
   map: string;
   region: string;
-  platform: string;
   voice: string;
   vibe: string;
   isActive: boolean;
@@ -25,7 +29,6 @@ type JoinRequestSummary = {
   id: string;
   requesterUserId: string;
   requesterHandleText: string;
-  requesterPlatform: string;
   note: string | null;
   confirmedSubscribed: boolean;
   confirmedEacOff: boolean;
@@ -39,7 +42,6 @@ type JoinRequestSummary = {
 
 type InviteChecklist = {
   requester: {
-    platform: string;
     handleText: string;
   };
   modded?: {
@@ -78,6 +80,42 @@ export default function HostDashboard({ lobbies, requests }: HostDashboardProps)
   const [allRequests, setAllRequests] = useState<JoinRequestSummary[]>(requests);
   const [tab, setTab] = useState<JoinRequestSummary["status"]>("PENDING");
   const [checklist, setChecklist] = useState<InviteChecklist | null>(null);
+  const {
+    toasts,
+    dismissToast,
+    unreadCount,
+    markViewed,
+    muted,
+    setMuted,
+  } = useHostEvents({
+    onRequestCreated: (payload: HostRequestCreatedEvent) => {
+      setAllRequests((prev) => {
+        if (prev.some((item) => item.id === payload.id)) {
+          return prev;
+        }
+        const normalized: JoinRequestSummary = {
+          id: payload.id,
+          requesterUserId: payload.requesterUserId,
+          requesterHandleText: payload.requesterHandleText,
+          note: payload.note ?? null,
+          confirmedSubscribed: payload.confirmedSubscribed ?? false,
+          confirmedEacOff: payload.confirmedEacOff ?? false,
+          status: payload.status ?? "PENDING",
+          lobby: payload.lobby,
+        };
+        return [normalized, ...prev];
+      });
+    },
+    onLobbyExpired: (payload: HostLobbyExpiredEvent) => {
+      setActiveLobbies((prev) =>
+        prev.map((item) =>
+          item.id === payload.id
+            ? { ...item, isActive: false, expiresAt: payload.expiresAt }
+            : item
+        )
+      );
+    },
+  });
 
   const filteredRequests = useMemo(
     () => allRequests.filter((request) => request.status === tab),
@@ -111,34 +149,12 @@ export default function HostDashboard({ lobbies, requests }: HostDashboardProps)
     return () => clearInterval(interval);
   }, [activeLobbies]);
 
-  useEffect(() => {
-    const source = new EventSource("/api/host/events");
-
-    source.addEventListener("request_created", (event) => {
-      const payload = JSON.parse(
-        (event as MessageEvent).data
-      ) as JoinRequestSummary;
-      setAllRequests((prev) => [payload, ...prev]);
-    });
-
-    source.addEventListener("lobby_expired", (event) => {
-      const payload = JSON.parse((event as MessageEvent).data) as {
-        id: string;
-        expiresAt: string;
-      };
-      setActiveLobbies((prev) =>
-        prev.map((item) =>
-          item.id === payload.id
-            ? { ...item, isActive: false, expiresAt: payload.expiresAt }
-            : item
-        )
-      );
-    });
-
-    return () => {
-      source.close();
-    };
-  }, []);
+  function handleTabClick(value: JoinRequestSummary["status"]) {
+    setTab(value);
+    if (unreadCount > 0) {
+      markViewed();
+    }
+  }
 
   async function sendHeartbeat(lobbyId: string) {
     const response = await fetch(`/api/lobbies/${lobbyId}/heartbeat`, {
@@ -187,7 +203,28 @@ export default function HostDashboard({ lobbies, requests }: HostDashboardProps)
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-      <section className="rounded-3xl border border-ink/10 bg-sand p-6">
+      {toasts.length > 0 && (
+        <div className="fixed right-6 top-6 z-50 space-y-2">
+          {toasts.map((toast) => (
+            <div
+              key={toast.id}
+              className="rounded-sm border border-ink/20 bg-sand px-4 py-2 text-sm text-ink shadow-sm"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span>{toast.message}</span>
+                <button
+                  type="button"
+                  onClick={() => dismissToast(toast.id)}
+                  className="text-xs font-semibold text-ink/60"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      <section className="rounded-md border border-ink/10 bg-sand p-6">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-ink">My Active Lobbies</h2>
         </div>
@@ -200,7 +237,7 @@ export default function HostDashboard({ lobbies, requests }: HostDashboardProps)
           {activeLobbies.map((lobby) => (
             <div
               key={lobby.id}
-              className="rounded-2xl border border-ink/10 bg-mist p-4"
+              className="rounded-sm border border-ink/10 bg-mist p-4"
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -217,20 +254,20 @@ export default function HostDashboard({ lobbies, requests }: HostDashboardProps)
                   <button
                     type="button"
                     onClick={() => sendHeartbeat(lobby.id)}
-                    className="rounded-full border border-ink/20 px-3 py-1 text-xs font-semibold text-ink hover:border-ink/40"
+                    className="rounded-sm border border-ink/20 px-3 py-1 text-xs font-semibold text-ink hover:border-ink/40"
                   >
                     Heartbeat
                   </button>
                   <a
                     href={`/host/lobbies/${lobby.id}/edit`}
-                    className="rounded-full border border-ink/20 px-3 py-1 text-xs font-semibold text-ink hover:border-ink/40"
+                    className="rounded-sm border border-ink/20 px-3 py-1 text-xs font-semibold text-ink hover:border-ink/40"
                   >
                     Edit
                   </a>
                   <button
                     type="button"
                     onClick={() => closeLobby(lobby.id)}
-                    className="rounded-full border border-clay/40 px-3 py-1 text-xs font-semibold text-clay hover:border-clay/60"
+                    className="rounded-sm border border-clay/40 px-3 py-1 text-xs font-semibold text-clay hover:border-clay/60"
                   >
                     Close
                   </button>
@@ -246,17 +283,33 @@ export default function HostDashboard({ lobbies, requests }: HostDashboardProps)
         </div>
       </section>
 
-      <section className="rounded-3xl border border-ink/10 bg-sand p-6">
+      <section className="rounded-md border border-ink/10 bg-sand p-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-ink">Join Requests</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-ink">Join Requests</h2>
+            {unreadCount > 0 && (
+              <span className="rounded-sm bg-clay/20 px-2 py-0.5 text-xs font-semibold text-ink">
+                {unreadCount}
+              </span>
+            )}
+          </div>
+          <label className="flex items-center gap-2 text-xs font-semibold text-ink/60">
+            <input
+              type="checkbox"
+              checked={muted}
+              onChange={(event) => setMuted(event.target.checked)}
+              className="h-3.5 w-3.5 rounded border-ink/20"
+            />
+            Mute pings
+          </label>
         </div>
         <div className="mt-3 flex gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-ink/50">
           {(["PENDING", "ACCEPTED", "DECLINED"] as const).map((value) => (
             <button
               key={value}
               type="button"
-              onClick={() => setTab(value)}
-              className={`rounded-full px-3 py-1 ${
+              onClick={() => handleTabClick(value)}
+              className={`rounded-sm px-3 py-1 ${
                 tab === value ? "bg-ink text-sand" : "bg-ink/10 text-ink"
               }`}
             >
@@ -272,13 +325,12 @@ export default function HostDashboard({ lobbies, requests }: HostDashboardProps)
           {filteredRequests.map((request) => (
             <div
               key={request.id}
-              className="rounded-2xl border border-ink/10 bg-mist p-4 text-sm"
+              className="rounded-sm border border-ink/10 bg-mist p-4 text-sm"
             >
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="font-semibold text-ink">
-                    {request.requesterHandleText} ·{" "}
-                    {request.requesterPlatform}
+                    {request.requesterHandleText}
                   </p>
                   <p className="text-xs text-ink/60">
                     Lobby: {request.lobby.title}
@@ -289,21 +341,21 @@ export default function HostDashboard({ lobbies, requests }: HostDashboardProps)
                     <button
                       type="button"
                       onClick={() => actOnRequest(request.id, "accept")}
-                      className="rounded-full bg-ink px-3 py-1 text-xs font-semibold text-sand"
+                      className="rounded-sm bg-ink px-3 py-1 text-xs font-semibold text-sand"
                     >
                       Accept
                     </button>
                     <button
                       type="button"
                       onClick={() => actOnRequest(request.id, "decline")}
-                      className="rounded-full border border-ink/20 px-3 py-1 text-xs font-semibold text-ink"
+                      className="rounded-sm border border-ink/20 px-3 py-1 text-xs font-semibold text-ink"
                     >
                       Decline
                     </button>
                     <button
                       type="button"
                       onClick={() => actOnRequest(request.id, "block")}
-                      className="rounded-full border border-clay/40 px-3 py-1 text-xs font-semibold text-clay"
+                      className="rounded-sm border border-clay/40 px-3 py-1 text-xs font-semibold text-clay"
                     >
                       Block
                     </button>
@@ -335,15 +387,14 @@ export default function HostDashboard({ lobbies, requests }: HostDashboardProps)
 
       {checklist && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4">
-          <div className="w-full max-w-lg rounded-3xl bg-sand p-6">
+          <div className="w-full max-w-lg rounded-md bg-sand p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h3 className="text-lg font-semibold text-ink">
                   Invite checklist
                 </h3>
                 <p className="text-sm text-ink/70">
-                  {checklist.requester.handleText} ·{" "}
-                  {checklist.requester.platform}
+                  {checklist.requester.handleText}
                 </p>
               </div>
               <button
@@ -357,7 +408,7 @@ export default function HostDashboard({ lobbies, requests }: HostDashboardProps)
 
             <ol className="mt-4 space-y-3 text-sm text-ink/70">
               {checklist.steps.map((step) => (
-                <li key={step.id} className="rounded-2xl border border-ink/10 p-3">
+                <li key={step.id} className="rounded-sm border border-ink/10 p-3">
                   <div className="flex items-center justify-between gap-3">
                     <span>{step.label}</span>
                     {step.copyText && (
@@ -366,7 +417,7 @@ export default function HostDashboard({ lobbies, requests }: HostDashboardProps)
                         onClick={() =>
                           navigator.clipboard.writeText(step.copyText ?? "")
                         }
-                        className="rounded-full border border-ink/20 px-3 py-1 text-xs font-semibold text-ink"
+                        className="rounded-sm border border-ink/20 px-3 py-1 text-xs font-semibold text-ink"
                       >
                         Copy
                       </button>
@@ -377,7 +428,7 @@ export default function HostDashboard({ lobbies, requests }: HostDashboardProps)
             </ol>
 
             {checklist.modded && (
-              <div className="mt-4 rounded-2xl border border-ink/10 bg-mist p-3 text-xs text-ink/70">
+              <div className="mt-4 rounded-sm border border-ink/10 bg-mist p-3 text-xs text-ink/70">
                 <p className="font-semibold text-ink">Modded lobby</p>
                 {checklist.modded.workshopCollectionUrl && (
                   <p className="mt-1">
@@ -398,7 +449,6 @@ export default function HostDashboard({ lobbies, requests }: HostDashboardProps)
 
             <div className="mt-4 space-y-2 text-xs text-ink/60">
               <p>{checklist.copyStrings.steamInstructions}</p>
-              <p>{checklist.copyStrings.xboxInstructions}</p>
             </div>
           </div>
         </div>
@@ -406,3 +456,4 @@ export default function HostDashboard({ lobbies, requests }: HostDashboardProps)
     </div>
   );
 }
+

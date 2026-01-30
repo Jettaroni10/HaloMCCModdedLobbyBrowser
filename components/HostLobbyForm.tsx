@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Games, Platforms, Regions, Vibes, Voices } from "@/lib/types";
+import { useMemo } from "react";
+import { Games, Regions, Vibes, Voices } from "@/lib/types";
 import TagsInput from "./TagsInput";
 
 type HostLobbyFormProps = {
@@ -11,16 +11,13 @@ type HostLobbyFormProps = {
     mode?: string;
     map?: string;
     region?: string;
-    platform?: string;
     voice?: string;
     vibe?: string;
     tags?: string[];
     rulesNote?: string;
     slotsTotal?: number | null;
-    slotsOpen?: number | null;
     friendsOnly?: boolean;
-    isModded?: boolean;
-    workshopCollectionUrl?: string | null;
+    workshopCollectionUrl?: string;
     workshopItemUrls?: string[];
     requiresEacOff?: boolean;
     modNotes?: string | null;
@@ -38,10 +35,6 @@ export default function HostLobbyForm({
   method = "post",
   onSubmit,
 }: HostLobbyFormProps) {
-  const [isModded, setIsModded] = useState(
-    defaultValues?.isModded ?? false
-  );
-
   const defaultTags = useMemo(() => defaultValues?.tags ?? [], [defaultValues]);
 
   return (
@@ -49,7 +42,7 @@ export default function HostLobbyForm({
       action={action}
       method={method}
       onSubmit={onSubmit}
-      className="mt-6 space-y-5 rounded-3xl border border-ink/10 bg-sand p-6"
+      className="mt-6 space-y-5 rounded-md border border-ink/10 bg-sand p-6"
     >
       <label className="block text-sm font-semibold text-ink">
         Title
@@ -57,7 +50,7 @@ export default function HostLobbyForm({
           name="title"
           required
           defaultValue={defaultValues?.title ?? ""}
-          className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+          className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
         />
       </label>
 
@@ -68,7 +61,7 @@ export default function HostLobbyForm({
             name="mode"
             required
             defaultValue={defaultValues?.mode ?? ""}
-            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+            className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
           />
         </label>
         <label className="block text-sm font-semibold text-ink">
@@ -77,7 +70,7 @@ export default function HostLobbyForm({
             name="map"
             required
             defaultValue={defaultValues?.map ?? ""}
-            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+            className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
           />
         </label>
       </div>
@@ -88,7 +81,7 @@ export default function HostLobbyForm({
           <select
             name="game"
             defaultValue={defaultValues?.game ?? Games[0]}
-            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+            className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
           >
             {Games.map((game) => (
               <option key={game} value={game}>
@@ -102,25 +95,11 @@ export default function HostLobbyForm({
           <select
             name="region"
             defaultValue={defaultValues?.region ?? Regions[0]}
-            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+            className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
           >
             {Regions.map((region) => (
               <option key={region} value={region}>
                 {region}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block text-sm font-semibold text-ink">
-          Platform
-          <select
-            name="platform"
-            defaultValue={defaultValues?.platform ?? Platforms[0]}
-            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
-          >
-            {Platforms.map((platform) => (
-              <option key={platform} value={platform}>
-                {platform}
               </option>
             ))}
           </select>
@@ -133,7 +112,7 @@ export default function HostLobbyForm({
           <select
             name="voice"
             defaultValue={defaultValues?.voice ?? Voices[0]}
-            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+            className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
           >
             {Voices.map((voice) => (
               <option key={voice} value={voice}>
@@ -147,7 +126,7 @@ export default function HostLobbyForm({
           <select
             name="vibe"
             defaultValue={defaultValues?.vibe ?? Vibes[0]}
-            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+            className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
           >
             {Vibes.map((vibe) => (
               <option key={vibe} value={vibe}>
@@ -170,7 +149,7 @@ export default function HostLobbyForm({
           required
           rows={3}
           defaultValue={defaultValues?.rulesNote ?? ""}
-          className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+          className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
         />
       </label>
 
@@ -182,19 +161,8 @@ export default function HostLobbyForm({
             type="number"
             min={2}
             max={32}
-            defaultValue={defaultValues?.slotsTotal ?? ""}
-            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
-          />
-        </label>
-        <label className="block text-sm font-semibold text-ink">
-          Slots open
-          <input
-            name="slotsOpen"
-            type="number"
-            min={0}
-            max={32}
-            defaultValue={defaultValues?.slotsOpen ?? ""}
-            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+            defaultValue={defaultValues?.slotsTotal ?? 16}
+            className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
           />
         </label>
       </div>
@@ -209,63 +177,52 @@ export default function HostLobbyForm({
         Friends only
       </label>
 
-      <label className="flex items-center gap-3 text-sm font-semibold text-ink">
-        <input
-          name="isModded"
-          type="checkbox"
-          defaultChecked={defaultValues?.isModded ?? false}
-          onChange={(event) => setIsModded(event.target.checked)}
-          className="h-4 w-4 rounded border-ink/20"
-        />
-        Modded lobby
-      </label>
-
-      {isModded && (
-        <div className="rounded-2xl border border-ink/10 bg-mist p-4">
-          <label className="block text-sm font-semibold text-ink">
-            Workshop collection URL (recommended)
-            <input
-              name="workshopCollectionUrl"
-              defaultValue={defaultValues?.workshopCollectionUrl ?? ""}
-              className="mt-2 w-full rounded-xl border border-ink/10 bg-sand px-3 py-2 text-sm"
-            />
-          </label>
-          <label className="mt-4 block text-sm font-semibold text-ink">
-            Workshop item URLs (optional)
-            <textarea
-              name="workshopItemUrls"
-              rows={3}
-              defaultValue={(defaultValues?.workshopItemUrls ?? []).join("\n")}
-              className="mt-2 w-full rounded-xl border border-ink/10 bg-sand px-3 py-2 text-sm"
-            />
-          </label>
-          <label className="mt-4 flex items-center gap-3 text-sm font-semibold text-ink">
-            <input
-              name="requiresEacOff"
-              type="checkbox"
-              defaultChecked={defaultValues?.requiresEacOff ?? false}
-              className="h-4 w-4 rounded border-ink/20"
-            />
-            Host indicates EAC Off may be required
-          </label>
-          <label className="mt-4 block text-sm font-semibold text-ink">
-            Mod notes
-            <textarea
-              name="modNotes"
-              rows={3}
-              defaultValue={defaultValues?.modNotes ?? ""}
-              className="mt-2 w-full rounded-xl border border-ink/10 bg-sand px-3 py-2 text-sm"
-            />
-          </label>
-        </div>
-      )}
+      <div className="rounded-sm border border-ink/10 bg-mist p-4">
+        <label className="block text-sm font-semibold text-ink">
+          Workshop collection URL (required)
+          <input
+            name="workshopCollectionUrl"
+            required
+            defaultValue={defaultValues?.workshopCollectionUrl ?? ""}
+            className="mt-2 w-full rounded-sm border border-ink/10 bg-sand px-3 py-2 text-sm"
+          />
+        </label>
+        <label className="mt-4 block text-sm font-semibold text-ink">
+          Workshop item URLs (optional)
+          <textarea
+            name="workshopItemUrls"
+            rows={3}
+            defaultValue={(defaultValues?.workshopItemUrls ?? []).join("\n")}
+            className="mt-2 w-full rounded-sm border border-ink/10 bg-sand px-3 py-2 text-sm"
+          />
+        </label>
+        <label className="mt-4 flex items-center gap-3 text-sm font-semibold text-ink">
+          <input
+            name="requiresEacOff"
+            type="checkbox"
+            defaultChecked={defaultValues?.requiresEacOff ?? true}
+            className="h-4 w-4 rounded border-ink/20"
+          />
+          Host indicates EAC Off may be required
+        </label>
+        <label className="mt-4 block text-sm font-semibold text-ink">
+          Mod notes
+          <textarea
+            name="modNotes"
+            rows={3}
+            defaultValue={defaultValues?.modNotes ?? ""}
+            className="mt-2 w-full rounded-sm border border-ink/10 bg-sand px-3 py-2 text-sm"
+          />
+        </label>
+      </div>
 
       <button
         type="submit"
-        className="w-full rounded-full bg-ink px-4 py-2 text-sm font-semibold text-sand hover:bg-ink/90"
+        className="w-full rounded-sm bg-ink px-4 py-2 text-sm font-semibold text-sand hover:bg-ink/90"
       >
         {submitLabel}
       </button>
     </form>
   );
 }
+

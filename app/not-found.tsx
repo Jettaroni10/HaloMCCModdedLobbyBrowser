@@ -13,10 +13,11 @@ export default function NotFound() {
       </p>
       <Link
         href="/browse"
-        className="rounded-full bg-ink px-5 py-2 text-sm font-semibold text-sand hover:bg-ink/90"
+        className="rounded-sm bg-ink px-5 py-2 text-sm font-semibold text-sand hover:bg-ink/90"
       >
         Back to browse
       </Link>
     </div>
   );
 }
+

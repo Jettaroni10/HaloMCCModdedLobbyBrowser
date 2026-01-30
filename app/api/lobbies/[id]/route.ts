@@ -9,7 +9,7 @@ import {
   parseNumber,
   parseStringArray,
 } from "@/lib/validation";
-import { Games, Platforms, Regions, Vibes, Voices } from "@/lib/types";
+import { Games, Regions, Vibes, Voices } from "@/lib/types";
 
 const LIMITS = {
   title: 80,
@@ -46,6 +46,7 @@ export async function GET(
     where: { id: params.id },
     include: {
       host: { select: { displayName: true } },
+      _count: { select: { members: true } },
     },
   });
 
@@ -53,7 +54,13 @@ export async function GET(
     return NextResponse.json({ error: "Lobby not found." }, { status: 404 });
   }
 
-  return NextResponse.json(lobby);
+  const normalized = {
+    ...lobby,
+    slotsOpen: Math.max(0, lobby.slotsTotal - lobby._count.members),
+  };
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { _count, ...rest } = normalized;
+  return NextResponse.json(rest);
 }
 
 export async function PATCH(
@@ -98,9 +105,6 @@ export async function PATCH(
   const region = parseEnum(body.region, Regions);
   if (region) data.region = region;
 
-  const platform = parseEnum(body.platform, Platforms);
-  if (platform) data.platform = platform;
-
   const voice = parseEnum(body.voice, Voices);
   if (voice) data.voice = voice;
 
@@ -115,20 +119,6 @@ export async function PATCH(
 
   const slotsTotal = clampInt(parseNumber(body.slotsTotal), 2, 32);
   if (slotsTotal !== undefined) data.slotsTotal = slotsTotal;
-
-  const slotsOpen = clampInt(parseNumber(body.slotsOpen), 0, 32);
-  if (slotsOpen !== undefined) data.slotsOpen = slotsOpen;
-
-  const isModded = parseBoolean(body.isModded);
-  if (typeof isModded === "boolean") {
-    data.isModded = isModded;
-    if (!isModded) {
-      data.workshopCollectionUrl = null;
-      data.workshopItemUrls = [];
-      data.requiresEacOff = false;
-      data.modNotes = null;
-    }
-  }
 
   const workshopCollectionUrl = normalizeText(
     body.workshopCollectionUrl,
@@ -162,16 +152,9 @@ export async function PATCH(
 
   const nextSlotsTotal =
     slotsTotal !== undefined ? slotsTotal : lobby.slotsTotal;
-  const nextSlotsOpen = slotsOpen !== undefined ? slotsOpen : lobby.slotsOpen;
-  if (
-    nextSlotsTotal !== null &&
-    nextSlotsTotal !== undefined &&
-    nextSlotsOpen !== null &&
-    nextSlotsOpen !== undefined &&
-    nextSlotsOpen > nextSlotsTotal
-  ) {
+  if (nextSlotsTotal !== null && nextSlotsTotal < 1) {
     return NextResponse.json(
-      { error: "slotsOpen cannot exceed slotsTotal." },
+      { error: "slotsTotal must be at least 1." },
       { status: 400 }
     );
   }
@@ -183,3 +166,4 @@ export async function PATCH(
 
   return NextResponse.json(updated);
 }
+

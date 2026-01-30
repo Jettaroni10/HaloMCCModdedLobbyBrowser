@@ -30,6 +30,23 @@ export async function POST(request: Request) {
     data: { isBanned: true },
   });
 
+  const bannedLobbies = await prisma.lobby.findMany({
+    where: { hostUserId: userId, isActive: true },
+    select: { id: true },
+  });
+  const lobbyIds = bannedLobbies.map((lobby) => lobby.id);
+
+  if (lobbyIds.length > 0) {
+    await prisma.lobby.updateMany({
+      where: { id: { in: lobbyIds } },
+      data: { isActive: false },
+    });
+    await prisma.joinRequest.updateMany({
+      where: { lobbyId: { in: lobbyIds }, status: "PENDING" },
+      data: { status: "DECLINED", decidedAt: new Date() },
+    });
+  }
+
   const isJson = (request.headers.get("content-type") ?? "").includes(
     "application/json"
   );
@@ -38,3 +55,4 @@ export async function POST(request: Request) {
   }
   return NextResponse.redirect(new URL("/admin", request.url));
 }
+

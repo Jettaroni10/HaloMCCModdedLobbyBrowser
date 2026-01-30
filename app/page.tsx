@@ -7,3 +7,4 @@ type PageProps = {
 export default function BrowseHome({ searchParams }: PageProps) {
   return <BrowseView searchParams={searchParams} />;
 }
+

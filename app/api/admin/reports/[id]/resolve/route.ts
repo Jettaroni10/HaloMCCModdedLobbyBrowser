@@ -28,3 +28,4 @@ export async function POST(
   }
   return NextResponse.redirect(new URL("/admin", request.url));
 }
+

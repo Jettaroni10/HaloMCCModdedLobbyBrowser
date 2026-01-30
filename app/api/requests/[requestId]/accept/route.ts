@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { addXp } from "@/lib/xp";
+import { emitLobbyRosterUpdated } from "@/lib/lobby-events";
 
 function buildInviteChecklist(request: {
-  requesterPlatform: string;
   requesterHandleText: string;
   confirmedSubscribed: boolean;
   confirmedEacOff: boolean;
@@ -28,7 +29,7 @@ function buildInviteChecklist(request: {
     },
     {
       id: "open-overlay",
-      label: "Open Steam overlay or Xbox app",
+      label: "Open Steam overlay",
     },
     {
       id: "send-invite",
@@ -38,7 +39,6 @@ function buildInviteChecklist(request: {
 
   const payload: Record<string, unknown> = {
     requester: {
-      platform: request.requesterPlatform,
       handleText: request.requesterHandleText,
     },
     steps,
@@ -47,8 +47,6 @@ function buildInviteChecklist(request: {
       inviteMessage,
       steamInstructions:
         "Open Steam overlay (Shift+Tab) and invite the player from Friends.",
-      xboxInstructions:
-        "Open the Xbox app and send an invite from your friends list.",
     },
   };
 
@@ -77,34 +75,113 @@ export async function POST(
     return NextResponse.json({ error: "Account is banned." }, { status: 403 });
   }
 
-  const joinRequest = await prisma.joinRequest.findUnique({
-    where: { id: params.requestId },
-    include: {
-      lobby: true,
-    },
+  const result = await prisma.$transaction(async (tx) => {
+    const joinRequest = await tx.joinRequest.findUnique({
+      where: { id: params.requestId },
+      include: { lobby: true },
+    });
+
+    if (!joinRequest) {
+      return { error: "NOT_FOUND" as const };
+    }
+    if (joinRequest.lobby.hostUserId !== user.id) {
+      return { error: "FORBIDDEN" as const };
+    }
+    if (joinRequest.status !== "PENDING") {
+      return { error: "ALREADY_DECIDED" as const };
+    }
+
+    const slotsTotal = joinRequest.lobby.slotsTotal ?? 16;
+    const members = await tx.lobbyMember.findMany({
+      where: { lobbyId: joinRequest.lobbyId },
+      select: { slotNumber: true },
+    });
+    const taken = new Set(members.map((member) => member.slotNumber));
+    let slotNumber = 0;
+    for (let i = 1; i <= slotsTotal; i += 1) {
+      if (!taken.has(i)) {
+        slotNumber = i;
+        break;
+      }
+    }
+    if (!slotNumber) {
+      return { error: "FULL" as const };
+    }
+
+    const updated = await tx.joinRequest.update({
+      where: { id: params.requestId },
+      data: {
+        status: "ACCEPTED",
+        decidedAt: new Date(),
+        decidedByUserId: user.id,
+      },
+      include: { lobby: true },
+    });
+
+    await tx.lobbyMember.create({
+      data: {
+        lobbyId: joinRequest.lobbyId,
+        userId: joinRequest.requesterUserId,
+        slotNumber,
+      },
+    });
+
+    const conversation = await tx.conversation.findFirst({
+      where: { lobbyId: joinRequest.lobbyId, type: "LOBBY" },
+      select: { id: true },
+    });
+    if (conversation) {
+      await tx.conversationParticipant.createMany({
+        data: [
+          {
+            conversationId: conversation.id,
+            userId: joinRequest.requesterUserId,
+          },
+        ],
+        skipDuplicates: true,
+      });
+    }
+
+    return { updated };
   });
 
-  if (!joinRequest) {
+  if ("error" in result) {
+    if (result.error === "NOT_FOUND") {
+      return NextResponse.json({ error: "Request not found." }, { status: 404 });
+    }
+    if (result.error === "FORBIDDEN") {
+      return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+    }
+    if (result.error === "ALREADY_DECIDED") {
+      return NextResponse.json(
+        { error: "Request already processed." },
+        { status: 409 }
+      );
+    }
+    if (result.error === "FULL") {
+      return NextResponse.json({ error: "Lobby full." }, { status: 409 });
+    }
+  }
+
+  const updated = result.updated;
+  if (!updated) {
     return NextResponse.json({ error: "Request not found." }, { status: 404 });
   }
-  if (joinRequest.lobby.hostUserId !== user.id) {
-    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
-  }
 
-  const updated = await prisma.joinRequest.update({
-    where: { id: params.requestId },
-    data: {
-      status: "ACCEPTED",
-      decidedAt: new Date(),
-      decidedByUserId: user.id,
-    },
-    include: {
-      lobby: true,
-    },
+  await addXp(updated.requesterUserId, 40, "JOIN_REQUEST_ACCEPTED", {
+    lobbyId: updated.lobbyId,
+    requestId: updated.id,
+    role: "requester",
+  });
+  await addXp(updated.lobby.hostUserId, 20, "JOIN_REQUEST_ACCEPTED", {
+    lobbyId: updated.lobbyId,
+    requestId: updated.id,
+    role: "host",
   });
 
+  emitLobbyRosterUpdated({ lobbyId: updated.lobbyId });
+
   const checklist = buildInviteChecklist({
-    requesterPlatform: updated.requesterPlatform,
     requesterHandleText: updated.requesterHandleText,
     confirmedSubscribed: updated.confirmedSubscribed,
     confirmedEacOff: updated.confirmedEacOff,
@@ -118,3 +195,4 @@ export async function POST(
 
   return NextResponse.json(checklist);
 }
+

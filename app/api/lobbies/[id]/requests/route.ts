@@ -5,11 +5,11 @@ import {
   normalizeHandleText,
   normalizeText,
   parseBoolean,
-  parseEnum,
 } from "@/lib/validation";
-import { Platforms } from "@/lib/types";
 import { isRateLimited, recordRateLimitEvent } from "@/lib/rate-limit";
 import { emitRequestCreated } from "@/lib/host-events";
+import { emitLobbyRequestCreated } from "@/lib/lobby-events";
+import { addXp, hasXpEvent } from "@/lib/xp";
 
 const LIMITS = {
   note: 200,
@@ -37,7 +37,6 @@ export async function POST(
   }
 
   const body = await readBody(request);
-  const requesterPlatform = parseEnum(body.requesterPlatform, Platforms);
   const requesterHandleText = normalizeHandleText(
     body.requesterHandleText,
     48
@@ -46,9 +45,9 @@ export async function POST(
   const confirmedSubscribed = parseBoolean(body.confirmedSubscribed) ?? false;
   const confirmedEacOff = parseBoolean(body.confirmedEacOff) ?? false;
 
-  if (!requesterPlatform || !requesterHandleText) {
+  if (!requesterHandleText) {
     return NextResponse.json(
-      { error: "Platform and handle are required." },
+      { error: "Steam name is required." },
       { status: 400 }
     );
   }
@@ -58,6 +57,24 @@ export async function POST(
   });
   if (!lobby || !lobby.isActive || lobby.expiresAt <= new Date()) {
     return NextResponse.json({ error: "Lobby not available." }, { status: 404 });
+  }
+
+  if (lobby.isModded) {
+    const hasMods =
+      Boolean(lobby.workshopCollectionUrl) ||
+      lobby.workshopItemUrls.length > 0;
+    if (hasMods && !confirmedSubscribed) {
+      return NextResponse.json(
+        { error: "Please confirm mod subscription before requesting." },
+        { status: 400 }
+      );
+    }
+    if (lobby.requiresEacOff && !confirmedEacOff) {
+      return NextResponse.json(
+        { error: "Please confirm EAC Off acknowledgement." },
+        { status: 400 }
+      );
+    }
   }
 
   const blocked = await prisma.block.findUnique({
@@ -126,7 +143,7 @@ export async function POST(
     data: {
       lobbyId: lobby.id,
       requesterUserId: user.id,
-      requesterPlatform,
+      requesterPlatform: "STEAM",
       requesterHandleText,
       note: note || null,
       confirmedSubscribed,
@@ -136,13 +153,23 @@ export async function POST(
 
   await recordRateLimitEvent(user.id, "join_request");
 
+  const joinRequestXpMeta = { lobbyId: lobby.id };
+  const alreadyAwarded = await hasXpEvent(
+    user.id,
+    "JOIN_REQUEST_CREATED",
+    joinRequestXpMeta
+  );
+  if (!alreadyAwarded) {
+    await addXp(user.id, 15, "JOIN_REQUEST_CREATED", joinRequestXpMeta);
+  }
+
   emitRequestCreated({
     hostUserId: lobby.hostUserId,
+    requesterDisplayName: user.displayName,
     request: {
       id: joinRequest.id,
       requesterUserId: joinRequest.requesterUserId,
       requesterHandleText: joinRequest.requesterHandleText,
-      requesterPlatform: joinRequest.requesterPlatform,
       note: joinRequest.note,
       confirmedSubscribed: joinRequest.confirmedSubscribed,
       confirmedEacOff: joinRequest.confirmedEacOff,
@@ -156,6 +183,17 @@ export async function POST(
     },
   });
 
+  emitLobbyRequestCreated({
+    lobbyId: lobby.id,
+    request: {
+      id: joinRequest.id,
+      requesterUserId: joinRequest.requesterUserId,
+      requesterHandleText: joinRequest.requesterHandleText,
+      requesterDisplayName: user.displayName,
+      createdAt: joinRequest.createdAt.toISOString(),
+    },
+  });
+
   const isJson = (request.headers.get("content-type") ?? "").includes(
     "application/json"
   );
@@ -164,3 +202,4 @@ export async function POST(
   }
   return NextResponse.redirect(new URL(`/lobbies/${lobby.id}`, request.url));
 }
+

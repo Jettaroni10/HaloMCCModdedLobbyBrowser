@@ -6,7 +6,7 @@ export default function LegalPage() {
         Please read before hosting or requesting invites.
       </p>
 
-      <div className="mt-6 space-y-6 rounded-3xl border border-ink/10 bg-sand p-6 text-sm text-ink/70">
+      <div className="mt-6 space-y-6 rounded-md border border-ink/10 bg-sand p-6 text-sm text-ink/70">
         <section>
           <h2 className="text-lg font-semibold text-ink">Non-affiliation</h2>
           <p className="mt-2">
@@ -71,3 +71,4 @@ export default function LegalPage() {
     </div>
   );
 }
+

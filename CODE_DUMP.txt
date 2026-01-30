@@ -4,10 +4,10 @@
 ## F:\HaloMCCModdedLobbyBrowser\.env.example
 ```
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/halomcc_invites"
-AUTH_SECRET="replace-with-strong-secret"
+AUTH_SECRET=""
 ADMIN_EMAILS=""
 DEV_USER_ID=""
-CRON_SECRET="replace-with-cron-secret"
+CRON_SECRET=""
 
 ```
 

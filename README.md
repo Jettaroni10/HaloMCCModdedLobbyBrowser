@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Halo MCC Custom Games Invite Coordinator
 
-## Getting Started
+Opt-in lobby listings and invite request tracking for Halo MCC custom games.
 
-First, run the development server:
+Not affiliated with Microsoft, Xbox, 343 Industries, or Halo.
+
+## Stack
+
+- Next.js 14 (App Router) + TypeScript
+- Tailwind CSS
+- Prisma ORM + Postgres
+- Auth: handle/email with signed session cookie
+- Realtime: Server-Sent Events (SSE)
+- Maintenance: cron cleanup endpoint
+
+## Local setup
+
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Configure environment variables:
+
+```bash
+cp .env.example .env
+```
+
+3. Update `DATABASE_URL`, `AUTH_SECRET`, and `ADMIN_EMAILS` in `.env`, then run migrations:
+
+```bash
+npx prisma migrate dev
+```
+
+4. Start the dev server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Routes
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- `/` onboarding + disclaimers
+- `/browse` browse listings
+- `/lobbies/[id]` lobby detail + invite request
+- `/host` host dashboard (host role required)
+- `/host/new` create lobby
+- `/settings/profile` profile settings
+- `/admin` admin moderation (admin role required)
+- `/legal` disclaimer + rules
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Notes
 
-## Learn More
+- Lobbies are opt-in and only include what hosts publish.
+- Modded support is metadata + Steam Workshop links only.
+- The app does not read MCC state, scan sessions, or send invites on your behalf.
 
-To learn more about Next.js, take a look at the following resources:
+## Maintenance
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Run the cleanup job every 1–5 minutes via scheduler:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+/api/cron/cleanup?secret=YOUR_CRON_SECRET
+```

@@ -1,0 +1,64 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import HostLobbyForm from "./HostLobbyForm";
+
+type HostLobbyEditFormProps = {
+  lobbyId: string;
+  defaultValues: {
+    title: string;
+    game: string;
+    mode: string;
+    map: string;
+    region: string;
+    platform: string;
+    voice: string;
+    vibe: string;
+    tags: string[];
+    rulesNote: string;
+    slotsTotal: number | null;
+    slotsOpen: number | null;
+    friendsOnly: boolean;
+    isModded: boolean;
+    workshopCollectionUrl: string | null;
+    workshopItemUrls: string[];
+    requiresEacOff: boolean;
+    modNotes: string | null;
+  };
+};
+
+export default function HostLobbyEditForm({
+  lobbyId,
+  defaultValues,
+}: HostLobbyEditFormProps) {
+  const router = useRouter();
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const payload: Record<string, unknown> = Object.fromEntries(
+      formData.entries()
+    );
+    payload.friendsOnly = formData.get("friendsOnly") === "on";
+    payload.isModded = formData.get("isModded") === "on";
+    payload.requiresEacOff = formData.get("requiresEacOff") === "on";
+
+    const response = await fetch(`/api/lobbies/${lobbyId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (response.ok) {
+      router.push("/host");
+    }
+  }
+
+  return (
+    <HostLobbyForm
+      defaultValues={defaultValues}
+      submitLabel="Save changes"
+      onSubmit={handleSubmit}
+    />
+  );
+}

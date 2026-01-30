@@ -9,8 +9,11 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
+        sand: "rgb(var(--sand) / <alpha-value>)",
+        ink: "rgb(var(--ink) / <alpha-value>)",
+        clay: "rgb(var(--clay) / <alpha-value>)",
+        moss: "rgb(var(--moss) / <alpha-value>)",
+        mist: "rgb(var(--mist) / <alpha-value>)",
       },
     },
   },

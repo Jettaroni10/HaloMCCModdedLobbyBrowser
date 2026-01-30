@@ -1,0 +1,53 @@
+import { EventEmitter } from "events";
+
+type RequestCreatedPayload = {
+  hostUserId: string;
+  request: {
+    id: string;
+    requesterUserId: string;
+    requesterHandleText: string;
+    requesterPlatform: string;
+    note: string | null;
+    confirmedSubscribed: boolean;
+    confirmedEacOff: boolean;
+    status: "PENDING";
+    createdAt: string;
+    lobby: {
+      id: string;
+      title: string;
+      isModded: boolean;
+    };
+  };
+};
+
+type LobbyExpiredPayload = {
+  hostUserId: string;
+  lobby: {
+    id: string;
+    expiresAt: string;
+  };
+};
+
+type HostEventMap = {
+  request_created: RequestCreatedPayload;
+  lobby_expired: LobbyExpiredPayload;
+};
+
+const globalForEvents = global as unknown as { hostEvents?: EventEmitter };
+
+export const hostEvents =
+  globalForEvents.hostEvents ?? new EventEmitter();
+
+if (process.env.NODE_ENV !== "production") {
+  globalForEvents.hostEvents = hostEvents;
+}
+
+export function emitRequestCreated(payload: RequestCreatedPayload) {
+  hostEvents.emit("request_created", payload);
+}
+
+export function emitLobbyExpired(payload: LobbyExpiredPayload) {
+  hostEvents.emit("lobby_expired", payload);
+}
+
+export type { HostEventMap, RequestCreatedPayload, LobbyExpiredPayload };

@@ -1,0 +1,179 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Game {
+  H1
+  H2
+  H3
+  ODST
+  REACH
+  H4
+}
+
+enum Region {
+  NA
+  EU
+  OCE
+  SA
+  AS
+}
+
+enum Platform {
+  STEAM
+  XBOX_FUTURE
+}
+
+enum Voice {
+  MIC_REQUIRED
+  MIC_OPTIONAL
+  NO_MIC
+}
+
+enum Vibe {
+  CASUAL
+  SWEATY
+  CHAOS
+  RP
+  OTHER
+}
+
+enum JoinRequestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+enum ReportTargetType {
+  USER
+  LOBBY
+  REQUEST
+}
+
+enum ReportCategory {
+  SPAM
+  HARASSMENT
+  IMPERSONATION
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
+model User {
+  id              String           @id @default(uuid())
+  email           String?          @unique
+  handle          String           @unique
+  displayName     String
+  steamName       String?
+  xboxGamertag    String?
+  reputationScore Int              @default(0)
+  isBanned        Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  hostedLobbies   Lobby[]          @relation("HostLobbies")
+  joinRequests    JoinRequest[]    @relation("RequesterJoinRequests")
+  decisions       JoinRequest[]    @relation("DeciderJoinRequests")
+  blocksInitiated Block[]          @relation("Blocker")
+  blocksReceived  Block[]          @relation("Blocked")
+  reportsFiled    Report[]         @relation("Reporter")
+  reportsResolved Report[]         @relation("Resolver")
+  rateLimitEvents RateLimitEvent[]
+}
+
+model Lobby {
+  id                     String       @id @default(uuid())
+  hostUserId             String
+  title                  String
+  game                   Game
+  mode                   String
+  map                    String
+  region                 Region
+  platform               Platform
+  voice                  Voice
+  vibe                   Vibe
+  tags                   String[]
+  rulesNote              String
+  friendsOnly            Boolean      @default(false)
+  slotsTotal             Int?
+  slotsOpen              Int?
+  isModded               Boolean      @default(false)
+  workshopCollectionUrl  String?
+  workshopItemUrls       String[]     @default([])
+  requiresEacOff         Boolean      @default(false)
+  modNotes               String?
+  isActive               Boolean      @default(true)
+  lastHeartbeatAt        DateTime
+  expiresAt              DateTime
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+  host                   User         @relation("HostLobbies", fields: [hostUserId], references: [id], onDelete: Cascade)
+  joinRequests           JoinRequest[]
+
+  @@index([isActive, expiresAt, region, game, platform], map: "lobbies_browse_idx")
+}
+
+model JoinRequest {
+  id                   String            @id @default(uuid())
+  lobbyId              String
+  requesterUserId      String
+  requesterPlatform    Platform
+  requesterHandleText  String
+  note                 String?
+  confirmedSubscribed  Boolean           @default(false)
+  confirmedEacOff      Boolean           @default(false)
+  status               JoinRequestStatus @default(PENDING)
+  createdAt            DateTime          @default(now())
+  decidedAt            DateTime?
+  decidedByUserId      String?
+  lobby                Lobby             @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
+  requester            User              @relation("RequesterJoinRequests", fields: [requesterUserId], references: [id], onDelete: Cascade)
+  decidedBy            User?             @relation("DeciderJoinRequests", fields: [decidedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([lobbyId, status, createdAt], map: "join_requests_idx")
+}
+
+model Block {
+  id            String   @id @default(uuid())
+  blockerUserId String
+  blockedUserId String
+  reason        String?
+  createdAt     DateTime @default(now())
+  blocker       User     @relation("Blocker", fields: [blockerUserId], references: [id], onDelete: Cascade)
+  blocked       User     @relation("Blocked", fields: [blockedUserId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerUserId, blockedUserId], map: "blocks_blocker_blocked_key")
+}
+
+model Report {
+  id              String           @id @default(uuid())
+  reporterUserId  String
+  targetType      ReportTargetType
+  targetId        String
+  category        ReportCategory
+  details         String
+  status          ReportStatus     @default(OPEN)
+  createdAt       DateTime         @default(now())
+  resolvedAt      DateTime?
+  resolvedByUserId String?
+  reporter        User             @relation("Reporter", fields: [reporterUserId], references: [id], onDelete: Cascade)
+  resolvedBy      User?            @relation("Resolver", fields: [resolvedByUserId], references: [id], onDelete: SetNull)
+}
+
+model RateLimitEvent {
+  id        String   @id @default(uuid())
+  userId    String
+  key       String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, key, createdAt], map: "rate_limit_events_idx")
+}

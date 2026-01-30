@@ -3,21 +3,28 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --sand: 244 239 230;
+  --mist: 251 247 241;
+  --ink: 31 42 46;
+  --clay: 239 125 59;
+  --moss: 28 125 117;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  color: rgb(var(--ink));
+  background: rgb(var(--sand));
+  min-height: 100vh;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(circle at top left, rgba(239, 125, 59, 0.15), transparent 55%),
+    radial-gradient(circle at 20% 60%, rgba(28, 125, 117, 0.15), transparent 55%),
+    linear-gradient(120deg, rgba(255, 255, 255, 0.7), rgba(244, 239, 230, 0.85));
 }
 
 @layer utilities {

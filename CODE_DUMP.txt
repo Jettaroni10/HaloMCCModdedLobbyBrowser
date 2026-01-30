@@ -1,3 +1,4689 @@
+# Code Dump
+# Generated: 2026-01-30T13:20:58.1662593-06:00
+
+## F:\HaloMCCModdedLobbyBrowser\.env.example
+```
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/halomcc_invites"
+AUTH_SECRET="replace-with-strong-secret"
+ADMIN_EMAILS=""
+DEV_USER_ID=""
+CRON_SECRET="replace-with-cron-secret"
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\.eslintrc.json
+```
+{
+  "extends": ["next/core-web-vitals", "next/typescript"]
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\admin\page.tsx
+```
+import { prisma } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth";
+import { formatEnum } from "@/lib/format";
+
+export default async function AdminPage() {
+  await requireAdmin();
+
+  const lobbies = await prisma.lobby.findMany({
+    orderBy: { createdAt: "desc" },
+    include: {
+      host: {
+        select: { email: true, displayName: true },
+      },
+    },
+  });
+
+  const reports = await prisma.report.findMany({
+    orderBy: { createdAt: "desc" },
+    include: {
+      reporter: { select: { id: true, handle: true, displayName: true } },
+      resolvedBy: { select: { id: true, handle: true, displayName: true } },
+    },
+  });
+
+  return (
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 py-12">
+      <div>
+        <h1 className="text-3xl font-semibold text-ink">Admin</h1>
+        <p className="mt-2 text-sm text-ink/70">
+          Minimal moderation controls for opt-in lobbies.
+        </p>
+      </div>
+
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold text-ink">Reports</h2>
+        {reports.length === 0 && (
+          <p className="text-sm text-ink/60">No reports yet.</p>
+        )}
+        {reports.map((report) => (
+          <div
+            key={report.id}
+            className="rounded-2xl border border-ink/10 bg-sand p-5"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base font-semibold text-ink">
+                  {report.category} · {report.targetType}
+                </h3>
+                <p className="text-sm text-ink/60">
+                  Target: {report.targetId}
+                </p>
+                <p className="text-xs text-ink/50">
+                  Reporter: {report.reporter.displayName} (
+                  {report.reporter.handle})
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <form
+                  action={`/api/admin/reports/${report.id}/resolve`}
+                  method="post"
+                >
+                  <button
+                    type="submit"
+                    className="rounded-full bg-ink px-3 py-1.5 text-xs font-semibold text-sand"
+                  >
+                    Resolve
+                  </button>
+                </form>
+                <form
+                  action={`/api/admin/reports/${report.id}/dismiss`}
+                  method="post"
+                >
+                  <button
+                    type="submit"
+                    className="rounded-full border border-ink/20 px-3 py-1.5 text-xs font-semibold text-ink"
+                  >
+                    Dismiss
+                  </button>
+                </form>
+                {report.targetType === "USER" && (
+                  <form action="/api/admin/ban-user" method="post">
+                    <input
+                      type="hidden"
+                      name="userId"
+                      value={report.targetId}
+                    />
+                    <button
+                      type="submit"
+                      className="rounded-full border border-clay/40 px-3 py-1.5 text-xs font-semibold text-clay"
+                    >
+                      Ban user
+                    </button>
+                  </form>
+                )}
+                {report.targetType === "LOBBY" && (
+                  <form action="/api/admin/takedown-lobby" method="post">
+                    <input
+                      type="hidden"
+                      name="lobbyId"
+                      value={report.targetId}
+                    />
+                    <button
+                      type="submit"
+                      className="rounded-full border border-clay/40 px-3 py-1.5 text-xs font-semibold text-clay"
+                    >
+                      Takedown lobby
+                    </button>
+                  </form>
+                )}
+              </div>
+            </div>
+            <p className="mt-3 text-sm text-ink/70">{report.details}</p>
+            <p className="mt-2 text-xs text-ink/50">
+              Status: {report.status}
+              {report.resolvedBy && (
+                <> · Resolved by {report.resolvedBy.displayName}</>
+              )}
+            </p>
+          </div>
+        ))}
+      </section>
+
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold text-ink">Lobbies</h2>
+        {lobbies.map((lobby) => (
+          <div
+            key={lobby.id}
+            className="rounded-2xl border border-ink/10 bg-sand p-5"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-ink">
+                  {lobby.title}
+                </h2>
+                <p className="text-sm text-ink/60">
+                  Host: {lobby.host.displayName || lobby.host.email}
+                </p>
+              </div>
+              <form action="/api/admin/takedown-lobby" method="post">
+                <input type="hidden" name="lobbyId" value={lobby.id} />
+                <button
+                  type="submit"
+                  className="rounded-full border border-ink/20 px-4 py-1.5 text-xs font-semibold text-ink hover:border-ink/40"
+                >
+                  Close lobby
+                </button>
+              </form>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs uppercase tracking-[0.2em] text-ink/60">
+              <span>{lobby.isActive ? "ACTIVE" : "INACTIVE"}</span>
+              <span>•</span>
+              <span>{formatEnum(lobby.game)}</span>
+              <span>•</span>
+              <span>{formatEnum(lobby.region)}</span>
+            </div>
+          </div>
+        ))}
+      </section>
+    </div>
+  );
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\api\admin\ban-user\route.ts
+```
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { getCurrentUser, isAdminUser } from "@/lib/auth";
+import { normalizeText } from "@/lib/validation";
+
+async function readBody(request: Request) {
+  const contentType = request.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    return request.json();
+  }
+  const formData = await request.formData();
+  return Object.fromEntries(formData.entries());
+}
+
+export async function POST(request: Request) {
+  const user = await getCurrentUser();
+  if (!user || !isAdminUser(user)) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
+  const body = await readBody(request);
+  const userId = normalizeText(body.userId, 64);
+
+  if (!userId) {
+    return NextResponse.json({ error: "userId is required." }, { status: 400 });
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { isBanned: true },
+  });
+
+  const isJson = (request.headers.get("content-type") ?? "").includes(
+    "application/json"
+  );
+  if (isJson) {
+    return NextResponse.json(updated);
+  }
+  return NextResponse.redirect(new URL("/admin", request.url));
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\api\admin\reports\[id]\dismiss\route.ts
+```
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { getCurrentUser, isAdminUser } from "@/lib/auth";
+
+export async function POST(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  const user = await getCurrentUser();
+  if (!user || !isAdminUser(user)) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
+  const updated = await prisma.report.update({
+    where: { id: params.id },
+    data: {
+      status: "DISMISSED",
+      resolvedAt: new Date(),
+      resolvedByUserId: user.id,
+    },
+  });
+
+  const isJson = (request.headers.get("content-type") ?? "").includes(
+    "application/json"
+  );
+  if (isJson) {
+    return NextResponse.json(updated);
+  }
+  return NextResponse.redirect(new URL("/admin", request.url));
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\api\admin\reports\[id]\resolve\route.ts
+```
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { getCurrentUser, isAdminUser } from "@/lib/auth";
+
+export async function POST(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  const user = await getCurrentUser();
+  if (!user || !isAdminUser(user)) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
+  const updated = await prisma.report.update({
+    where: { id: params.id },
+    data: {
+      status: "RESOLVED",
+      resolvedAt: new Date(),
+      resolvedByUserId: user.id,
+    },
+  });
+
+  const isJson = (request.headers.get("content-type") ?? "").includes(
+    "application/json"
+  );
+  if (isJson) {
+    return NextResponse.json(updated);
+  }
+  return NextResponse.redirect(new URL("/admin", request.url));
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\api\admin\reports\route.ts
+```
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { getCurrentUser, isAdminUser } from "@/lib/auth";
+
+export async function GET() {
+  const user = await getCurrentUser();
+  if (!user || !isAdminUser(user)) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
+  const reports = await prisma.report.findMany({
+    orderBy: { createdAt: "desc" },
+    include: {
+      reporter: { select: { id: true, handle: true, displayName: true } },
+      resolvedBy: { select: { id: true, handle: true, displayName: true } },
+    },
+  });
+
+  return NextResponse.json(reports);
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\api\admin\takedown-lobby\route.ts
+```
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { getCurrentUser, isAdminUser } from "@/lib/auth";
+import { normalizeText } from "@/lib/validation";
+
+async function readBody(request: Request) {
+  const contentType = request.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    return request.json();
+  }
+  const formData = await request.formData();
+  return Object.fromEntries(formData.entries());
+}
+
+export async function POST(request: Request) {
+  const user = await getCurrentUser();
+  if (!user || !isAdminUser(user)) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
+  const body = await readBody(request);
+  const lobbyId = normalizeText(body.lobbyId, 64);
+
+  if (!lobbyId) {
+    return NextResponse.json({ error: "lobbyId is required." }, { status: 400 });
+  }
+
+  const updated = await prisma.lobby.update({
+    where: { id: lobbyId },
+    data: { isActive: false },
+  });
+
+  const isJson = (request.headers.get("content-type") ?? "").includes(
+    "application/json"
+  );
+  if (isJson) {
+    return NextResponse.json(updated);
+  }
+  return NextResponse.redirect(new URL("/admin", request.url));
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\api\auth\login\route.ts
+```
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { createSessionToken, getSessionCookieName } from "@/lib/auth";
+import { normalizeHandleText } from "@/lib/validation";
+
+export async function POST(request: Request) {
+  const contentType = request.headers.get("content-type") ?? "";
+  const body =
+    contentType.includes("application/json") ? await request.json() : null;
+  const formData = body ? null : await request.formData();
+
+  const handle = normalizeHandleText(
+    body?.handle ?? formData?.get("handle"),
+    32
+  );
+  const emailRaw = body?.email ?? formData?.get("email");
+  const email =
+    typeof emailRaw === "string" && emailRaw.trim().length > 0
+      ? emailRaw.toLowerCase().trim()
+      : null;
+
+  if (!handle && !email) {
+    return NextResponse.json(
+      { error: "Handle or email is required." },
+      { status: 400 }
+    );
+  }
+
+  const user = await prisma.user.findFirst({
+    where: {
+      OR: [
+        handle ? { handle } : undefined,
+        email ? { email } : undefined,
+      ].filter(Boolean) as { handle?: string; email?: string }[],
+    },
+  });
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "No matching account found." },
+      { status: 404 }
+    );
+  }
+  if (user.isBanned) {
+    return NextResponse.json(
+      { error: "Account is banned." },
+      { status: 403 }
+    );
+  }
+
+  const session = createSessionToken(user.id);
+  if (!session) {
+    return NextResponse.json(
+      { error: "Auth secret missing." },
+      { status: 500 }
+    );
+  }
+
+  const response = NextResponse.redirect(new URL("/browse", request.url));
+  response.cookies.set(getSessionCookieName(), session.token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    expires: new Date(session.expiresAt),
+  });
+  return response;
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\api\auth\logout\route.ts
+```
+import { NextResponse } from "next/server";
+import { getSessionCookieName } from "@/lib/auth";
+
+export async function POST(request: Request) {
+  const response = NextResponse.redirect(new URL("/", request.url));
+  response.cookies.set(getSessionCookieName(), "", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    expires: new Date(0),
+  });
+  return response;
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\api\auth\signup\route.ts
+```
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { createSessionToken, getSessionCookieName } from "@/lib/auth";
+import { normalizeHandleText, normalizeText } from "@/lib/validation";
+
+export async function POST(request: Request) {
+  const contentType = request.headers.get("content-type") ?? "";
+  const body =
+    contentType.includes("application/json") ? await request.json() : null;
+  const formData = body ? null : await request.formData();
+
+  const handle = normalizeHandleText(
+    body?.handle ?? formData?.get("handle"),
+    32
+  );
+  const displayName = normalizeText(
+    body?.displayName ?? formData?.get("displayName"),
+    48
+  );
+  const emailRaw = body?.email ?? formData?.get("email");
+  const email =
+    typeof emailRaw === "string" && emailRaw.trim().length > 0
+      ? emailRaw.toLowerCase().trim()
+      : null;
+  const steamName = normalizeHandleText(
+    body?.steamName ?? formData?.get("steamName"),
+    48
+  );
+  const xboxGamertag = normalizeHandleText(
+    body?.xboxGamertag ?? formData?.get("xboxGamertag"),
+    48
+  );
+
+  if (!handle || !displayName) {
+    return NextResponse.json(
+      { error: "Handle and display name are required." },
+      { status: 400 }
+    );
+  }
+
+  const existingHandle = await prisma.user.findUnique({
+    where: { handle },
+  });
+  if (existingHandle) {
+    return NextResponse.json(
+      { error: "That handle is already in use." },
+      { status: 409 }
+    );
+  }
+
+  if (email) {
+    const existingEmail = await prisma.user.findUnique({ where: { email } });
+    if (existingEmail) {
+      return NextResponse.json(
+        { error: "That email is already in use." },
+        { status: 409 }
+      );
+    }
+  }
+
+  const user = await prisma.user.create({
+    data: {
+      email,
+      handle,
+      displayName,
+      steamName: steamName || null,
+      xboxGamertag: xboxGamertag || null,
+    },
+  });
+
+  const session = createSessionToken(user.id);
+  if (!session) {
+    return NextResponse.json(
+      { error: "Auth secret missing." },
+      { status: 500 }
+    );
+  }
+
+  const response = NextResponse.redirect(new URL("/browse", request.url));
+  response.cookies.set(getSessionCookieName(), session.token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    expires: new Date(session.expiresAt),
+  });
+
+  return response;
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\api\cron\cleanup\route.ts
+```
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { emitLobbyExpired } from "@/lib/host-events";
+
+export const runtime = "nodejs";
+
+function getProvidedSecret(request: Request) {
+  const auth = request.headers.get("authorization");
+  if (auth?.startsWith("Bearer ")) {
+    return auth.slice("Bearer ".length).trim();
+  }
+  const url = new URL(request.url);
+  return url.searchParams.get("secret") ?? "";
+}
+
+async function runCleanup(request: Request) {
+  if (!process.env.DATABASE_URL) {
+    return NextResponse.json({ error: "Database not configured." }, { status: 500 });
+  }
+
+  const expectedSecret = process.env.CRON_SECRET ?? "";
+  if (!expectedSecret) {
+    return NextResponse.json({ error: "Cron secret not configured." }, { status: 500 });
+  }
+
+  const providedSecret = getProvidedSecret(request);
+  if (!providedSecret || providedSecret !== expectedSecret) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
+  const now = new Date();
+
+  const expiredLobbies = await prisma.lobby.findMany({
+    where: { isActive: true, expiresAt: { lt: now } },
+    select: { id: true, hostUserId: true, expiresAt: true },
+  });
+  const expiredIds = expiredLobbies.map((lobby) => lobby.id);
+
+  let lobbyCount = 0;
+  let requestCount = 0;
+
+  if (expiredIds.length > 0) {
+    const lobbyResult = await prisma.lobby.updateMany({
+      where: { id: { in: expiredIds } },
+      data: { isActive: false },
+    });
+    lobbyCount = lobbyResult.count;
+
+    const requestResult = await prisma.joinRequest.updateMany({
+      where: { lobbyId: { in: expiredIds }, status: "PENDING" },
+      data: { status: "DECLINED", decidedAt: now },
+    });
+    requestCount = requestResult.count;
+  }
+
+  for (const lobby of expiredLobbies) {
+    emitLobbyExpired({
+      hostUserId: lobby.hostUserId,
+      lobby: {
+        id: lobby.id,
+        expiresAt: lobby.expiresAt.toISOString(),
+      },
+    });
+  }
+
+  const purgeBefore = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+  const rateLimitResult = await prisma.rateLimitEvent.deleteMany({
+    where: { createdAt: { lt: purgeBefore } },
+  });
+
+  return NextResponse.json({
+    expiredLobbies: lobbyCount,
+    declinedRequests: requestCount,
+    purgedRateLimitEvents: rateLimitResult.count,
+  });
+}
+
+export async function POST(request: Request) {
+  return runCleanup(request);
+}
+
+export async function GET(request: Request) {
+  return runCleanup(request);
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\api\host\events\route.ts
+```
+import { getCurrentUser } from "@/lib/auth";
+import { hostEvents } from "@/lib/host-events";
+
+export const runtime = "nodejs";
+
+export async function GET() {
+  const user = await getCurrentUser();
+  if (!user || user.isBanned) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  const encoder = new TextEncoder();
+
+  const stream = new ReadableStream({
+    start(controller) {
+      const send = (event: string, data: unknown) => {
+        controller.enqueue(
+          encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+        );
+      };
+
+      const handleRequestCreated = (payload: {
+        hostUserId: string;
+        request: unknown;
+      }) => {
+        if (payload.hostUserId !== user.id) return;
+        send("request_created", payload.request);
+      };
+
+      const handleLobbyExpired = (payload: {
+        hostUserId: string;
+        lobby: unknown;
+      }) => {
+        if (payload.hostUserId !== user.id) return;
+        send("lobby_expired", payload.lobby);
+      };
+
+      hostEvents.on("request_created", handleRequestCreated);
+      hostEvents.on("lobby_expired", handleLobbyExpired);
+
+      const ping = setInterval(() => {
+        controller.enqueue(encoder.encode(`event: ping\ndata: ${Date.now()}\n\n`));
+      }, 15000);
+
+      return () => {
+        clearInterval(ping);
+        hostEvents.off("request_created", handleRequestCreated);
+        hostEvents.off("lobby_expired", handleLobbyExpired);
+      };
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+    },
+  });
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\api\host\requests\route.ts
+```
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth";
+
+export async function GET() {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  if (user.isBanned) {
+    return NextResponse.json({ error: "Account is banned." }, { status: 403 });
+  }
+
+  const now = new Date();
+
+  const requests = await prisma.joinRequest.findMany({
+    where: {
+      status: "PENDING",
+      lobby: {
+        hostUserId: user.id,
+        isActive: true,
+        expiresAt: { gt: now },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    include: {
+      lobby: {
+        select: {
+          id: true,
+          title: true,
+          game: true,
+          platform: true,
+          region: true,
+          isModded: true,
+        },
+      },
+      requester: {
+        select: {
+          id: true,
+          displayName: true,
+          handle: true,
+        },
+      },
+    },
+  });
+
+  return NextResponse.json(requests);
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\api\lobbies\[id]\close\route.ts
+```
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth";
+
+export async function POST(
+  _request: Request,
+  { params }: { params: { id: string } }
+) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  if (user.isBanned) {
+    return NextResponse.json({ error: "Account is banned." }, { status: 403 });
+  }
+
+  const lobby = await prisma.lobby.findUnique({ where: { id: params.id } });
+  if (!lobby) {
+    return NextResponse.json({ error: "Lobby not found." }, { status: 404 });
+  }
+  if (lobby.hostUserId !== user.id) {
+    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+  }
+
+  const updated = await prisma.lobby.update({
+    where: { id: params.id },
+    data: { isActive: false },
+  });
+
+  return NextResponse.json(updated);
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\api\lobbies\[id]\heartbeat\route.ts
+```
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth";
+
+export async function POST(
+  _request: Request,
+  { params }: { params: { id: string } }
+) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  if (user.isBanned) {
+    return NextResponse.json({ error: "Account is banned." }, { status: 403 });
+  }
+
+  const lobby = await prisma.lobby.findUnique({ where: { id: params.id } });
+  if (!lobby) {
+    return NextResponse.json({ error: "Lobby not found." }, { status: 404 });
+  }
+  if (lobby.hostUserId !== user.id) {
+    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+  }
+
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + 30 * 60 * 1000);
+
+  const updated = await prisma.lobby.update({
+    where: { id: params.id },
+    data: {
+      lastHeartbeatAt: now,
+      expiresAt,
+    },
+  });
+
+  return NextResponse.json(updated);
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\api\lobbies\[id]\requests\route.ts
+```
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth";
+import {
+  normalizeHandleText,
+  normalizeText,
+  parseBoolean,
+  parseEnum,
+} from "@/lib/validation";
+import { Platforms } from "@/lib/types";
+import { isRateLimited, recordRateLimitEvent } from "@/lib/rate-limit";
+import { emitRequestCreated } from "@/lib/host-events";
+
+const LIMITS = {
+  note: 200,
+};
+
+async function readBody(request: Request) {
+  const contentType = request.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    return request.json();
+  }
+  const formData = await request.formData();
+  return Object.fromEntries(formData.entries());
+}
+
+export async function POST(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  if (user.isBanned) {
+    return NextResponse.json({ error: "Account is banned." }, { status: 403 });
+  }
+
+  const body = await readBody(request);
+  const requesterPlatform = parseEnum(body.requesterPlatform, Platforms);
+  const requesterHandleText = normalizeHandleText(
+    body.requesterHandleText,
+    48
+  );
+  const note = normalizeText(body.note, LIMITS.note);
+  const confirmedSubscribed = parseBoolean(body.confirmedSubscribed) ?? false;
+  const confirmedEacOff = parseBoolean(body.confirmedEacOff) ?? false;
+
+  if (!requesterPlatform || !requesterHandleText) {
+    return NextResponse.json(
+      { error: "Platform and handle are required." },
+      { status: 400 }
+    );
+  }
+
+  const lobby = await prisma.lobby.findUnique({
+    where: { id: params.id },
+  });
+  if (!lobby || !lobby.isActive || lobby.expiresAt <= new Date()) {
+    return NextResponse.json({ error: "Lobby not available." }, { status: 404 });
+  }
+
+  const blocked = await prisma.block.findUnique({
+    where: {
+      blockerUserId_blockedUserId: {
+        blockerUserId: lobby.hostUserId,
+        blockedUserId: user.id,
+      },
+    },
+  });
+  if (blocked) {
+    return NextResponse.json({ error: "Blocked by host." }, { status: 403 });
+  }
+
+  const perMinuteLimited = await isRateLimited(
+    user.id,
+    "join_request",
+    5,
+    60 * 1000
+  );
+  if (perMinuteLimited) {
+    return NextResponse.json(
+      { error: "You are sending requests too quickly. Try again in a minute." },
+      { status: 429 }
+    );
+  }
+
+  const perHourLimited = await isRateLimited(
+    user.id,
+    "join_request",
+    30,
+    60 * 60 * 1000
+  );
+  if (perHourLimited) {
+    return NextResponse.json(
+      { error: "Hourly request limit reached. Try again later." },
+      { status: 429 }
+    );
+  }
+
+  const pendingCount = await prisma.joinRequest.count({
+    where: { lobbyId: lobby.id, status: "PENDING" },
+  });
+  if (pendingCount >= 20) {
+    return NextResponse.json(
+      { error: "This lobby is full of pending requests. Try again later." },
+      { status: 429 }
+    );
+  }
+
+  const existing = await prisma.joinRequest.findFirst({
+    where: {
+      lobbyId: lobby.id,
+      requesterUserId: user.id,
+      status: { in: ["PENDING", "ACCEPTED"] },
+    },
+  });
+  if (existing) {
+    return NextResponse.json(
+      { error: "Request already exists." },
+      { status: 409 }
+    );
+  }
+
+  const joinRequest = await prisma.joinRequest.create({
+    data: {
+      lobbyId: lobby.id,
+      requesterUserId: user.id,
+      requesterPlatform,
+      requesterHandleText,
+      note: note || null,
+      confirmedSubscribed,
+      confirmedEacOff,
+    },
+  });
+
+  await recordRateLimitEvent(user.id, "join_request");
+
+  emitRequestCreated({
+    hostUserId: lobby.hostUserId,
+    request: {
+      id: joinRequest.id,
+      requesterUserId: joinRequest.requesterUserId,
+      requesterHandleText: joinRequest.requesterHandleText,
+      requesterPlatform: joinRequest.requesterPlatform,
+      note: joinRequest.note,
+      confirmedSubscribed: joinRequest.confirmedSubscribed,
+      confirmedEacOff: joinRequest.confirmedEacOff,
+      status: "PENDING",
+      createdAt: joinRequest.createdAt.toISOString(),
+      lobby: {
+        id: lobby.id,
+        title: lobby.title,
+        isModded: lobby.isModded,
+      },
+    },
+  });
+
+  const isJson = (request.headers.get("content-type") ?? "").includes(
+    "application/json"
+  );
+  if (isJson) {
+    return NextResponse.json(joinRequest, { status: 201 });
+  }
+  return NextResponse.redirect(new URL(`/lobbies/${lobby.id}`, request.url));
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\api\lobbies\[id]\route.ts
+```
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth";
+import {
+  clampInt,
+  normalizeText,
+  parseBoolean,
+  parseEnum,
+  parseNumber,
+  parseStringArray,
+} from "@/lib/validation";
+import { Games, Platforms, Regions, Vibes, Voices } from "@/lib/types";
+
+const LIMITS = {
+  title: 80,
+  mode: 60,
+  map: 60,
+  rules: 600,
+  tag: 24,
+  tagsMax: 10,
+  workshopUrl: 220,
+  modNotes: 600,
+};
+
+function sanitizeTags(input: unknown) {
+  return parseStringArray(input)
+    .map((tag) => normalizeText(tag, LIMITS.tag))
+    .filter(Boolean)
+    .slice(0, LIMITS.tagsMax);
+}
+
+async function readBody(request: Request) {
+  const contentType = request.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    return request.json();
+  }
+  const formData = await request.formData();
+  return Object.fromEntries(formData.entries());
+}
+
+export async function GET(
+  _request: Request,
+  { params }: { params: { id: string } }
+) {
+  const lobby = await prisma.lobby.findUnique({
+    where: { id: params.id },
+    include: {
+      host: { select: { displayName: true } },
+    },
+  });
+
+  if (!lobby) {
+    return NextResponse.json({ error: "Lobby not found." }, { status: 404 });
+  }
+
+  return NextResponse.json(lobby);
+}
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  if (user.isBanned) {
+    return NextResponse.json({ error: "Account is banned." }, { status: 403 });
+  }
+
+  const lobby = await prisma.lobby.findUnique({ where: { id: params.id } });
+  if (!lobby) {
+    return NextResponse.json({ error: "Lobby not found." }, { status: 404 });
+  }
+  if (lobby.hostUserId !== user.id) {
+    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+  }
+
+  const body = await readBody(request);
+
+  const data: Record<string, unknown> = {};
+
+  const title = normalizeText(body.title, LIMITS.title);
+  if (title) data.title = title;
+
+  const mode = normalizeText(body.mode, LIMITS.mode);
+  if (mode) data.mode = mode;
+
+  const map = normalizeText(body.map, LIMITS.map);
+  if (map) data.map = map;
+
+  const rulesNote = normalizeText(body.rulesNote, LIMITS.rules);
+  if (rulesNote) data.rulesNote = rulesNote;
+
+  const game = parseEnum(body.game, Games);
+  if (game) data.game = game;
+
+  const region = parseEnum(body.region, Regions);
+  if (region) data.region = region;
+
+  const platform = parseEnum(body.platform, Platforms);
+  if (platform) data.platform = platform;
+
+  const voice = parseEnum(body.voice, Voices);
+  if (voice) data.voice = voice;
+
+  const vibe = parseEnum(body.vibe, Vibes);
+  if (vibe) data.vibe = vibe;
+
+  const tags = sanitizeTags(body.tags);
+  if (tags.length > 0) data.tags = tags;
+
+  const friendsOnly = parseBoolean(body.friendsOnly);
+  if (typeof friendsOnly === "boolean") data.friendsOnly = friendsOnly;
+
+  const slotsTotal = clampInt(parseNumber(body.slotsTotal), 2, 32);
+  if (slotsTotal !== undefined) data.slotsTotal = slotsTotal;
+
+  const slotsOpen = clampInt(parseNumber(body.slotsOpen), 0, 32);
+  if (slotsOpen !== undefined) data.slotsOpen = slotsOpen;
+
+  const isModded = parseBoolean(body.isModded);
+  if (typeof isModded === "boolean") {
+    data.isModded = isModded;
+    if (!isModded) {
+      data.workshopCollectionUrl = null;
+      data.workshopItemUrls = [];
+      data.requiresEacOff = false;
+      data.modNotes = null;
+    }
+  }
+
+  const workshopCollectionUrl = normalizeText(
+    body.workshopCollectionUrl,
+    LIMITS.workshopUrl
+  );
+  if (workshopCollectionUrl) {
+    data.workshopCollectionUrl = workshopCollectionUrl;
+  }
+
+  const workshopItemUrls = parseStringArray(body.workshopItemUrls)
+    .map((url) => normalizeText(url, LIMITS.workshopUrl))
+    .filter(Boolean);
+  if (workshopItemUrls.length > 0) {
+    data.workshopItemUrls = workshopItemUrls;
+  }
+
+  const requiresEacOff = parseBoolean(body.requiresEacOff);
+  if (typeof requiresEacOff === "boolean") {
+    data.requiresEacOff = requiresEacOff;
+  }
+
+  const modNotes = normalizeText(body.modNotes, LIMITS.modNotes);
+  if (modNotes) data.modNotes = modNotes;
+
+  if (Object.keys(data).length === 0) {
+    return NextResponse.json(
+      { error: "No valid updates provided." },
+      { status: 400 }
+    );
+  }
+
+  const nextSlotsTotal =
+    slotsTotal !== undefined ? slotsTotal : lobby.slotsTotal;
+  const nextSlotsOpen = slotsOpen !== undefined ? slotsOpen : lobby.slotsOpen;
+  if (
+    nextSlotsTotal !== null &&
+    nextSlotsTotal !== undefined &&
+    nextSlotsOpen !== null &&
+    nextSlotsOpen !== undefined &&
+    nextSlotsOpen > nextSlotsTotal
+  ) {
+    return NextResponse.json(
+      { error: "slotsOpen cannot exceed slotsTotal." },
+      { status: 400 }
+    );
+  }
+
+  const updated = await prisma.lobby.update({
+    where: { id: params.id },
+    data,
+  });
+
+  return NextResponse.json(updated);
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\api\lobbies\route.ts
+```
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth";
+import {
+  clampInt,
+  normalizeText,
+  parseBoolean,
+  parseEnum,
+  parseNumber,
+  parseStringArray,
+} from "@/lib/validation";
+import { Games, Platforms, Regions, Vibes, Voices } from "@/lib/types";
+
+const LIMITS = {
+  title: 80,
+  mode: 60,
+  map: 60,
+  rules: 600,
+  tag: 24,
+  tagsMax: 10,
+  workshopUrl: 220,
+  modNotes: 600,
+};
+
+function sanitizeTags(input: unknown) {
+  return parseStringArray(input)
+    .map((tag) => normalizeText(tag, LIMITS.tag))
+    .filter(Boolean)
+    .slice(0, LIMITS.tagsMax);
+}
+
+async function readBody(request: Request) {
+  const contentType = request.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    return request.json();
+  }
+  const formData = await request.formData();
+  const entries = Object.fromEntries(formData.entries());
+  return entries;
+}
+
+export async function POST(request: Request) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  if (user.isBanned) {
+    return NextResponse.json({ error: "Account is banned." }, { status: 403 });
+  }
+
+  const body = await readBody(request);
+
+  const title = normalizeText(body.title, LIMITS.title);
+  const mode = normalizeText(body.mode, LIMITS.mode);
+  const map = normalizeText(body.map, LIMITS.map);
+  const rulesNote = normalizeText(body.rulesNote, LIMITS.rules);
+  const game = parseEnum(body.game, Games);
+  const region = parseEnum(body.region, Regions);
+  const platform = parseEnum(body.platform, Platforms);
+  const voice = parseEnum(body.voice, Voices);
+  const vibe = parseEnum(body.vibe, Vibes);
+  const tags = sanitizeTags(body.tags);
+  const friendsOnly = parseBoolean(body.friendsOnly) ?? false;
+  const slotsTotal = clampInt(parseNumber(body.slotsTotal), 2, 32);
+  const slotsOpen = clampInt(parseNumber(body.slotsOpen), 0, 32);
+  const isModded = parseBoolean(body.isModded) ?? false;
+  const workshopCollectionUrl = normalizeText(
+    body.workshopCollectionUrl,
+    LIMITS.workshopUrl
+  );
+  const workshopItemUrls = parseStringArray(body.workshopItemUrls)
+    .map((url) => normalizeText(url, LIMITS.workshopUrl))
+    .filter(Boolean);
+  const requiresEacOff = parseBoolean(body.requiresEacOff) ?? false;
+  const modNotes = normalizeText(body.modNotes, LIMITS.modNotes);
+
+  if (!title || !mode || !map || !rulesNote) {
+    return NextResponse.json(
+      { error: "Missing required fields." },
+      { status: 400 }
+    );
+  }
+  if (!game || !region || !platform || !voice || !vibe) {
+    return NextResponse.json(
+      { error: "Invalid enum value." },
+      { status: 400 }
+    );
+  }
+  if (
+    slotsTotal !== undefined &&
+    slotsOpen !== undefined &&
+    slotsOpen > slotsTotal
+  ) {
+    return NextResponse.json(
+      { error: "slotsOpen cannot exceed slotsTotal." },
+      { status: 400 }
+    );
+  }
+
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + 30 * 60 * 1000);
+
+  const lobby = await prisma.lobby.create({
+    data: {
+      hostUserId: user.id,
+      title,
+      game,
+      mode,
+      map,
+      region,
+      platform,
+      voice,
+      vibe,
+      tags,
+      rulesNote,
+      friendsOnly,
+      slotsTotal: slotsTotal ?? null,
+      slotsOpen: slotsOpen ?? null,
+      isModded,
+      workshopCollectionUrl: isModded ? workshopCollectionUrl || null : null,
+      workshopItemUrls: isModded ? workshopItemUrls : [],
+      requiresEacOff: isModded ? requiresEacOff : false,
+      modNotes: isModded ? modNotes || null : null,
+      lastHeartbeatAt: now,
+      expiresAt,
+    },
+  });
+
+  const isJson = (request.headers.get("content-type") ?? "").includes(
+    "application/json"
+  );
+  if (isJson) {
+    return NextResponse.json(lobby, { status: 201 });
+  }
+  return NextResponse.redirect(new URL("/host", request.url));
+}
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const game = parseEnum(searchParams.get("game"), Games);
+  const region = parseEnum(searchParams.get("region"), Regions);
+  const platform = parseEnum(searchParams.get("platform"), Platforms);
+  const voice = parseEnum(searchParams.get("voice"), Voices);
+  const vibe = parseEnum(searchParams.get("vibe"), Vibes);
+  const isModded = parseBoolean(searchParams.get("isModded"));
+  const tags = sanitizeTags(searchParams.get("tags"));
+
+  const now = new Date();
+
+  const lobbies = await prisma.lobby.findMany({
+    where: {
+      isActive: true,
+      expiresAt: { gt: now },
+      ...(game ? { game } : {}),
+      ...(region ? { region } : {}),
+      ...(platform ? { platform } : {}),
+      ...(voice ? { voice } : {}),
+      ...(vibe ? { vibe } : {}),
+      ...(typeof isModded === "boolean" ? { isModded } : {}),
+      ...(tags.length > 0 ? { tags: { hasSome: tags } } : {}),
+    },
+    orderBy: { lastHeartbeatAt: "desc" },
+    include: {
+      host: { select: { displayName: true } },
+    },
+  });
+
+  return NextResponse.json(lobbies);
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\api\lobbies\stream\route.ts
+```
+export const runtime = "nodejs";
+
+export async function GET() {
+  let interval: NodeJS.Timeout | null = null;
+
+  const stream = new ReadableStream({
+    start(controller) {
+      const encoder = new TextEncoder();
+      const send = (payload: string) => {
+        controller.enqueue(encoder.encode(payload));
+      };
+
+      send("event: ready\ndata: stream-open\n\n");
+
+      interval = setInterval(() => {
+        send(`event: ping\ndata: ${Date.now()}\n\n`);
+      }, 15000);
+    },
+    cancel() {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+    },
+  });
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\api\me\route.ts
+```
+import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth";
+
+export async function GET() {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  return NextResponse.json({ user });
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\api\profile\route.ts
+```
+import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { normalizeHandleText, normalizeText } from "@/lib/validation";
+
+export async function POST(request: Request) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  if (user.isBanned) {
+    return NextResponse.json({ error: "Account is banned." }, { status: 403 });
+  }
+
+  const contentType = request.headers.get("content-type") ?? "";
+  const body =
+    contentType.includes("application/json") ? await request.json() : null;
+  const formData = body ? null : await request.formData();
+
+  const displayName = normalizeText(
+    body?.displayName ?? formData?.get("displayName"),
+    48
+  );
+  const steamName = normalizeHandleText(
+    body?.steamName ?? formData?.get("steamName"),
+    48
+  );
+  const xboxGamertag = normalizeHandleText(
+    body?.xboxGamertag ?? formData?.get("xboxGamertag"),
+    48
+  );
+
+  if (!displayName) {
+    return NextResponse.json(
+      { error: "Display name is required." },
+      { status: 400 }
+    );
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      displayName,
+      steamName: steamName || null,
+      xboxGamertag: xboxGamertag || null,
+    },
+  });
+
+  const isJson = (request.headers.get("content-type") ?? "").includes(
+    "application/json"
+  );
+  if (isJson) {
+    return NextResponse.json({ ok: true });
+  }
+  return NextResponse.redirect(new URL("/settings/profile", request.url));
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\api\reports\route.ts
+```
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth";
+import { normalizeText, parseEnum } from "@/lib/validation";
+
+const TARGET_TYPES = ["USER", "LOBBY", "REQUEST"] as const;
+const CATEGORIES = ["SPAM", "HARASSMENT", "IMPERSONATION", "OTHER"] as const;
+
+async function readBody(request: Request) {
+  const contentType = request.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    return request.json();
+  }
+  const formData = await request.formData();
+  return Object.fromEntries(formData.entries());
+}
+
+export async function POST(request: Request) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  if (user.isBanned) {
+    return NextResponse.json({ error: "Account is banned." }, { status: 403 });
+  }
+
+  const body = await readBody(request);
+  const targetType = parseEnum(body.targetType, TARGET_TYPES);
+  const targetId = normalizeText(body.targetId, 64);
+  const category = parseEnum(body.category, CATEGORIES);
+  const details = normalizeText(body.details, 1000);
+
+  if (!targetType || !targetId || !category || !details) {
+    return NextResponse.json(
+      { error: "Invalid report payload." },
+      { status: 400 }
+    );
+  }
+
+  const report = await prisma.report.create({
+    data: {
+      reporterUserId: user.id,
+      targetType,
+      targetId,
+      category,
+      details,
+    },
+  });
+
+  return NextResponse.json(report, { status: 201 });
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\api\requests\[requestId]\accept\route.ts
+```
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth";
+
+function buildInviteChecklist(request: {
+  requesterPlatform: string;
+  requesterHandleText: string;
+  confirmedSubscribed: boolean;
+  confirmedEacOff: boolean;
+  lobby: {
+    isModded: boolean;
+    workshopCollectionUrl: string | null;
+    workshopItemUrls: string[];
+    requiresEacOff: boolean;
+  };
+}) {
+  const inviteMessage = `Invite sent to ${request.requesterHandleText}. Please join when ready.`;
+  const steps = [
+    {
+      id: "copy-handle",
+      label: "Copy requester handle",
+      copyText: request.requesterHandleText,
+    },
+    {
+      id: "copy-message",
+      label: "Copy invite message template",
+      copyText: inviteMessage,
+    },
+    {
+      id: "open-overlay",
+      label: "Open Steam overlay or Xbox app",
+    },
+    {
+      id: "send-invite",
+      label: "Send invite manually",
+    },
+  ];
+
+  const payload: Record<string, unknown> = {
+    requester: {
+      platform: request.requesterPlatform,
+      handleText: request.requesterHandleText,
+    },
+    steps,
+    copyStrings: {
+      requesterHandle: request.requesterHandleText,
+      inviteMessage,
+      steamInstructions:
+        "Open Steam overlay (Shift+Tab) and invite the player from Friends.",
+      xboxInstructions:
+        "Open the Xbox app and send an invite from your friends list.",
+    },
+  };
+
+  if (request.lobby.isModded) {
+    payload.modded = {
+      workshopCollectionUrl: request.lobby.workshopCollectionUrl,
+      workshopItemUrls: request.lobby.workshopItemUrls,
+      requiresEacOff: request.lobby.requiresEacOff,
+      requesterConfirmedSubscribed: request.confirmedSubscribed,
+      requesterConfirmedEacOff: request.confirmedEacOff,
+    };
+  }
+
+  return payload;
+}
+
+export async function POST(
+  _request: Request,
+  { params }: { params: { requestId: string } }
+) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  if (user.isBanned) {
+    return NextResponse.json({ error: "Account is banned." }, { status: 403 });
+  }
+
+  const joinRequest = await prisma.joinRequest.findUnique({
+    where: { id: params.requestId },
+    include: {
+      lobby: true,
+    },
+  });
+
+  if (!joinRequest) {
+    return NextResponse.json({ error: "Request not found." }, { status: 404 });
+  }
+  if (joinRequest.lobby.hostUserId !== user.id) {
+    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+  }
+
+  const updated = await prisma.joinRequest.update({
+    where: { id: params.requestId },
+    data: {
+      status: "ACCEPTED",
+      decidedAt: new Date(),
+      decidedByUserId: user.id,
+    },
+    include: {
+      lobby: true,
+    },
+  });
+
+  const checklist = buildInviteChecklist({
+    requesterPlatform: updated.requesterPlatform,
+    requesterHandleText: updated.requesterHandleText,
+    confirmedSubscribed: updated.confirmedSubscribed,
+    confirmedEacOff: updated.confirmedEacOff,
+    lobby: {
+      isModded: updated.lobby.isModded,
+      workshopCollectionUrl: updated.lobby.workshopCollectionUrl,
+      workshopItemUrls: updated.lobby.workshopItemUrls,
+      requiresEacOff: updated.lobby.requiresEacOff,
+    },
+  });
+
+  return NextResponse.json(checklist);
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\api\requests\[requestId]\block\route.ts
+```
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth";
+
+export async function POST(
+  _request: Request,
+  { params }: { params: { requestId: string } }
+) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  if (user.isBanned) {
+    return NextResponse.json({ error: "Account is banned." }, { status: 403 });
+  }
+
+  const joinRequest = await prisma.joinRequest.findUnique({
+    where: { id: params.requestId },
+    include: { lobby: true },
+  });
+
+  if (!joinRequest) {
+    return NextResponse.json({ error: "Request not found." }, { status: 404 });
+  }
+  if (joinRequest.lobby.hostUserId !== user.id) {
+    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+  }
+
+  await prisma.block.upsert({
+    where: {
+      blockerUserId_blockedUserId: {
+        blockerUserId: user.id,
+        blockedUserId: joinRequest.requesterUserId,
+      },
+    },
+    update: {},
+    create: {
+      blockerUserId: user.id,
+      blockedUserId: joinRequest.requesterUserId,
+    },
+  });
+
+  const updated = await prisma.joinRequest.update({
+    where: { id: params.requestId },
+    data: {
+      status: "DECLINED",
+      decidedAt: new Date(),
+      decidedByUserId: user.id,
+    },
+  });
+
+  return NextResponse.json(updated);
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\api\requests\[requestId]\decline\route.ts
+```
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth";
+
+export async function POST(
+  _request: Request,
+  { params }: { params: { requestId: string } }
+) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  if (user.isBanned) {
+    return NextResponse.json({ error: "Account is banned." }, { status: 403 });
+  }
+
+  const joinRequest = await prisma.joinRequest.findUnique({
+    where: { id: params.requestId },
+    include: { lobby: true },
+  });
+
+  if (!joinRequest) {
+    return NextResponse.json({ error: "Request not found." }, { status: 404 });
+  }
+  if (joinRequest.lobby.hostUserId !== user.id) {
+    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+  }
+
+  const updated = await prisma.joinRequest.update({
+    where: { id: params.requestId },
+    data: {
+      status: "DECLINED",
+      decidedAt: new Date(),
+      decidedByUserId: user.id,
+    },
+  });
+
+  return NextResponse.json(updated);
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\browse\page.tsx
+```
+import BrowseView from "@/components/BrowseView";
+
+type PageProps = {
+  searchParams?: Record<string, string | string[] | undefined>;
+};
+
+export default function BrowsePage({ searchParams }: PageProps) {
+  return <BrowseView searchParams={searchParams} />;
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\dev\checklist\page.tsx
+```
+import { notFound } from "next/navigation";
+import DevChecklist from "@/components/DevChecklist";
+
+export default function DevChecklistPage() {
+  if (process.env.NODE_ENV === "production") {
+    notFound();
+  }
+
+  return (
+    <div className="mx-auto w-full max-w-3xl px-6 py-12">
+      <h1 className="text-3xl font-semibold text-ink">MVP test checklist</h1>
+      <p className="mt-2 text-sm text-ink/70">
+        Walk through each step before calling the MVP done.
+      </p>
+      <div className="mt-6">
+        <DevChecklist />
+      </div>
+    </div>
+  );
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\globals.css
+```
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --sand: 244 239 230;
+  --mist: 251 247 241;
+  --ink: 31 42 46;
+  --clay: 239 125 59;
+  --moss: 28 125 117;
+}
+
+body {
+  color: rgb(var(--ink));
+  background: rgb(var(--sand));
+  min-height: 100vh;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(circle at top left, rgba(239, 125, 59, 0.15), transparent 55%),
+    radial-gradient(circle at 20% 60%, rgba(28, 125, 117, 0.15), transparent 55%),
+    linear-gradient(120deg, rgba(255, 255, 255, 0.7), rgba(244, 239, 230, 0.85));
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\host\lobbies\[id]\edit\page.tsx
+```
+import { notFound, redirect } from "next/navigation";
+import { prisma } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import HostLobbyEditForm from "@/components/HostLobbyEditForm";
+
+type PageProps = {
+  params: { id: string };
+};
+
+export default async function EditLobbyPage({ params }: PageProps) {
+  const user = await requireAuth();
+
+  const lobby = await prisma.lobby.findUnique({
+    where: { id: params.id },
+  });
+
+  if (!lobby) {
+    notFound();
+  }
+
+  if (lobby.hostUserId !== user.id) {
+    redirect("/host");
+  }
+
+  return (
+    <div className="mx-auto w-full max-w-3xl px-6 py-12">
+      <h1 className="text-3xl font-semibold text-ink">Edit lobby</h1>
+      <p className="mt-2 text-sm text-ink/70">
+        Update details and keep your lobby fresh.
+      </p>
+      <HostLobbyEditForm
+        lobbyId={lobby.id}
+        defaultValues={{
+          title: lobby.title,
+          game: lobby.game,
+          mode: lobby.mode,
+          map: lobby.map,
+          region: lobby.region,
+          platform: lobby.platform,
+          voice: lobby.voice,
+          vibe: lobby.vibe,
+          tags: lobby.tags,
+          rulesNote: lobby.rulesNote,
+          slotsTotal: lobby.slotsTotal,
+          slotsOpen: lobby.slotsOpen,
+          friendsOnly: lobby.friendsOnly,
+          isModded: lobby.isModded,
+          workshopCollectionUrl: lobby.workshopCollectionUrl,
+          workshopItemUrls: lobby.workshopItemUrls,
+          requiresEacOff: lobby.requiresEacOff,
+          modNotes: lobby.modNotes,
+        }}
+      />
+    </div>
+  );
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\host\new\page.tsx
+```
+import { requireAuth } from "@/lib/auth";
+import HostLobbyForm from "@/components/HostLobbyForm";
+
+export default async function NewLobbyPage() {
+  await requireAuth();
+
+  return (
+    <div className="mx-auto w-full max-w-3xl px-6 py-12">
+      <h1 className="text-3xl font-semibold text-ink">Create a lobby</h1>
+      <p className="mt-2 text-sm text-ink/70">
+        Publish only what you want players to see. No automatic invites are
+        sent.
+      </p>
+      <HostLobbyForm submitLabel="Publish lobby" />
+    </div>
+  );
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\host\page.tsx
+```
+import Link from "next/link";
+import { prisma } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import HostDashboard from "@/components/HostDashboard";
+
+export default async function HostDashboard() {
+  const user = await requireAuth();
+  const lobbies = await prisma.lobby.findMany({
+    where: { hostUserId: user.id, isActive: true },
+    orderBy: { lastHeartbeatAt: "desc" },
+  });
+
+  const requests = await prisma.joinRequest.findMany({
+    where: { lobby: { hostUserId: user.id } },
+    orderBy: { createdAt: "desc" },
+    include: {
+      lobby: { select: { id: true, title: true, isModded: true } },
+    },
+  });
+
+  const serializedLobbies = lobbies.map((lobby) => ({
+    ...lobby,
+    lastHeartbeatAt: lobby.lastHeartbeatAt.toISOString(),
+    expiresAt: lobby.expiresAt.toISOString(),
+    createdAt: lobby.createdAt.toISOString(),
+    updatedAt: lobby.updatedAt.toISOString(),
+  }));
+
+  const serializedRequests = requests.map((request) => ({
+    ...request,
+    createdAt: request.createdAt.toISOString(),
+    decidedAt: request.decidedAt ? request.decidedAt.toISOString() : null,
+  }));
+
+  return (
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-12">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold text-ink">Host dashboard</h1>
+          <p className="mt-2 text-sm text-ink/70">
+            Publish opt-in listings and manage invite requests.
+          </p>
+        </div>
+        <Link
+          href="/host/new"
+          className="rounded-full bg-ink px-6 py-2 text-sm font-semibold text-sand hover:bg-ink/90"
+        >
+          Create lobby
+        </Link>
+      </div>
+
+      <HostDashboard
+        lobbies={serializedLobbies}
+        requests={serializedRequests}
+      />
+    </div>
+  );
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\layout.tsx
+```
+import type { Metadata } from "next";
+import localFont from "next/font/local";
+import "./globals.css";
+import { getCurrentUser, isAdminUser } from "@/lib/auth";
+import SiteHeader from "@/components/SiteHeader";
+import SiteFooter from "@/components/SiteFooter";
+
+const geistSans = localFont({
+  src: "./fonts/GeistVF.woff",
+  variable: "--font-geist-sans",
+  weight: "100 900",
+});
+const geistMono = localFont({
+  src: "./fonts/GeistMonoVF.woff",
+  variable: "--font-geist-mono",
+  weight: "100 900",
+});
+
+export const metadata: Metadata = {
+  title: "Halo MCC Invite Coordinator",
+  description:
+    "Coordinate Halo MCC custom game invites with opt-in lobbies and mod metadata.",
+};
+
+export default async function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  const user = await getCurrentUser();
+  const isAdmin = isAdminUser(user);
+
+  return (
+    <html lang="en">
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased font-[family-name:var(--font-geist-sans)]`}
+      >
+        <div className="flex min-h-screen flex-col">
+          <SiteHeader user={user} isAdmin={isAdmin} />
+          <main className="flex-1">{children}</main>
+          <SiteFooter />
+        </div>
+      </body>
+    </html>
+  );
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\legal\page.tsx
+```
+export default function LegalPage() {
+  return (
+    <div className="mx-auto w-full max-w-4xl px-6 py-12">
+      <h1 className="text-3xl font-semibold text-ink">Legal &amp; rules</h1>
+      <p className="mt-2 text-sm text-ink/70">
+        Please read before hosting or requesting invites.
+      </p>
+
+      <div className="mt-6 space-y-6 rounded-3xl border border-ink/10 bg-sand p-6 text-sm text-ink/70">
+        <section>
+          <h2 className="text-lg font-semibold text-ink">Non-affiliation</h2>
+          <p className="mt-2">
+            Not affiliated with Microsoft, Xbox, 343 Industries, or Halo.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-lg font-semibold text-ink">Safety &amp; scope</h2>
+          <ul className="mt-2 list-disc space-y-1 pl-5">
+            <li>This app does not interact with MCC networking or game state.</li>
+            <li>No Halo assets or official branding are used.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 className="text-lg font-semibold text-ink">What this app is</h2>
+          <ul className="mt-2 list-disc space-y-1 pl-5">
+            <li>Opt-in lobby listings published by hosts.</li>
+            <li>Invite request tracking and coordination.</li>
+            <li>Metadata for modded lobbies, including Steam Workshop links.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 className="text-lg font-semibold text-ink">
+            What this app is not
+          </h2>
+          <ul className="mt-2 list-disc space-y-1 pl-5">
+            <li>It does not read MCC state or scan sessions.</li>
+            <li>It does not hook/inject, inspect packets, or auto-join.</li>
+            <li>It does not send invites via Steam or Xbox APIs.</li>
+            <li>It does not download or install mods.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 className="text-lg font-semibold text-ink">Modded lobbies</h2>
+          <p className="mt-2">
+            We do not distribute mods; we only link to Steam Workshop.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-lg font-semibold text-ink">Host rules</h2>
+          <ul className="mt-2 list-disc space-y-1 pl-5">
+            <li>Only publish lobbies you control.</li>
+            <li>Be explicit about mod requirements and invite flow.</li>
+            <li>Remove or close stale lobbies promptly.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 className="text-lg font-semibold text-ink">Player rules</h2>
+          <ul className="mt-2 list-disc space-y-1 pl-5">
+            <li>Respect host instructions and availability.</li>
+            <li>Share only the details hosts request.</li>
+            <li>Keep requests relevant and concise.</li>
+          </ul>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\lobbies\[id]\page.tsx
+```
+import { notFound } from "next/navigation";
+import { prisma } from "@/lib/db";
+import { formatEnum } from "@/lib/format";
+import { getCurrentUser } from "@/lib/auth";
+import LobbyRequestForm from "@/components/LobbyRequestForm";
+import ReportForm from "@/components/ReportForm";
+
+type LobbyPageProps = {
+  params: { id: string };
+};
+
+export default async function LobbyPage({ params }: LobbyPageProps) {
+  const dbReady = Boolean(process.env.DATABASE_URL);
+  if (!dbReady) {
+    return (
+      <div className="mx-auto w-full max-w-4xl px-6 py-12 text-sm text-ink/70">
+        Configure <code className="font-semibold">DATABASE_URL</code> to load
+        lobby details.
+      </div>
+    );
+  }
+
+  const lobby = await prisma.lobby.findUnique({
+    where: { id: params.id },
+    include: {
+      host: { select: { displayName: true } },
+    },
+  });
+
+  if (!lobby) {
+    notFound();
+  }
+
+  const user = await getCurrentUser();
+
+  return (
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-6 py-12">
+      <div className="rounded-3xl border border-ink/10 bg-mist p-8">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.4em] text-ink/50">
+              Lobby
+            </p>
+            <h1 className="mt-2 text-3xl font-semibold text-ink">
+              {lobby.title}
+            </h1>
+            <p className="mt-2 text-sm text-ink/60">
+              Hosted by {lobby.host.displayName}
+            </p>
+          </div>
+          {lobby.isModded && (
+            <span className="rounded-full bg-clay/20 px-4 py-1 text-xs font-semibold text-ink">
+              Modded lobby
+            </span>
+          )}
+        </div>
+        <p className="mt-4 text-sm text-ink/70">
+          {lobby.mode} · {lobby.map}
+        </p>
+        <div className="mt-4 flex flex-wrap gap-3 text-xs uppercase tracking-[0.2em] text-ink/60">
+          <span>{formatEnum(lobby.game)}</span>
+          <span>•</span>
+          <span>{formatEnum(lobby.region)}</span>
+          <span>•</span>
+          <span>{formatEnum(lobby.platform)}</span>
+          <span>•</span>
+          <span>{formatEnum(lobby.voice)}</span>
+          <span>•</span>
+          <span>{formatEnum(lobby.vibe)}</span>
+          <span>•</span>
+          <span>
+            Slots {lobby.slotsOpen ?? "?"}/{lobby.slotsTotal ?? "?"}
+          </span>
+        </div>
+      </div>
+
+      <LobbyRequestForm
+        lobbyId={lobby.id}
+        isModded={lobby.isModded}
+        requiresEacOff={lobby.requiresEacOff}
+        workshopCollectionUrl={lobby.workshopCollectionUrl}
+        workshopItemUrls={lobby.workshopItemUrls}
+        modNotes={lobby.modNotes}
+        rulesNote={lobby.rulesNote}
+        tags={lobby.tags}
+        userSteamName={user?.steamName ?? null}
+        userXboxGamertag={user?.xboxGamertag ?? null}
+        isSignedIn={Boolean(user)}
+      />
+
+      <div className="flex items-center justify-end">
+        <ReportForm
+          targetType="LOBBY"
+          targetId={lobby.id}
+          label="Report lobby"
+          isSignedIn={Boolean(user)}
+        />
+      </div>
+    </div>
+  );
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\login\page.tsx
+```
+export default function LoginPage() {
+  return (
+    <div className="mx-auto w-full max-w-md px-6 py-12">
+      <h1 className="text-3xl font-semibold text-ink">Sign in</h1>
+      <p className="mt-2 text-sm text-ink/70">
+        Use your handle or email to access your profile.
+      </p>
+
+      <form
+        action="/api/auth/login"
+        method="post"
+        className="mt-6 space-y-4 rounded-3xl border border-ink/10 bg-sand p-6"
+      >
+        <label className="block text-sm font-semibold text-ink">
+          Handle
+          <input
+            name="handle"
+            type="text"
+            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+          />
+        </label>
+        <div className="text-center text-xs uppercase tracking-[0.3em] text-ink/40">
+          or
+        </div>
+        <label className="block text-sm font-semibold text-ink">
+          Email
+          <input
+            name="email"
+            type="email"
+            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+          />
+        </label>
+        <button
+          type="submit"
+          className="w-full rounded-full bg-ink px-4 py-2 text-sm font-semibold text-sand hover:bg-ink/90"
+        >
+          Sign in
+        </button>
+      </form>
+    </div>
+  );
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\not-found.tsx
+```
+import Link from "next/link";
+
+export default function NotFound() {
+  return (
+    <div className="mx-auto flex w-full max-w-3xl flex-col items-start gap-4 px-6 py-16">
+      <p className="text-xs uppercase tracking-[0.4em] text-ink/50">
+        404
+      </p>
+      <h1 className="text-3xl font-semibold text-ink">Lobby not found</h1>
+      <p className="text-sm text-ink/70">
+        The lobby link might be stale or unpublished. Browse live listings for
+        active sessions.
+      </p>
+      <Link
+        href="/browse"
+        className="rounded-full bg-ink px-5 py-2 text-sm font-semibold text-sand hover:bg-ink/90"
+      >
+        Back to browse
+      </Link>
+    </div>
+  );
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\page.tsx
+```
+import BrowseView from "@/components/BrowseView";
+
+type PageProps = {
+  searchParams?: Record<string, string | string[] | undefined>;
+};
+
+export default function BrowseHome({ searchParams }: PageProps) {
+  return <BrowseView searchParams={searchParams} />;
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\settings\profile\page.tsx
+```
+import { requireAuth } from "@/lib/auth";
+
+export default async function ProfilePage() {
+  const user = await requireAuth();
+
+  return (
+    <div className="mx-auto w-full max-w-3xl px-6 py-12">
+      <h1 className="text-3xl font-semibold text-ink">Profile settings</h1>
+      <p className="mt-2 text-sm text-ink/70">
+        Keep your profile light. Hosts can share extra details in each lobby.
+      </p>
+
+      <form
+        action="/api/profile"
+        method="post"
+        className="mt-6 space-y-5 rounded-3xl border border-ink/10 bg-sand p-6"
+      >
+        <label className="block text-sm font-semibold text-ink">
+          Display name
+          <input
+            name="displayName"
+            defaultValue={user.displayName ?? ""}
+            placeholder="Your host or player name"
+            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+          />
+        </label>
+        <label className="block text-sm font-semibold text-ink">
+          Steam name
+          <input
+            name="steamName"
+            defaultValue={user.steamName ?? ""}
+            placeholder="Optional"
+            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+          />
+        </label>
+        <label className="block text-sm font-semibold text-ink">
+          Xbox gamertag
+          <input
+            name="xboxGamertag"
+            defaultValue={user.xboxGamertag ?? ""}
+            placeholder="Optional"
+            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+          />
+        </label>
+
+        <div className="rounded-2xl border border-ink/10 bg-mist px-4 py-3 text-sm text-ink/70">
+          <p>
+            Handle: <span className="font-semibold text-ink">{user.handle}</span>
+          </p>
+          <p className="mt-1">
+            Email:{" "}
+            <span className="font-semibold text-ink">
+              {user.email ?? "Not set"}
+            </span>
+          </p>
+        </div>
+
+        <button
+          type="submit"
+          className="w-full rounded-full bg-ink px-4 py-2 text-sm font-semibold text-sand hover:bg-ink/90"
+        >
+          Save changes
+        </button>
+      </form>
+    </div>
+  );
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\app\signup\page.tsx
+```
+export default function SignupPage() {
+  return (
+    <div className="mx-auto w-full max-w-md px-6 py-12">
+      <h1 className="text-3xl font-semibold text-ink">Create account</h1>
+      <p className="mt-2 text-sm text-ink/70">
+        Create a profile with a unique handle to publish and request invites.
+      </p>
+
+      <form
+        action="/api/auth/signup"
+        method="post"
+        className="mt-6 space-y-4 rounded-3xl border border-ink/10 bg-sand p-6"
+      >
+        <label className="block text-sm font-semibold text-ink">
+          Handle
+          <input
+            name="handle"
+            type="text"
+            required
+            placeholder="unique-handle"
+            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+          />
+        </label>
+        <label className="block text-sm font-semibold text-ink">
+          Display name
+          <input
+            name="displayName"
+            type="text"
+            required
+            placeholder="Host or player name"
+            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+          />
+        </label>
+        <label className="block text-sm font-semibold text-ink">
+          Email (optional)
+          <input
+            name="email"
+            type="email"
+            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+          />
+        </label>
+        <label className="block text-sm font-semibold text-ink">
+          Steam name (optional)
+          <input
+            name="steamName"
+            type="text"
+            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+          />
+        </label>
+        <label className="block text-sm font-semibold text-ink">
+          Xbox gamertag (optional)
+          <input
+            name="xboxGamertag"
+            type="text"
+            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+          />
+        </label>
+        <button
+          type="submit"
+          className="w-full rounded-full bg-ink px-4 py-2 text-sm font-semibold text-sand hover:bg-ink/90"
+        >
+          Create account
+        </button>
+      </form>
+    </div>
+  );
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\components\BrowseView.tsx
+```
+import Link from "next/link";
+import { prisma } from "@/lib/db";
+import { formatEnum } from "@/lib/format";
+import { formatMinutesAgo } from "@/lib/time";
+import {
+  parseBoolean,
+  parseEnum,
+  parseStringArray,
+} from "@/lib/validation";
+import { Games, Platforms, Regions, Vibes, Voices } from "@/lib/types";
+
+type BrowseViewProps = {
+  searchParams?: Record<string, string | string[] | undefined>;
+};
+
+function getParam(value: string | string[] | undefined) {
+  if (Array.isArray(value)) {
+    return value[0];
+  }
+  return value;
+}
+
+export default async function BrowseView({ searchParams = {} }: BrowseViewProps) {
+  const dbReady = Boolean(process.env.DATABASE_URL);
+  const now = new Date();
+
+  const game = parseEnum(getParam(searchParams.game), Games);
+  const region = parseEnum(getParam(searchParams.region), Regions);
+  const platform = parseEnum(getParam(searchParams.platform), Platforms);
+  const voice = parseEnum(getParam(searchParams.voice), Voices);
+  const vibe = parseEnum(getParam(searchParams.vibe), Vibes);
+  const isModded = parseBoolean(getParam(searchParams.isModded));
+  const tags = parseStringArray(getParam(searchParams.tags));
+
+  const lobbies = dbReady
+    ? await prisma.lobby.findMany({
+        where: {
+          isActive: true,
+          expiresAt: { gt: now },
+          ...(game ? { game } : {}),
+          ...(region ? { region } : {}),
+          ...(platform ? { platform } : {}),
+          ...(voice ? { voice } : {}),
+          ...(vibe ? { vibe } : {}),
+          ...(typeof isModded === "boolean" ? { isModded } : {}),
+          ...(tags.length > 0 ? { tags: { hasSome: tags } } : {}),
+        },
+        orderBy: { lastHeartbeatAt: "desc" },
+        include: {
+          host: { select: { displayName: true } },
+        },
+      })
+    : [];
+
+  return (
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-12">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold text-ink">Browse lobbies</h1>
+          <p className="mt-2 text-sm text-ink/70">
+            Filters are opt-in. Only host-published lobbies appear here.
+          </p>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-ink/10 bg-mist p-4 text-sm text-ink/70">
+        <p className="font-semibold text-ink">
+          Not affiliated with Microsoft, Xbox, 343 Industries, or Halo.
+        </p>
+        <p className="mt-1">
+          This app coordinates opt-in invites only and does not interact with
+          MCC networking or game state.
+        </p>
+      </div>
+
+      <form className="grid gap-4 rounded-3xl border border-ink/10 bg-sand p-5 md:grid-cols-7">
+        <label className="text-xs font-semibold uppercase tracking-[0.3em] text-ink/60">
+          Game
+          <select
+            name="game"
+            defaultValue={game ?? ""}
+            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm text-ink"
+          >
+            <option value="">All</option>
+            {Games.map((value) => (
+              <option key={value} value={value}>
+                {formatEnum(value)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="text-xs font-semibold uppercase tracking-[0.3em] text-ink/60">
+          Region
+          <select
+            name="region"
+            defaultValue={region ?? ""}
+            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm text-ink"
+          >
+            <option value="">All</option>
+            {Regions.map((value) => (
+              <option key={value} value={value}>
+                {formatEnum(value)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="text-xs font-semibold uppercase tracking-[0.3em] text-ink/60">
+          Platform
+          <select
+            name="platform"
+            defaultValue={platform ?? ""}
+            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm text-ink"
+          >
+            <option value="">All</option>
+            {Platforms.map((value) => (
+              <option key={value} value={value}>
+                {formatEnum(value)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="text-xs font-semibold uppercase tracking-[0.3em] text-ink/60">
+          Modded
+          <select
+            name="isModded"
+            defaultValue={
+              typeof isModded === "boolean" ? String(isModded) : ""
+            }
+            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm text-ink"
+          >
+            <option value="">All</option>
+            <option value="true">Modded</option>
+            <option value="false">Vanilla</option>
+          </select>
+        </label>
+        <label className="text-xs font-semibold uppercase tracking-[0.3em] text-ink/60">
+          Mic
+          <select
+            name="voice"
+            defaultValue={voice ?? ""}
+            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm text-ink"
+          >
+            <option value="">All</option>
+            {Voices.map((value) => (
+              <option key={value} value={value}>
+                {formatEnum(value)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="text-xs font-semibold uppercase tracking-[0.3em] text-ink/60">
+          Vibe
+          <select
+            name="vibe"
+            defaultValue={vibe ?? ""}
+            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm text-ink"
+          >
+            <option value="">All</option>
+            {Vibes.map((value) => (
+              <option key={value} value={value}>
+                {formatEnum(value)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="text-xs font-semibold uppercase tracking-[0.3em] text-ink/60">
+          Tags
+          <input
+            name="tags"
+            defaultValue={getParam(searchParams.tags) ?? ""}
+            placeholder="chill, co-op"
+            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm text-ink"
+          />
+        </label>
+        <div className="md:col-span-7">
+          <button
+            type="submit"
+            className="w-full rounded-full bg-ink px-4 py-2 text-sm font-semibold text-sand hover:bg-ink/90"
+          >
+            Apply filters
+          </button>
+        </div>
+      </form>
+
+      {!dbReady && (
+        <div className="rounded-2xl border border-ink/10 bg-mist p-4 text-sm text-ink/70">
+          Configure <code className="font-semibold">DATABASE_URL</code> to load
+          live listings. Until then, the browse view stays empty.
+        </div>
+      )}
+
+      <div className="grid gap-5 md:grid-cols-2">
+        {lobbies.map((lobby) => (
+          <div
+            key={lobby.id}
+            className="rounded-2xl border border-ink/10 bg-sand p-5"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-semibold text-ink">
+                  {lobby.title}
+                </h2>
+                <p className="text-sm text-ink/60">
+                  {formatEnum(lobby.game)} · {lobby.mode} · {lobby.map}
+                </p>
+                <p className="text-xs uppercase tracking-[0.3em] text-ink/50">
+                  {formatEnum(lobby.region)}
+                </p>
+              </div>
+              <div className="flex flex-col items-end gap-2 text-xs">
+                {lobby.isModded && (
+                  <span className="rounded-full bg-clay/20 px-3 py-1 font-semibold text-ink">
+                    Modded
+                  </span>
+                )}
+                {lobby.voice === "MIC_REQUIRED" && (
+                  <span className="rounded-full bg-ink/10 px-3 py-1 font-semibold text-ink">
+                    Mic required
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-ink/60">
+              <span>{formatEnum(lobby.platform)}</span>
+              <span>•</span>
+              <span>{formatEnum(lobby.vibe)}</span>
+              {lobby.slotsTotal !== null && (
+                <>
+                  <span>•</span>
+                  <span>
+                    Slots {lobby.slotsOpen ?? "?"}/{lobby.slotsTotal}
+                  </span>
+                </>
+              )}
+            </div>
+            <div className="mt-3 flex items-center justify-between text-xs text-ink/60">
+              <span>{formatMinutesAgo(lobby.lastHeartbeatAt, now)}</span>
+              <Link
+                href={`/lobbies/${lobby.id}`}
+                className="rounded-full border border-ink/20 px-4 py-1.5 text-xs font-semibold text-ink hover:border-ink/40"
+              >
+                View lobby
+              </Link>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {lobbies.length === 0 && dbReady && (
+        <div className="rounded-2xl border border-ink/10 bg-mist p-6 text-sm text-ink/70">
+          No lobbies match those filters. Try clearing filters or check back
+          soon.
+        </div>
+      )}
+    </div>
+  );
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\components\DevChecklist.tsx
+```
+"use client";
+
+import { useEffect, useState } from "react";
+
+type ChecklistItem = {
+  id: string;
+  label: string;
+  hint?: string;
+};
+
+const ITEMS: ChecklistItem[] = [
+  {
+    id: "lobby-create",
+    label: "Lobby create → appears in browse immediately",
+    hint: "Create a lobby and confirm it shows on /.",
+  },
+  {
+    id: "lobby-expire",
+    label: "No heartbeat → lobby disappears after expiry window",
+    hint: "Wait 30 minutes or set expiresAt in DB to confirm.",
+  },
+  {
+    id: "lobby-heartbeat",
+    label: "Heartbeat extends expiry",
+    hint: "Use the Heartbeat button on /host.",
+  },
+  {
+    id: "rate-limit",
+    label: "Request invite rate limits trigger correctly",
+    hint: "Submit 6 requests in a minute and check 429.",
+  },
+  {
+    id: "sse",
+    label: "Host sees request appear live on dashboard via SSE",
+    hint: "Open /host in one tab, submit request in another.",
+  },
+  {
+    id: "accept-checklist",
+    label: "Host accept sets status and shows checklist modal",
+    hint: "Accept a pending request and ensure modal appears.",
+  },
+  {
+    id: "block",
+    label: "Host block prevents future requests",
+    hint: "Block a requester, then attempt another request.",
+  },
+  {
+    id: "modded-gate",
+    label: "Modded lobby enforces readiness gates before request",
+    hint: "Create modded lobby and ensure checkboxes gate submit.",
+  },
+  {
+    id: "reports",
+    label: "Reports create + appear in admin",
+    hint: "Report a lobby/user and confirm in /admin.",
+  },
+  {
+    id: "banned",
+    label: "Banned user cannot create lobbies or request invites",
+    hint: "Ban a user and retry API actions.",
+  },
+];
+
+const STORAGE_KEY = "mcc_dev_checklist";
+
+export default function DevChecklist() {
+  const [checked, setChecked] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      try {
+        setChecked(JSON.parse(stored));
+      } catch {
+        setChecked({});
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(checked));
+  }, [checked]);
+
+  function toggle(id: string) {
+    setChecked((prev) => ({ ...prev, [id]: !prev[id] }));
+  }
+
+  return (
+    <div className="space-y-6">
+      <section className="rounded-2xl border border-ink/10 bg-mist p-4 text-sm text-ink/70">
+        <p className="font-semibold text-ink">Dev-only checklist</p>
+        <p className="mt-1">
+          This page is only visible in development. Use it to validate MVP
+          behavior before release.
+        </p>
+      </section>
+
+      <section className="rounded-2xl border border-ink/10 bg-sand p-4">
+        <h2 className="text-sm font-semibold uppercase tracking-[0.3em] text-ink/60">
+          Quick links
+        </h2>
+        <div className="mt-3 flex flex-wrap gap-3 text-sm">
+          <a className="text-ink underline" href="/">
+            Browse
+          </a>
+          <a className="text-ink underline" href="/host">
+            Host dashboard
+          </a>
+          <a className="text-ink underline" href="/host/new">
+            Create lobby
+          </a>
+          <a className="text-ink underline" href="/admin">
+            Admin
+          </a>
+        </div>
+      </section>
+
+      <section className="space-y-3">
+        {ITEMS.map((item) => (
+          <label
+            key={item.id}
+            className="flex flex-col gap-2 rounded-2xl border border-ink/10 bg-sand p-4 text-sm text-ink/70"
+          >
+            <div className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                checked={Boolean(checked[item.id])}
+                onChange={() => toggle(item.id)}
+                className="mt-1 h-4 w-4 rounded border-ink/20"
+              />
+              <span className="font-semibold text-ink">{item.label}</span>
+            </div>
+            {item.hint && <span className="text-xs">{item.hint}</span>}
+          </label>
+        ))}
+      </section>
+    </div>
+  );
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\components\HostDashboard.tsx
+```
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import ReportForm from "./ReportForm";
+
+type LobbySummary = {
+  id: string;
+  title: string;
+  game: string;
+  mode: string;
+  map: string;
+  region: string;
+  platform: string;
+  voice: string;
+  vibe: string;
+  isActive: boolean;
+  isModded: boolean;
+  lastHeartbeatAt: string;
+  expiresAt: string;
+  slotsOpen: number | null;
+  slotsTotal: number | null;
+};
+
+type JoinRequestSummary = {
+  id: string;
+  requesterUserId: string;
+  requesterHandleText: string;
+  requesterPlatform: string;
+  note: string | null;
+  confirmedSubscribed: boolean;
+  confirmedEacOff: boolean;
+  status: "PENDING" | "ACCEPTED" | "DECLINED";
+  lobby: {
+    id: string;
+    title: string;
+    isModded: boolean;
+  };
+};
+
+type InviteChecklist = {
+  requester: {
+    platform: string;
+    handleText: string;
+  };
+  modded?: {
+    workshopCollectionUrl: string | null;
+    workshopItemUrls: string[];
+    requiresEacOff: boolean;
+    requesterConfirmedSubscribed: boolean;
+    requesterConfirmedEacOff: boolean;
+  };
+  steps: { id: string; label: string; copyText?: string }[];
+  copyStrings: Record<string, string>;
+};
+
+type HostDashboardProps = {
+  lobbies: LobbySummary[];
+  requests: JoinRequestSummary[];
+};
+
+function formatCountdown(dateString: string) {
+  const diffMs = new Date(dateString).getTime() - Date.now();
+  const minutes = Math.ceil(diffMs / 60000);
+  if (minutes <= 0) {
+    return "Expired";
+  }
+  return `Expires in ${minutes} min`;
+}
+
+function formatUpdated(dateString: string) {
+  const diffMs = Date.now() - new Date(dateString).getTime();
+  const minutes = Math.max(0, Math.floor(diffMs / 60000));
+  return minutes <= 0 ? "Updated just now" : `Updated ${minutes} min ago`;
+}
+
+export default function HostDashboard({ lobbies, requests }: HostDashboardProps) {
+  const [activeLobbies, setActiveLobbies] = useState<LobbySummary[]>(lobbies);
+  const [allRequests, setAllRequests] = useState<JoinRequestSummary[]>(requests);
+  const [tab, setTab] = useState<JoinRequestSummary["status"]>("PENDING");
+  const [checklist, setChecklist] = useState<InviteChecklist | null>(null);
+
+  const filteredRequests = useMemo(
+    () => allRequests.filter((request) => request.status === tab),
+    [allRequests, tab]
+  );
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      activeLobbies.forEach((lobby) => {
+        if (!lobby.isActive) return;
+        fetch(`/api/lobbies/${lobby.id}/heartbeat`, { method: "POST" })
+          .then((res) => (res.ok ? res.json() : null))
+          .then((data) => {
+            if (!data) return;
+            setActiveLobbies((prev) =>
+              prev.map((item) =>
+                item.id === lobby.id
+                  ? {
+                      ...item,
+                      lastHeartbeatAt: data.lastHeartbeatAt,
+                      expiresAt: data.expiresAt,
+                    }
+                  : item
+              )
+            );
+          })
+          .catch(() => {});
+      });
+    }, 5 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [activeLobbies]);
+
+  useEffect(() => {
+    const source = new EventSource("/api/host/events");
+
+    source.addEventListener("request_created", (event) => {
+      const payload = JSON.parse(
+        (event as MessageEvent).data
+      ) as JoinRequestSummary;
+      setAllRequests((prev) => [payload, ...prev]);
+    });
+
+    source.addEventListener("lobby_expired", (event) => {
+      const payload = JSON.parse((event as MessageEvent).data) as {
+        id: string;
+        expiresAt: string;
+      };
+      setActiveLobbies((prev) =>
+        prev.map((item) =>
+          item.id === payload.id
+            ? { ...item, isActive: false, expiresAt: payload.expiresAt }
+            : item
+        )
+      );
+    });
+
+    return () => {
+      source.close();
+    };
+  }, []);
+
+  async function sendHeartbeat(lobbyId: string) {
+    const response = await fetch(`/api/lobbies/${lobbyId}/heartbeat`, {
+      method: "POST",
+    });
+    if (!response.ok) return;
+    const data = (await response.json()) as LobbySummary;
+    setActiveLobbies((prev) =>
+      prev.map((item) => (item.id === lobbyId ? { ...item, ...data } : item))
+    );
+  }
+
+  async function closeLobby(lobbyId: string) {
+    const response = await fetch(`/api/lobbies/${lobbyId}/close`, {
+      method: "POST",
+    });
+    if (!response.ok) return;
+    const data = (await response.json()) as LobbySummary;
+    setActiveLobbies((prev) =>
+      prev.map((item) => (item.id === lobbyId ? { ...item, ...data } : item))
+    );
+  }
+
+  async function actOnRequest(
+    requestId: string,
+    action: "accept" | "decline" | "block"
+  ) {
+    const response = await fetch(`/api/requests/${requestId}/${action}`, {
+      method: "POST",
+    });
+    if (!response.ok) return;
+
+    if (action === "accept") {
+      const payload = (await response.json()) as InviteChecklist;
+      setChecklist(payload);
+    }
+
+    setAllRequests((prev) =>
+      prev.map((item) =>
+        item.id === requestId
+          ? { ...item, status: action === "accept" ? "ACCEPTED" : "DECLINED" }
+          : item
+      )
+    );
+  }
+
+  return (
+    <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+      <section className="rounded-3xl border border-ink/10 bg-sand p-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-ink">My Active Lobbies</h2>
+        </div>
+        <div className="mt-4 space-y-4">
+          {activeLobbies.length === 0 && (
+            <p className="text-sm text-ink/60">
+              You have no active lobbies yet.
+            </p>
+          )}
+          {activeLobbies.map((lobby) => (
+            <div
+              key={lobby.id}
+              className="rounded-2xl border border-ink/10 bg-mist p-4"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-ink">{lobby.title}</p>
+                  <p className="text-xs text-ink/60">
+                    {lobby.game} · {lobby.mode} · {lobby.map}
+                  </p>
+                  <p className="text-xs text-ink/50">
+                    {formatCountdown(lobby.expiresAt)} ·{" "}
+                    {formatUpdated(lobby.lastHeartbeatAt)}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => sendHeartbeat(lobby.id)}
+                    className="rounded-full border border-ink/20 px-3 py-1 text-xs font-semibold text-ink hover:border-ink/40"
+                  >
+                    Heartbeat
+                  </button>
+                  <a
+                    href={`/host/lobbies/${lobby.id}/edit`}
+                    className="rounded-full border border-ink/20 px-3 py-1 text-xs font-semibold text-ink hover:border-ink/40"
+                  >
+                    Edit
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => closeLobby(lobby.id)}
+                    className="rounded-full border border-clay/40 px-3 py-1 text-xs font-semibold text-clay hover:border-clay/60"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+              {lobby.slotsTotal !== null && (
+                <p className="mt-2 text-xs text-ink/60">
+                  Slots {lobby.slotsOpen ?? "?"}/{lobby.slotsTotal}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-ink/10 bg-sand p-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-ink">Join Requests</h2>
+        </div>
+        <div className="mt-3 flex gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-ink/50">
+          {(["PENDING", "ACCEPTED", "DECLINED"] as const).map((value) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setTab(value)}
+              className={`rounded-full px-3 py-1 ${
+                tab === value ? "bg-ink text-sand" : "bg-ink/10 text-ink"
+              }`}
+            >
+              {value}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-4 space-y-4">
+          {filteredRequests.length === 0 && (
+            <p className="text-sm text-ink/60">No requests in this tab.</p>
+          )}
+          {filteredRequests.map((request) => (
+            <div
+              key={request.id}
+              className="rounded-2xl border border-ink/10 bg-mist p-4 text-sm"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="font-semibold text-ink">
+                    {request.requesterHandleText} ·{" "}
+                    {request.requesterPlatform}
+                  </p>
+                  <p className="text-xs text-ink/60">
+                    Lobby: {request.lobby.title}
+                  </p>
+                </div>
+                {request.status === "PENDING" && (
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => actOnRequest(request.id, "accept")}
+                      className="rounded-full bg-ink px-3 py-1 text-xs font-semibold text-sand"
+                    >
+                      Accept
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => actOnRequest(request.id, "decline")}
+                      className="rounded-full border border-ink/20 px-3 py-1 text-xs font-semibold text-ink"
+                    >
+                      Decline
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => actOnRequest(request.id, "block")}
+                      className="rounded-full border border-clay/40 px-3 py-1 text-xs font-semibold text-clay"
+                    >
+                      Block
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div className="mt-2">
+                <ReportForm
+                  targetType="USER"
+                  targetId={request.requesterUserId}
+                  label="Report user"
+                  isSignedIn={true}
+                />
+              </div>
+              {request.note && (
+                <p className="mt-2 text-xs text-ink/70">{request.note}</p>
+              )}
+              {request.lobby.isModded && (
+                <div className="mt-3 text-xs text-ink/60">
+                  Mods: subscribed{" "}
+                  {request.confirmedSubscribed ? "yes" : "no"} · EAC off noted{" "}
+                  {request.confirmedEacOff ? "yes" : "no"}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {checklist && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4">
+          <div className="w-full max-w-lg rounded-3xl bg-sand p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-semibold text-ink">
+                  Invite checklist
+                </h3>
+                <p className="text-sm text-ink/70">
+                  {checklist.requester.handleText} ·{" "}
+                  {checklist.requester.platform}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setChecklist(null)}
+                className="text-sm text-ink/60"
+              >
+                Close
+              </button>
+            </div>
+
+            <ol className="mt-4 space-y-3 text-sm text-ink/70">
+              {checklist.steps.map((step) => (
+                <li key={step.id} className="rounded-2xl border border-ink/10 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <span>{step.label}</span>
+                    {step.copyText && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          navigator.clipboard.writeText(step.copyText ?? "")
+                        }
+                        className="rounded-full border border-ink/20 px-3 py-1 text-xs font-semibold text-ink"
+                      >
+                        Copy
+                      </button>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ol>
+
+            {checklist.modded && (
+              <div className="mt-4 rounded-2xl border border-ink/10 bg-mist p-3 text-xs text-ink/70">
+                <p className="font-semibold text-ink">Modded lobby</p>
+                {checklist.modded.workshopCollectionUrl && (
+                  <p className="mt-1">
+                    Collection: {checklist.modded.workshopCollectionUrl}
+                  </p>
+                )}
+                {checklist.modded.workshopItemUrls.length > 0 && (
+                  <p className="mt-1">
+                    Items: {checklist.modded.workshopItemUrls.length}
+                  </p>
+                )}
+                <p className="mt-1">
+                  EAC off may be required:{" "}
+                  {checklist.modded.requiresEacOff ? "yes" : "no"}
+                </p>
+              </div>
+            )}
+
+            <div className="mt-4 space-y-2 text-xs text-ink/60">
+              <p>{checklist.copyStrings.steamInstructions}</p>
+              <p>{checklist.copyStrings.xboxInstructions}</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\components\HostLobbyEditForm.tsx
+```
+"use client";
+
+import { useRouter } from "next/navigation";
+import HostLobbyForm from "./HostLobbyForm";
+
+type HostLobbyEditFormProps = {
+  lobbyId: string;
+  defaultValues: {
+    title: string;
+    game: string;
+    mode: string;
+    map: string;
+    region: string;
+    platform: string;
+    voice: string;
+    vibe: string;
+    tags: string[];
+    rulesNote: string;
+    slotsTotal: number | null;
+    slotsOpen: number | null;
+    friendsOnly: boolean;
+    isModded: boolean;
+    workshopCollectionUrl: string | null;
+    workshopItemUrls: string[];
+    requiresEacOff: boolean;
+    modNotes: string | null;
+  };
+};
+
+export default function HostLobbyEditForm({
+  lobbyId,
+  defaultValues,
+}: HostLobbyEditFormProps) {
+  const router = useRouter();
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const payload: Record<string, unknown> = Object.fromEntries(
+      formData.entries()
+    );
+    payload.friendsOnly = formData.get("friendsOnly") === "on";
+    payload.isModded = formData.get("isModded") === "on";
+    payload.requiresEacOff = formData.get("requiresEacOff") === "on";
+
+    const response = await fetch(`/api/lobbies/${lobbyId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (response.ok) {
+      router.push("/host");
+    }
+  }
+
+  return (
+    <HostLobbyForm
+      defaultValues={defaultValues}
+      submitLabel="Save changes"
+      onSubmit={handleSubmit}
+    />
+  );
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\components\HostLobbyForm.tsx
+```
+"use client";
+
+import { useMemo, useState } from "react";
+import { Games, Platforms, Regions, Vibes, Voices } from "@/lib/types";
+import TagsInput from "./TagsInput";
+
+type HostLobbyFormProps = {
+  defaultValues?: {
+    title?: string;
+    game?: string;
+    mode?: string;
+    map?: string;
+    region?: string;
+    platform?: string;
+    voice?: string;
+    vibe?: string;
+    tags?: string[];
+    rulesNote?: string;
+    slotsTotal?: number | null;
+    slotsOpen?: number | null;
+    friendsOnly?: boolean;
+    isModded?: boolean;
+    workshopCollectionUrl?: string | null;
+    workshopItemUrls?: string[];
+    requiresEacOff?: boolean;
+    modNotes?: string | null;
+  };
+  submitLabel?: string;
+  action?: string;
+  method?: "post" | "get";
+  onSubmit?: React.FormEventHandler<HTMLFormElement>;
+};
+
+export default function HostLobbyForm({
+  defaultValues,
+  submitLabel = "Publish lobby",
+  action = "/api/lobbies",
+  method = "post",
+  onSubmit,
+}: HostLobbyFormProps) {
+  const [isModded, setIsModded] = useState(
+    defaultValues?.isModded ?? false
+  );
+
+  const defaultTags = useMemo(() => defaultValues?.tags ?? [], [defaultValues]);
+
+  return (
+    <form
+      action={action}
+      method={method}
+      onSubmit={onSubmit}
+      className="mt-6 space-y-5 rounded-3xl border border-ink/10 bg-sand p-6"
+    >
+      <label className="block text-sm font-semibold text-ink">
+        Title
+        <input
+          name="title"
+          required
+          defaultValue={defaultValues?.title ?? ""}
+          className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+        />
+      </label>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <label className="block text-sm font-semibold text-ink">
+          Mode
+          <input
+            name="mode"
+            required
+            defaultValue={defaultValues?.mode ?? ""}
+            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+          />
+        </label>
+        <label className="block text-sm font-semibold text-ink">
+          Map
+          <input
+            name="map"
+            required
+            defaultValue={defaultValues?.map ?? ""}
+            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+          />
+        </label>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <label className="block text-sm font-semibold text-ink">
+          Game
+          <select
+            name="game"
+            defaultValue={defaultValues?.game ?? Games[0]}
+            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+          >
+            {Games.map((game) => (
+              <option key={game} value={game}>
+                {game}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block text-sm font-semibold text-ink">
+          Region
+          <select
+            name="region"
+            defaultValue={defaultValues?.region ?? Regions[0]}
+            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+          >
+            {Regions.map((region) => (
+              <option key={region} value={region}>
+                {region}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block text-sm font-semibold text-ink">
+          Platform
+          <select
+            name="platform"
+            defaultValue={defaultValues?.platform ?? Platforms[0]}
+            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+          >
+            {Platforms.map((platform) => (
+              <option key={platform} value={platform}>
+                {platform}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <label className="block text-sm font-semibold text-ink">
+          Voice
+          <select
+            name="voice"
+            defaultValue={defaultValues?.voice ?? Voices[0]}
+            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+          >
+            {Voices.map((voice) => (
+              <option key={voice} value={voice}>
+                {voice.replaceAll("_", " ")}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block text-sm font-semibold text-ink">
+          Vibe
+          <select
+            name="vibe"
+            defaultValue={defaultValues?.vibe ?? Vibes[0]}
+            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+          >
+            {Vibes.map((vibe) => (
+              <option key={vibe} value={vibe}>
+                {vibe.replaceAll("_", " ")}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <label className="block text-sm font-semibold text-ink">
+        Tags
+        <TagsInput name="tags" defaultTags={defaultTags} />
+      </label>
+
+      <label className="block text-sm font-semibold text-ink">
+        Rules note
+        <textarea
+          name="rulesNote"
+          required
+          rows={3}
+          defaultValue={defaultValues?.rulesNote ?? ""}
+          className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+        />
+      </label>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <label className="block text-sm font-semibold text-ink">
+          Slots total
+          <input
+            name="slotsTotal"
+            type="number"
+            min={2}
+            max={32}
+            defaultValue={defaultValues?.slotsTotal ?? ""}
+            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+          />
+        </label>
+        <label className="block text-sm font-semibold text-ink">
+          Slots open
+          <input
+            name="slotsOpen"
+            type="number"
+            min={0}
+            max={32}
+            defaultValue={defaultValues?.slotsOpen ?? ""}
+            className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+          />
+        </label>
+      </div>
+
+      <label className="flex items-center gap-3 text-sm font-semibold text-ink">
+        <input
+          name="friendsOnly"
+          type="checkbox"
+          defaultChecked={defaultValues?.friendsOnly ?? false}
+          className="h-4 w-4 rounded border-ink/20"
+        />
+        Friends only
+      </label>
+
+      <label className="flex items-center gap-3 text-sm font-semibold text-ink">
+        <input
+          name="isModded"
+          type="checkbox"
+          defaultChecked={defaultValues?.isModded ?? false}
+          onChange={(event) => setIsModded(event.target.checked)}
+          className="h-4 w-4 rounded border-ink/20"
+        />
+        Modded lobby
+      </label>
+
+      {isModded && (
+        <div className="rounded-2xl border border-ink/10 bg-mist p-4">
+          <label className="block text-sm font-semibold text-ink">
+            Workshop collection URL (recommended)
+            <input
+              name="workshopCollectionUrl"
+              defaultValue={defaultValues?.workshopCollectionUrl ?? ""}
+              className="mt-2 w-full rounded-xl border border-ink/10 bg-sand px-3 py-2 text-sm"
+            />
+          </label>
+          <label className="mt-4 block text-sm font-semibold text-ink">
+            Workshop item URLs (optional)
+            <textarea
+              name="workshopItemUrls"
+              rows={3}
+              defaultValue={(defaultValues?.workshopItemUrls ?? []).join("\n")}
+              className="mt-2 w-full rounded-xl border border-ink/10 bg-sand px-3 py-2 text-sm"
+            />
+          </label>
+          <label className="mt-4 flex items-center gap-3 text-sm font-semibold text-ink">
+            <input
+              name="requiresEacOff"
+              type="checkbox"
+              defaultChecked={defaultValues?.requiresEacOff ?? false}
+              className="h-4 w-4 rounded border-ink/20"
+            />
+            Host indicates EAC Off may be required
+          </label>
+          <label className="mt-4 block text-sm font-semibold text-ink">
+            Mod notes
+            <textarea
+              name="modNotes"
+              rows={3}
+              defaultValue={defaultValues?.modNotes ?? ""}
+              className="mt-2 w-full rounded-xl border border-ink/10 bg-sand px-3 py-2 text-sm"
+            />
+          </label>
+        </div>
+      )}
+
+      <button
+        type="submit"
+        className="w-full rounded-full bg-ink px-4 py-2 text-sm font-semibold text-sand hover:bg-ink/90"
+      >
+        {submitLabel}
+      </button>
+    </form>
+  );
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\components\LiveStatus.tsx
+```
+"use client";
+
+import { useEffect, useState } from "react";
+
+export default function LiveStatus() {
+  const [status, setStatus] = useState<"connecting" | "live" | "offline">(
+    "connecting"
+  );
+
+  useEffect(() => {
+    const source = new EventSource("/api/lobbies/stream");
+
+    source.addEventListener("ready", () => setStatus("live"));
+    source.addEventListener("error", () => setStatus("offline"));
+
+    return () => {
+      source.close();
+    };
+  }, []);
+
+  const label =
+    status === "live"
+      ? "Live updates connected"
+      : status === "offline"
+      ? "Live updates offline"
+      : "Connecting live updates…";
+
+  return (
+    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-ink/60">
+      <span
+        className={`h-2 w-2 rounded-full ${
+          status === "live"
+            ? "bg-moss"
+            : status === "offline"
+            ? "bg-clay"
+            : "bg-ink/30"
+        }`}
+      />
+      {label}
+    </div>
+  );
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\components\LobbyRequestForm.tsx
+```
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+
+type LobbyRequestFormProps = {
+  lobbyId: string;
+  isModded: boolean;
+  requiresEacOff: boolean;
+  workshopCollectionUrl: string | null;
+  workshopItemUrls: string[];
+  modNotes: string | null;
+  rulesNote: string;
+  tags: string[];
+  userSteamName: string | null;
+  userXboxGamertag: string | null;
+  isSignedIn: boolean;
+};
+
+export default function LobbyRequestForm({
+  lobbyId,
+  isModded,
+  requiresEacOff,
+  workshopCollectionUrl,
+  workshopItemUrls,
+  modNotes,
+  rulesNote,
+  tags,
+  userSteamName,
+  userXboxGamertag,
+  isSignedIn,
+}: LobbyRequestFormProps) {
+  const [platform, setPlatform] = useState<"STEAM" | "XBOX_FUTURE">("STEAM");
+  const [handleText, setHandleText] = useState("");
+  const [note, setNote] = useState("");
+  const [confirmedSubscribed, setConfirmedSubscribed] = useState(false);
+  const [confirmedEacOff, setConfirmedEacOff] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState("");
+
+  const defaultHandle = useMemo(() => {
+    return platform === "STEAM"
+      ? userSteamName ?? ""
+      : userXboxGamertag ?? "";
+  }, [platform, userSteamName, userXboxGamertag]);
+
+  useEffect(() => {
+    if (!handleText) {
+      setHandleText(defaultHandle);
+    }
+  }, [defaultHandle, handleText]);
+
+  const readinessOk = !isModded || (confirmedSubscribed && confirmedEacOff);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const response = await fetch(`/api/lobbies/${lobbyId}/requests`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requesterPlatform: platform,
+          requesterHandleText: handleText,
+          note,
+          confirmedSubscribed,
+          confirmedEacOff,
+        }),
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as
+          | { error?: string }
+          | null;
+        throw new Error(payload?.error || "Request failed.");
+      }
+
+      setSuccess(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Request failed.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (success) {
+    return (
+      <div className="rounded-2xl border border-ink/10 bg-mist p-6 text-sm text-ink/70">
+        <h3 className="text-lg font-semibold text-ink">
+          Request sent successfully
+        </h3>
+        <p className="mt-2">
+          Wait for the host to invite you via your selected platform.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-6 md:grid-cols-[1.05fr_0.95fr]">
+      <div className="rounded-2xl border border-ink/10 bg-sand p-6">
+        <h2 className="text-lg font-semibold text-ink">Lobby details</h2>
+        <p className="mt-2 text-sm text-ink/70">{rulesNote}</p>
+        {tags.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {tags.map((tag) => (
+              <span
+                key={tag}
+                className="rounded-full bg-ink/10 px-3 py-1 text-xs font-semibold text-ink"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {isModded && (
+          <div className="mt-6 rounded-2xl border border-ink/10 bg-mist p-4 text-sm text-ink/70">
+            <h3 className="text-sm font-semibold text-ink">Required Mods</h3>
+            {workshopCollectionUrl && (
+              <a
+                href={workshopCollectionUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 inline-flex items-center justify-center rounded-full bg-ink px-4 py-2 text-xs font-semibold text-sand hover:bg-ink/90"
+              >
+                Open Workshop Collection
+              </a>
+            )}
+            {workshopItemUrls.length > 0 && (
+              <ul className="mt-3 space-y-2">
+                {workshopItemUrls.map((link) => (
+                  <li key={link}>
+                    <a
+                      href={link}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-ink underline decoration-ink/30 underline-offset-4 hover:text-ink/80"
+                    >
+                      {link}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {modNotes && (
+              <p className="mt-3 rounded-xl border border-ink/10 bg-sand px-3 py-2 text-xs text-ink/70">
+                {modNotes}
+              </p>
+            )}
+            {requiresEacOff && (
+              <p className="mt-3 text-xs font-semibold text-ink/70">
+                Host indicates EAC Off may be required.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-2xl border border-ink/10 bg-sand p-6">
+        <h2 className="text-lg font-semibold text-ink">Request invite</h2>
+        <p className="mt-2 text-sm text-ink/70">
+          Hosts send invites outside the app. We only track the request.
+        </p>
+
+        {!isSignedIn ? (
+          <div className="mt-4 rounded-2xl border border-ink/10 bg-mist p-4 text-sm text-ink/70">
+            <p className="font-semibold text-ink">Sign in required</p>
+            <p className="mt-2">
+              You need an account to request an invite.
+            </p>
+            <a
+              href="/login"
+              className="mt-3 inline-flex rounded-full bg-ink px-4 py-2 text-xs font-semibold text-sand"
+            >
+              Sign in
+            </a>
+          </div>
+        ) : (
+          <>
+        {isModded && (
+          <div className="mt-4 rounded-2xl border border-ink/10 bg-mist px-4 py-3 text-xs text-ink/70">
+            <p className="text-sm font-semibold text-ink">
+              Readiness checklist
+            </p>
+            <label className="mt-3 flex items-start gap-2 text-sm text-ink">
+              <input
+                type="checkbox"
+                checked={confirmedSubscribed}
+                onChange={(event) => setConfirmedSubscribed(event.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-ink/20"
+              />
+              I&apos;ve subscribed to required mods
+            </label>
+            <label className="mt-2 flex items-start gap-2 text-sm text-ink">
+              <input
+                type="checkbox"
+                checked={confirmedEacOff}
+                onChange={(event) => setConfirmedEacOff(event.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-ink/20"
+              />
+              I understand EAC Off may be required
+            </label>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+          <label className="block text-sm font-semibold text-ink">
+            Platform
+            <select
+              name="requesterPlatform"
+              value={platform}
+              onChange={(event) =>
+                setPlatform(event.target.value as "STEAM" | "XBOX_FUTURE")
+              }
+              className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+            >
+              <option value="STEAM">STEAM</option>
+              <option value="XBOX_FUTURE">XBOX FUTURE</option>
+            </select>
+          </label>
+          <label className="block text-sm font-semibold text-ink">
+            Handle to invite
+            <input
+              name="requesterHandleText"
+              value={handleText}
+              onChange={(event) => setHandleText(event.target.value)}
+              placeholder="Steam name or gamertag"
+              className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+              required
+            />
+          </label>
+          <label className="block text-sm font-semibold text-ink">
+            Note (optional)
+            <textarea
+              name="note"
+              value={note}
+              onChange={(event) => setNote(event.target.value.slice(0, 200))}
+              rows={3}
+              maxLength={200}
+              placeholder="Availability, voice chat, or setup notes."
+              className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+            />
+            <span className="mt-1 block text-xs text-ink/50">
+              {note.length}/200
+            </span>
+          </label>
+          <p className="text-xs text-ink/60">
+            By requesting, you consent to the host contacting you via a platform
+            invite.
+          </p>
+          {error && <p className="text-xs text-clay">{error}</p>}
+          <button
+            type="submit"
+            disabled={!readinessOk || loading}
+            className="w-full rounded-full bg-ink px-4 py-2 text-sm font-semibold text-sand disabled:cursor-not-allowed disabled:bg-ink/40"
+          >
+            {loading ? "Sending request..." : "Submit request"}
+          </button>
+        </form>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\components\ReportForm.tsx
+```
+"use client";
+
+import { useState } from "react";
+
+type ReportFormProps = {
+  targetType: "USER" | "LOBBY" | "REQUEST";
+  targetId: string;
+  label: string;
+  isSignedIn: boolean;
+};
+
+const CATEGORIES = ["SPAM", "HARASSMENT", "IMPERSONATION", "OTHER"] as const;
+
+export default function ReportForm({
+  targetType,
+  targetId,
+  label,
+  isSignedIn,
+}: ReportFormProps) {
+  const [open, setOpen] = useState(false);
+  const [category, setCategory] = useState<(typeof CATEGORIES)[number]>("SPAM");
+  const [details, setDetails] = useState("");
+  const [status, setStatus] = useState<"idle" | "sent" | "error">("idle");
+
+  async function submitReport(event: React.FormEvent) {
+    event.preventDefault();
+    setStatus("idle");
+
+    try {
+      const response = await fetch("/api/reports", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetType, targetId, category, details }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed");
+      }
+      setStatus("sent");
+      setDetails("");
+      setOpen(false);
+    } catch {
+      setStatus("error");
+    }
+  }
+
+  if (!isSignedIn) {
+    return (
+      <a
+        href="/login"
+        className="text-xs font-semibold text-ink/60 underline decoration-ink/30"
+      >
+        Sign in to report
+      </a>
+    );
+  }
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className="text-xs font-semibold text-clay underline decoration-clay/40"
+      >
+        {label}
+      </button>
+      {open && (
+        <form onSubmit={submitReport} className="mt-3 space-y-2 text-xs">
+          <label className="block text-ink/70">
+            Category
+            <select
+              value={category}
+              onChange={(event) =>
+                setCategory(event.target.value as typeof category)
+              }
+              className="mt-1 w-full rounded-lg border border-ink/10 bg-mist px-2 py-1 text-sm"
+            >
+              {CATEGORIES.map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-ink/70">
+            Details
+            <textarea
+              value={details}
+              onChange={(event) => setDetails(event.target.value)}
+              rows={3}
+              required
+              className="mt-1 w-full rounded-lg border border-ink/10 bg-mist px-2 py-1 text-sm"
+            />
+          </label>
+          <div className="flex items-center gap-2">
+            <button
+              type="submit"
+              className="rounded-full bg-ink px-3 py-1 text-xs font-semibold text-sand"
+            >
+              Submit report
+            </button>
+            {status === "error" && (
+              <span className="text-xs text-clay">Try again.</span>
+            )}
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\components\SiteFooter.tsx
+```
+import Link from "next/link";
+
+export default function SiteFooter() {
+  return (
+    <footer className="border-t border-ink/10 bg-sand/70">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-10 text-sm text-ink/70">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <p className="text-base font-semibold text-ink">
+            Halo MCC Custom Games Invite Coordinator
+          </p>
+          <div className="flex items-center gap-4">
+            <Link href="/" className="hover:text-ink">
+              Browse
+            </Link>
+            <Link href="/host" className="hover:text-ink">
+              Host
+            </Link>
+            <Link href="/legal" className="hover:text-ink">
+              Legal
+            </Link>
+          </div>
+        </div>
+        <div className="rounded-2xl border border-ink/10 bg-sand px-4 py-3 text-ink">
+          <p className="font-semibold">
+            Not affiliated with Microsoft, Xbox, 343 Industries, or Halo.
+          </p>
+          <p className="text-sm text-ink/70">
+            This tool only coordinates invitations and provides helper actions.
+            It does not read game state, scan sessions, or send invites for you.
+          </p>
+        </div>
+        <p>
+          Lobbies are opt-in and only include what hosts explicitly publish.
+          Modded support is limited to metadata and Steam Workshop links.
+        </p>
+      </div>
+    </footer>
+  );
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\components\SiteHeader.tsx
+```
+import Link from "next/link";
+import type { SessionUser } from "@/lib/auth";
+
+type SiteHeaderProps = {
+  user: SessionUser | null;
+  isAdmin: boolean;
+};
+
+export default function SiteHeader({ user, isAdmin }: SiteHeaderProps) {
+  return (
+    <header className="border-b border-ink/10 bg-sand/80 backdrop-blur">
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-clay text-ink flex items-center justify-center font-semibold">
+            IC
+          </div>
+          <div>
+            <p className="text-sm uppercase tracking-[0.3em] text-ink/50">
+              Invite Coordinator
+            </p>
+            <p className="text-lg font-semibold text-ink">
+              Halo MCC Custom Games
+            </p>
+          </div>
+        </div>
+        <nav className="flex items-center gap-5 text-sm font-medium">
+          <Link href="/" className="hover:text-ink/80">
+            Browse
+          </Link>
+          <Link href="/host" className="hover:text-ink/80">
+            Host
+          </Link>
+          <Link href="/legal" className="hover:text-ink/80">
+            Legal
+          </Link>
+          {isAdmin && (
+            <Link href="/admin" className="hover:text-ink/80">
+              Admin
+            </Link>
+          )}
+          {user ? (
+            <>
+              <Link href="/settings/profile" className="hover:text-ink/80">
+                {user.displayName || "Profile"}
+              </Link>
+              <form action="/api/auth/logout" method="post">
+                <button
+                  type="submit"
+                  className="rounded-full border border-ink/20 px-4 py-1.5 text-ink hover:border-ink/40"
+                >
+                  Sign out
+                </button>
+              </form>
+            </>
+          ) : (
+            <>
+              <Link href="/login" className="hover:text-ink/80">
+                Sign in
+              </Link>
+              <Link
+                href="/signup"
+                className="rounded-full bg-ink px-4 py-1.5 text-sand hover:bg-ink/90"
+              >
+                Create account
+              </Link>
+            </>
+          )}
+        </nav>
+      </div>
+    </header>
+  );
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\components\TagsInput.tsx
+```
+"use client";
+
+import { useState } from "react";
+
+type TagsInputProps = {
+  name: string;
+  defaultTags?: string[];
+  placeholder?: string;
+};
+
+export default function TagsInput({
+  name,
+  defaultTags = [],
+  placeholder = "Add a tag and press Enter",
+}: TagsInputProps) {
+  const [tags, setTags] = useState<string[]>(defaultTags);
+  const [input, setInput] = useState("");
+
+  function addTag(value: string) {
+    const trimmed = value.trim();
+    if (!trimmed || tags.includes(trimmed)) {
+      return;
+    }
+    setTags((prev) => [...prev, trimmed]);
+  }
+
+  function removeTag(value: string) {
+    setTags((prev) => prev.filter((tag) => tag !== value));
+  }
+
+  function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Enter" || event.key === ",") {
+      event.preventDefault();
+      addTag(input);
+      setInput("");
+    }
+  }
+
+  return (
+    <div>
+      <div className="flex flex-wrap gap-2">
+        {tags.map((tag) => (
+          <button
+            key={tag}
+            type="button"
+            onClick={() => removeTag(tag)}
+            className="rounded-full bg-ink/10 px-3 py-1 text-xs font-semibold text-ink hover:bg-ink/20"
+          >
+            {tag} ×
+          </button>
+        ))}
+      </div>
+      <input type="hidden" name={name} value={tags.join(", ")} />
+      <input
+        type="text"
+        value={input}
+        onChange={(event) => setInput(event.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder}
+        className="mt-2 w-full rounded-xl border border-ink/10 bg-mist px-3 py-2 text-sm"
+      />
+      <p className="mt-1 text-xs text-ink/50">
+        Press Enter to add. Click a tag to remove.
+      </p>
+    </div>
+  );
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\lib\auth.ts
+```
+import { cookies } from "next/headers";
+import { createHmac, timingSafeEqual } from "crypto";
+import { redirect } from "next/navigation";
+import { prisma } from "./db";
+import type { User } from "@prisma/client";
+
+export type SessionUser = Pick<
+  User,
+  | "id"
+  | "email"
+  | "handle"
+  | "displayName"
+  | "steamName"
+  | "xboxGamertag"
+  | "reputationScore"
+  | "isBanned"
+>;
+
+const SESSION_COOKIE = "mcc_session";
+const SESSION_DAYS = 14;
+
+function getAuthSecret() {
+  const secret = process.env.AUTH_SECRET;
+  if (secret) {
+    return secret;
+  }
+  if (process.env.NODE_ENV !== "production") {
+    return "dev-auth-secret";
+  }
+  return "";
+}
+
+function signToken(payload: string) {
+  const secret = getAuthSecret();
+  if (!secret) {
+    return "";
+  }
+  return createHmac("sha256", secret).update(payload).digest("hex");
+}
+
+function safeEqual(a: string, b: string) {
+  const aBuf = Buffer.from(a);
+  const bBuf = Buffer.from(b);
+  if (aBuf.length !== bBuf.length) {
+    return false;
+  }
+  return timingSafeEqual(aBuf, bBuf);
+}
+
+export function createSessionToken(userId: string) {
+  const expiresAt = Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000;
+  const payload = `${userId}.${expiresAt}`;
+  const signature = signToken(payload);
+  if (!signature) {
+    return null;
+  }
+  return { token: `${payload}.${signature}`, expiresAt };
+}
+
+export function parseSessionToken(token: string | null) {
+  if (!token) {
+    return null;
+  }
+  const parts = token.split(".");
+  if (parts.length !== 3) {
+    return null;
+  }
+  const [userId, expiresAtRaw, signature] = parts;
+  const expiresAt = Number(expiresAtRaw);
+  if (!userId || !Number.isFinite(expiresAt)) {
+    return null;
+  }
+  if (Date.now() > expiresAt) {
+    return null;
+  }
+  const payload = `${userId}.${expiresAt}`;
+  const expected = signToken(payload);
+  if (!expected || !safeEqual(signature, expected)) {
+    return null;
+  }
+  return { userId, expiresAt };
+}
+
+export async function getCurrentUser(): Promise<SessionUser | null> {
+  if (!process.env.DATABASE_URL) {
+    return null;
+  }
+
+  const devUserId = process.env.DEV_USER_ID;
+  if (devUserId) {
+    return prisma.user.findUnique({
+      where: { id: devUserId },
+      select: {
+        id: true,
+        email: true,
+        handle: true,
+        displayName: true,
+        steamName: true,
+        xboxGamertag: true,
+        reputationScore: true,
+        isBanned: true,
+      },
+    });
+  }
+
+  const cookieValue = cookies().get(SESSION_COOKIE)?.value ?? null;
+  const parsed = parseSessionToken(cookieValue);
+  if (!parsed) {
+    return null;
+  }
+
+  return prisma.user.findUnique({
+    where: { id: parsed.userId },
+    select: {
+      id: true,
+      email: true,
+      handle: true,
+      displayName: true,
+      steamName: true,
+      xboxGamertag: true,
+      reputationScore: true,
+      isBanned: true,
+    },
+  });
+}
+
+export async function requireAuth() {
+  const user = await getCurrentUser();
+  if (!user) {
+    redirect("/login");
+  }
+  return user;
+}
+
+export function isAdminUser(user: SessionUser | null) {
+  if (!user || !user.email) {
+    return false;
+  }
+  const adminEmails = (process.env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+
+  return adminEmails.includes(user.email.toLowerCase());
+}
+
+export async function requireAdmin() {
+  const user = await requireAuth();
+  if (!isAdminUser(user)) {
+    redirect("/browse");
+  }
+  return user;
+}
+
+export function getSessionCookieName() {
+  return SESSION_COOKIE;
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\lib\db.ts
+```
+import { PrismaClient } from "@prisma/client";
+
+const globalForPrisma = global as unknown as { prisma?: PrismaClient };
+
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    log: ["error", "warn"],
+  });
+
+if (process.env.NODE_ENV !== "production") {
+  globalForPrisma.prisma = prisma;
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\lib\format.ts
+```
+export function formatEnum(value: string) {
+  return value.replaceAll("_", " ");
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\lib\host-events.ts
+```
+import { EventEmitter } from "events";
+
+type RequestCreatedPayload = {
+  hostUserId: string;
+  request: {
+    id: string;
+    requesterUserId: string;
+    requesterHandleText: string;
+    requesterPlatform: string;
+    note: string | null;
+    confirmedSubscribed: boolean;
+    confirmedEacOff: boolean;
+    status: "PENDING";
+    createdAt: string;
+    lobby: {
+      id: string;
+      title: string;
+      isModded: boolean;
+    };
+  };
+};
+
+type LobbyExpiredPayload = {
+  hostUserId: string;
+  lobby: {
+    id: string;
+    expiresAt: string;
+  };
+};
+
+type HostEventMap = {
+  request_created: RequestCreatedPayload;
+  lobby_expired: LobbyExpiredPayload;
+};
+
+const globalForEvents = global as unknown as { hostEvents?: EventEmitter };
+
+export const hostEvents =
+  globalForEvents.hostEvents ?? new EventEmitter();
+
+if (process.env.NODE_ENV !== "production") {
+  globalForEvents.hostEvents = hostEvents;
+}
+
+export function emitRequestCreated(payload: RequestCreatedPayload) {
+  hostEvents.emit("request_created", payload);
+}
+
+export function emitLobbyExpired(payload: LobbyExpiredPayload) {
+  hostEvents.emit("lobby_expired", payload);
+}
+
+export type { HostEventMap, RequestCreatedPayload, LobbyExpiredPayload };
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\lib\rate-limit.ts
+```
+import { prisma } from "./db";
+
+export async function isRateLimited(userId: string, key: string, max: number, windowMs: number) {
+  const since = new Date(Date.now() - windowMs);
+  const count = await prisma.rateLimitEvent.count({
+    where: {
+      userId,
+      key,
+      createdAt: { gt: since },
+    },
+  });
+  return count >= max;
+}
+
+export async function recordRateLimitEvent(userId: string, key: string) {
+  await prisma.rateLimitEvent.create({
+    data: { userId, key },
+  });
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\lib\time.ts
+```
+export function formatMinutesAgo(date: Date, now = new Date()) {
+  const diffMs = now.getTime() - date.getTime();
+  const minutes = Math.max(0, Math.floor(diffMs / 60000));
+  if (minutes <= 0) {
+    return "Updated just now";
+  }
+  return `Updated ${minutes} min ago`;
+}
+
+export function formatExpiresIn(date: Date, now = new Date()) {
+  const diffMs = date.getTime() - now.getTime();
+  const minutes = Math.ceil(diffMs / 60000);
+  if (minutes <= 0) {
+    return "Expired";
+  }
+  return `Expires in ${minutes} min`;
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\lib\types.ts
+```
+export const Games = ["H1", "H2", "H3", "ODST", "REACH", "H4"] as const;
+
+export type Game = (typeof Games)[number];
+
+export const Regions = ["NA", "EU", "OCE", "SA", "AS"] as const;
+
+export type Region = (typeof Regions)[number];
+
+export const Platforms = ["STEAM", "XBOX_FUTURE"] as const;
+
+export type Platform = (typeof Platforms)[number];
+
+export const Voices = ["MIC_REQUIRED", "MIC_OPTIONAL", "NO_MIC"] as const;
+
+export type Voice = (typeof Voices)[number];
+
+export const Vibes = ["CASUAL", "SWEATY", "CHAOS", "RP", "OTHER"] as const;
+
+export type Vibe = (typeof Vibes)[number];
+
+export const JoinRequestStatuses = ["PENDING", "ACCEPTED", "DECLINED"] as const;
+
+export type JoinRequestStatus = (typeof JoinRequestStatuses)[number];
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\lib\validation.ts
+```
+const CONTROL_CHARS = /[\u0000-\u001F\u007F]/g;
+
+export function normalizeHandleText(value: unknown, maxLength = 64) {
+  if (typeof value !== "string") {
+    return "";
+  }
+  return value
+    .replace(CONTROL_CHARS, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLength);
+}
+
+export function normalizeText(value: unknown, maxLength: number) {
+  if (typeof value !== "string") {
+    return "";
+  }
+  return value
+    .replace(CONTROL_CHARS, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLength);
+}
+
+export function parseBoolean(value: unknown) {
+  if (typeof value === "boolean") {
+    return value;
+  }
+  if (typeof value === "string") {
+    const normalized = value.toLowerCase();
+    if (["true", "1", "yes", "on"].includes(normalized)) {
+      return true;
+    }
+    if (["false", "0", "no", "off"].includes(normalized)) {
+      return false;
+    }
+  }
+  return undefined;
+}
+
+export function parseNumber(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
+}
+
+export function parseStringArray(value: unknown) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item));
+  }
+  if (typeof value === "string") {
+    return value
+      .split(/,|\n/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+export function parseEnum<T extends readonly string[]>(
+  value: unknown,
+  allowed: T
+) {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  return allowed.includes(value) ? (value as T[number]) : undefined;
+}
+
+export function clampInt(value: number | undefined, min: number, max: number) {
+  if (value === undefined) {
+    return undefined;
+  }
+  const rounded = Math.round(value);
+  if (rounded < min || rounded > max) {
+    return undefined;
+  }
+  return rounded;
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\next-env.d.ts
+```
+/// <reference types="next" />
+/// <reference types="next/image-types/global" />
+
+// NOTE: This file should not be edited
+// see https://nextjs.org/docs/app/building-your-application/configuring/typescript for more information.
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\next.config.mjs
+```
+/** @type {import('next').NextConfig} */
+const nextConfig = {};
+
+export default nextConfig;
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\package-lock.json
+```
 {
   "name": "halo-mcc-invite-coordinator",
   "version": "0.1.0",
@@ -6869,3 +11555,544 @@
     }
   }
 }
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\package.json
+```
+{
+  "name": "halo-mcc-invite-coordinator",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev"
+  },
+  "dependencies": {
+    "@prisma/client": "^7.3.0",
+    "next": "14.2.35",
+    "react": "^18",
+    "react-dom": "^18"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.35",
+    "postcss": "^8",
+    "prisma": "^7.3.0",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  }
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\postcss.config.mjs
+```
+/** @type {import('postcss-load-config').Config} */
+const config = {
+  plugins: {
+    tailwindcss: {},
+  },
+};
+
+export default config;
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\prisma\migrations\0001_init\migration.sql
+```
+-- CreateEnum
+CREATE TYPE "Game" AS ENUM ('H1', 'H2', 'H3', 'ODST', 'REACH', 'H4');
+
+-- CreateEnum
+CREATE TYPE "Region" AS ENUM ('NA', 'EU', 'OCE', 'SA', 'AS');
+
+-- CreateEnum
+CREATE TYPE "Platform" AS ENUM ('STEAM', 'XBOX_FUTURE');
+
+-- CreateEnum
+CREATE TYPE "Voice" AS ENUM ('MIC_REQUIRED', 'MIC_OPTIONAL', 'NO_MIC');
+
+-- CreateEnum
+CREATE TYPE "Vibe" AS ENUM ('CASUAL', 'SWEATY', 'CHAOS', 'RP', 'OTHER');
+
+-- CreateEnum
+CREATE TYPE "JoinRequestStatus" AS ENUM ('PENDING', 'ACCEPTED', 'DECLINED');
+
+-- CreateEnum
+CREATE TYPE "ReportTargetType" AS ENUM ('USER', 'LOBBY', 'REQUEST');
+
+-- CreateEnum
+CREATE TYPE "ReportCategory" AS ENUM ('SPAM', 'HARASSMENT', 'IMPERSONATION', 'OTHER');
+
+-- CreateEnum
+CREATE TYPE "ReportStatus" AS ENUM ('OPEN', 'RESOLVED', 'DISMISSED');
+
+-- CreateTable
+CREATE TABLE "User" (
+    "id" TEXT NOT NULL,
+    "email" TEXT,
+    "handle" TEXT NOT NULL,
+    "displayName" TEXT NOT NULL,
+    "steamName" TEXT,
+    "xboxGamertag" TEXT,
+    "reputationScore" INTEGER NOT NULL DEFAULT 0,
+    "isBanned" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Lobby" (
+    "id" TEXT NOT NULL,
+    "hostUserId" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "game" "Game" NOT NULL,
+    "mode" TEXT NOT NULL,
+    "map" TEXT NOT NULL,
+    "region" "Region" NOT NULL,
+    "platform" "Platform" NOT NULL,
+    "voice" "Voice" NOT NULL,
+    "vibe" "Vibe" NOT NULL,
+    "tags" TEXT[] NOT NULL,
+    "rulesNote" TEXT NOT NULL,
+    "friendsOnly" BOOLEAN NOT NULL DEFAULT false,
+    "slotsTotal" INTEGER,
+    "slotsOpen" INTEGER,
+    "isModded" BOOLEAN NOT NULL DEFAULT false,
+    "workshopCollectionUrl" TEXT,
+    "workshopItemUrls" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
+    "requiresEacOff" BOOLEAN NOT NULL DEFAULT false,
+    "modNotes" TEXT,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "lastHeartbeatAt" TIMESTAMP(3) NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Lobby_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "JoinRequest" (
+    "id" TEXT NOT NULL,
+    "lobbyId" TEXT NOT NULL,
+    "requesterUserId" TEXT NOT NULL,
+    "requesterPlatform" "Platform" NOT NULL,
+    "requesterHandleText" TEXT NOT NULL,
+    "note" TEXT,
+    "confirmedSubscribed" BOOLEAN NOT NULL DEFAULT false,
+    "confirmedEacOff" BOOLEAN NOT NULL DEFAULT false,
+    "status" "JoinRequestStatus" NOT NULL DEFAULT 'PENDING',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "decidedAt" TIMESTAMP(3),
+    "decidedByUserId" TEXT,
+
+    CONSTRAINT "JoinRequest_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Block" (
+    "id" TEXT NOT NULL,
+    "blockerUserId" TEXT NOT NULL,
+    "blockedUserId" TEXT NOT NULL,
+    "reason" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Block_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Report" (
+    "id" TEXT NOT NULL,
+    "reporterUserId" TEXT NOT NULL,
+    "targetType" "ReportTargetType" NOT NULL,
+    "targetId" TEXT NOT NULL,
+    "category" "ReportCategory" NOT NULL,
+    "details" TEXT NOT NULL,
+    "status" "ReportStatus" NOT NULL DEFAULT 'OPEN',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "resolvedAt" TIMESTAMP(3),
+    "resolvedByUserId" TEXT,
+
+    CONSTRAINT "Report_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "RateLimitEvent" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "key" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "RateLimitEvent_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_handle_key" ON "User"("handle");
+
+-- CreateIndex
+CREATE INDEX "lobbies_browse_idx" ON "Lobby"("isActive", "expiresAt", "region", "game", "platform");
+
+-- CreateIndex
+CREATE INDEX "join_requests_idx" ON "JoinRequest"("lobbyId", "status", "createdAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "blocks_blocker_blocked_key" ON "Block"("blockerUserId", "blockedUserId");
+
+-- CreateIndex
+CREATE INDEX "rate_limit_events_idx" ON "RateLimitEvent"("userId", "key", "createdAt");
+
+-- AddForeignKey
+ALTER TABLE "Lobby" ADD CONSTRAINT "Lobby_hostUserId_fkey" FOREIGN KEY ("hostUserId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "JoinRequest" ADD CONSTRAINT "JoinRequest_lobbyId_fkey" FOREIGN KEY ("lobbyId") REFERENCES "Lobby"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "JoinRequest" ADD CONSTRAINT "JoinRequest_requesterUserId_fkey" FOREIGN KEY ("requesterUserId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "JoinRequest" ADD CONSTRAINT "JoinRequest_decidedByUserId_fkey" FOREIGN KEY ("decidedByUserId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Block" ADD CONSTRAINT "Block_blockerUserId_fkey" FOREIGN KEY ("blockerUserId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Block" ADD CONSTRAINT "Block_blockedUserId_fkey" FOREIGN KEY ("blockedUserId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Report" ADD CONSTRAINT "Report_reporterUserId_fkey" FOREIGN KEY ("reporterUserId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Report" ADD CONSTRAINT "Report_resolvedByUserId_fkey" FOREIGN KEY ("resolvedByUserId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "RateLimitEvent" ADD CONSTRAINT "RateLimitEvent_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\prisma\schema.prisma
+```
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Game {
+  H1
+  H2
+  H3
+  ODST
+  REACH
+  H4
+}
+
+enum Region {
+  NA
+  EU
+  OCE
+  SA
+  AS
+}
+
+enum Platform {
+  STEAM
+  XBOX_FUTURE
+}
+
+enum Voice {
+  MIC_REQUIRED
+  MIC_OPTIONAL
+  NO_MIC
+}
+
+enum Vibe {
+  CASUAL
+  SWEATY
+  CHAOS
+  RP
+  OTHER
+}
+
+enum JoinRequestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+enum ReportTargetType {
+  USER
+  LOBBY
+  REQUEST
+}
+
+enum ReportCategory {
+  SPAM
+  HARASSMENT
+  IMPERSONATION
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
+model User {
+  id              String           @id @default(uuid())
+  email           String?          @unique
+  handle          String           @unique
+  displayName     String
+  steamName       String?
+  xboxGamertag    String?
+  reputationScore Int              @default(0)
+  isBanned        Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  hostedLobbies   Lobby[]          @relation("HostLobbies")
+  joinRequests    JoinRequest[]    @relation("RequesterJoinRequests")
+  decisions       JoinRequest[]    @relation("DeciderJoinRequests")
+  blocksInitiated Block[]          @relation("Blocker")
+  blocksReceived  Block[]          @relation("Blocked")
+  reportsFiled    Report[]         @relation("Reporter")
+  reportsResolved Report[]         @relation("Resolver")
+  rateLimitEvents RateLimitEvent[]
+}
+
+model Lobby {
+  id                     String       @id @default(uuid())
+  hostUserId             String
+  title                  String
+  game                   Game
+  mode                   String
+  map                    String
+  region                 Region
+  platform               Platform
+  voice                  Voice
+  vibe                   Vibe
+  tags                   String[]
+  rulesNote              String
+  friendsOnly            Boolean      @default(false)
+  slotsTotal             Int?
+  slotsOpen              Int?
+  isModded               Boolean      @default(false)
+  workshopCollectionUrl  String?
+  workshopItemUrls       String[]     @default([])
+  requiresEacOff         Boolean      @default(false)
+  modNotes               String?
+  isActive               Boolean      @default(true)
+  lastHeartbeatAt        DateTime
+  expiresAt              DateTime
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+  host                   User         @relation("HostLobbies", fields: [hostUserId], references: [id], onDelete: Cascade)
+  joinRequests           JoinRequest[]
+
+  @@index([isActive, expiresAt, region, game, platform], map: "lobbies_browse_idx")
+}
+
+model JoinRequest {
+  id                   String            @id @default(uuid())
+  lobbyId              String
+  requesterUserId      String
+  requesterPlatform    Platform
+  requesterHandleText  String
+  note                 String?
+  confirmedSubscribed  Boolean           @default(false)
+  confirmedEacOff      Boolean           @default(false)
+  status               JoinRequestStatus @default(PENDING)
+  createdAt            DateTime          @default(now())
+  decidedAt            DateTime?
+  decidedByUserId      String?
+  lobby                Lobby             @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
+  requester            User              @relation("RequesterJoinRequests", fields: [requesterUserId], references: [id], onDelete: Cascade)
+  decidedBy            User?             @relation("DeciderJoinRequests", fields: [decidedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([lobbyId, status, createdAt], map: "join_requests_idx")
+}
+
+model Block {
+  id            String   @id @default(uuid())
+  blockerUserId String
+  blockedUserId String
+  reason        String?
+  createdAt     DateTime @default(now())
+  blocker       User     @relation("Blocker", fields: [blockerUserId], references: [id], onDelete: Cascade)
+  blocked       User     @relation("Blocked", fields: [blockedUserId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerUserId, blockedUserId], map: "blocks_blocker_blocked_key")
+}
+
+model Report {
+  id              String           @id @default(uuid())
+  reporterUserId  String
+  targetType      ReportTargetType
+  targetId        String
+  category        ReportCategory
+  details         String
+  status          ReportStatus     @default(OPEN)
+  createdAt       DateTime         @default(now())
+  resolvedAt      DateTime?
+  resolvedByUserId String?
+  reporter        User             @relation("Reporter", fields: [reporterUserId], references: [id], onDelete: Cascade)
+  resolvedBy      User?            @relation("Resolver", fields: [resolvedByUserId], references: [id], onDelete: SetNull)
+}
+
+model RateLimitEvent {
+  id        String   @id @default(uuid())
+  userId    String
+  key       String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, key, createdAt], map: "rate_limit_events_idx")
+}
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\README.md
+```
+# Halo MCC Custom Games Invite Coordinator
+
+Opt-in lobby listings and invite request tracking for Halo MCC custom games.
+
+Not affiliated with Microsoft, Xbox, 343 Industries, or Halo.
+
+## Stack
+
+- Next.js 14 (App Router) + TypeScript
+- Tailwind CSS
+- Prisma ORM + Postgres
+- Auth: handle/email with signed session cookie
+- Realtime: Server-Sent Events (SSE)
+- Maintenance: cron cleanup endpoint
+
+## Local setup
+
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Configure environment variables:
+
+```bash
+cp .env.example .env
+```
+
+3. Update `DATABASE_URL`, `AUTH_SECRET`, and `ADMIN_EMAILS` in `.env`, then run migrations:
+
+```bash
+npx prisma migrate dev
+```
+
+4. Start the dev server:
+
+```bash
+npm run dev
+```
+
+## Routes
+
+- `/` onboarding + disclaimers
+- `/browse` browse listings
+- `/lobbies/[id]` lobby detail + invite request
+- `/host` host dashboard (host role required)
+- `/host/new` create lobby
+- `/settings/profile` profile settings
+- `/admin` admin moderation (admin role required)
+- `/legal` disclaimer + rules
+
+## Notes
+
+- Lobbies are opt-in and only include what hosts publish.
+- Modded support is metadata + Steam Workshop links only.
+- The app does not read MCC state, scan sessions, or send invites on your behalf.
+
+## Maintenance
+
+Run the cleanup job every 1–5 minutes via scheduler:
+
+```
+/api/cron/cleanup?secret=YOUR_CRON_SECRET
+```
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\tailwind.config.ts
+```
+import type { Config } from "tailwindcss";
+
+const config: Config = {
+  content: [
+    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./app/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        sand: "rgb(var(--sand) / <alpha-value>)",
+        ink: "rgb(var(--ink) / <alpha-value>)",
+        clay: "rgb(var(--clay) / <alpha-value>)",
+        moss: "rgb(var(--moss) / <alpha-value>)",
+        mist: "rgb(var(--mist) / <alpha-value>)",
+      },
+    },
+  },
+  plugins: [],
+};
+export default config;
+
+```
+
+## F:\HaloMCCModdedLobbyBrowser\tsconfig.json
+```
+{
+  "compilerOptions": {
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}
+
+```
+

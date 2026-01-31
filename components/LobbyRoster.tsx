@@ -55,35 +55,45 @@ export default function LobbyRoster({
       <div className="mt-4 space-y-2">
         {slots.map((slotNumber) => {
           const member = memberBySlot.get(slotNumber);
-          const hasMember = Boolean(member);
+          if (!member) {
+            return (
+              <div
+                key={`slot-${slotNumber}`}
+                className="flex h-10 items-center justify-between rounded-sm border border-white/10 px-3"
+                style={{
+                  backgroundColor: "rgba(0,0,0,0.35)",
+                  color: "rgba(255,255,255,0.45)",
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-sm bg-black/70 text-[11px] font-semibold text-white">
+                    {slotNumber}
+                  </div>
+                  <span className="text-sm font-semibold">Empty</span>
+                </div>
+              </div>
+            );
+          }
+
           return (
             <div
               key={`slot-${slotNumber}`}
               className="flex h-10 items-center justify-between rounded-sm border border-white/10 px-3"
-              style={
-                hasMember
-                  ? {
-                      backgroundColor: resolveNametagColor(
-                        member?.nametagColor
-                      ),
-                      color: nameplateTextColor(member?.nametagColor),
-                    }
-                  : {
-                      backgroundColor: "rgba(0,0,0,0.35)",
-                      color: "rgba(255,255,255,0.45)",
-                    }
-              }
+              style={{
+                backgroundColor: resolveNametagColor(member.nametagColor),
+                color: nameplateTextColor(member.nametagColor),
+              }}
             >
               <div className="flex items-center gap-3">
                 <div className="flex h-7 w-7 items-center justify-center rounded-sm bg-black/70 text-[11px] font-semibold text-white">
                   {slotNumber}
                 </div>
                 <span className="text-sm font-semibold">
-                  {hasMember ? member?.displayName : "Empty"}
+                  {member.displayName}
                 </span>
               </div>
               <div className="flex items-center gap-3">
-                {hasMember && viewerUserId && member?.userId !== viewerUserId && (
+                {viewerUserId && member.userId !== viewerUserId && (
                   <RosterFriendButton
                     targetUserId={member.userId}
                     initialState={
@@ -95,11 +105,9 @@ export default function LobbyRoster({
                     }
                   />
                 )}
-                {hasMember && (
-                  <div className="rounded-sm border border-white/20 bg-black/60 px-2 py-1 text-[10px] font-semibold text-white">
-                    SR{member?.srLevel}
-                  </div>
-                )}
+                <div className="rounded-sm border border-white/20 bg-black/60 px-2 py-1 text-[10px] font-semibold text-white">
+                  SR{member.srLevel}
+                </div>
               </div>
             </div>
           );

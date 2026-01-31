@@ -4,7 +4,7 @@ import { formatEnum } from "@/lib/format";
 import { formatMinutesAgo } from "@/lib/time";
 import { parseEnum, parseStringArray } from "@/lib/validation";
 import { Games, Regions, Vibes, Voices } from "@/lib/types";
-import { getSignedReadUrl } from "@/lib/lobby-images";
+import LobbyCardBackground from "@/components/LobbyCardBackground";
 
 type BrowseViewProps = {
   searchParams?: Record<string, string | string[] | undefined>;
@@ -46,28 +46,9 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
       })
     : [];
 
-  const imageUrls = new Map<string, string | null>();
-  if (dbReady) {
-    await Promise.all(
-      lobbies.map(async (lobby) => {
-        if (!lobby.mapImagePath) {
-          imageUrls.set(lobby.id, null);
-          return;
-        }
-        try {
-          const url = await getSignedReadUrl(lobby.mapImagePath);
-          imageUrls.set(lobby.id, url);
-        } catch {
-          imageUrls.set(lobby.id, null);
-        }
-      })
-    );
-  }
-
   const decoratedLobbies = lobbies.map((lobby) => ({
     ...lobby,
     slotsOpen: Math.max(0, lobby.slotsTotal - lobby._count.members),
-    mapImageUrl: imageUrls.get(lobby.id) ?? null,
   }));
 
   return (
@@ -184,26 +165,9 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
             key={lobby.id}
             className="relative overflow-hidden rounded-sm border border-ink/10 bg-sand p-5"
           >
-            <div
-              className="absolute inset-0 -z-10 bg-cover bg-center"
-              style={{
-                backgroundImage: `url(${
-                  lobby.mapImageUrl ?? "/images/map-placeholder.webp"
-                })`,
-              }}
-            />
-            <div
-              className={`absolute inset-0 -z-10 ${
-                lobby.mapImageUrl ? "bg-black/20" : "bg-[#081826]/65"
-              }`}
-            />
-            <div
-              className="absolute inset-0 -z-10"
-              style={{
-                background: lobby.mapImageUrl
-                  ? "radial-gradient(circle at 50% 20%, rgba(0,0,0,0.05), rgba(0,0,0,0.35) 70%)"
-                  : "radial-gradient(circle at 50% 20%, rgba(0,0,0,0.35), rgba(0,0,0,0.85) 70%)",
-              }}
+            <LobbyCardBackground
+              lobbyId={lobby.id}
+              hasImage={Boolean(lobby.mapImagePath)}
             />
             <div className="flex items-start justify-between gap-4">
               <div>

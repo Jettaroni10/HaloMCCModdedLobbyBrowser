@@ -11,7 +11,7 @@ type ChatMessage = {
   senderNametagColor?: string | null;
   body: string;
   createdAt: string;
-  status?: "sending" | "failed";
+  status?: "sending" | "failed" | "sent";
 };
 
 type LobbyChatProps = {

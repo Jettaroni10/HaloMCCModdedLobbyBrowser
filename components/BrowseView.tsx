@@ -178,7 +178,7 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
         </div>
       )}
 
-      <div className="grid gap-5 md:grid-cols-2">
+      <div className="flex flex-col gap-5">
         {decoratedLobbies.map((lobby) => (
           <div
             key={lobby.id}

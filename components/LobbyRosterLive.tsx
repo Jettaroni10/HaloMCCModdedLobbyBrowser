@@ -19,6 +19,7 @@ type LobbyRosterLiveProps = {
   friendIds?: string[];
   pendingIds?: string[];
   className?: string;
+  slotsTotal?: number;
 };
 
 export default function LobbyRosterLive({
@@ -28,6 +29,7 @@ export default function LobbyRosterLive({
   friendIds = [],
   pendingIds = [],
   className,
+  slotsTotal = 16,
 }: LobbyRosterLiveProps) {
   const [roster, setRoster] = useState<RosterMember[]>(initialRoster);
 
@@ -48,6 +50,7 @@ export default function LobbyRosterLive({
       friendIds={friendIds}
       pendingIds={pendingIds}
       className={className}
+      slotsTotal={slotsTotal}
     />
   );
 }

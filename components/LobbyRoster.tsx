@@ -17,6 +17,7 @@ type LobbyRosterProps = {
   friendIds?: string[];
   pendingIds?: string[];
   className?: string;
+  slotsTotal?: number;
 };
 
 export default function LobbyRoster({
@@ -25,40 +26,59 @@ export default function LobbyRoster({
   friendIds = [],
   pendingIds = [],
   className,
+  slotsTotal = 16,
 }: LobbyRosterProps) {
   const friendSet = new Set(friendIds);
   const pendingSet = new Set(pendingIds);
+  const rowHeight = 40;
+  const totalHeight = slotsTotal * rowHeight + 80;
+  const memberBySlot = new Map(
+    roster.map((member) => [member.slotNumber, member])
+  );
+  const slots = Array.from({ length: slotsTotal }, (_, index) => index + 1);
 
   return (
     <section
       className={`rounded-md border border-white/10 bg-black/40 p-6 backdrop-blur-sm ${
         className ?? ""
       }`}
+      style={{ height: totalHeight }}
     >
       <h2 className="text-xs font-semibold uppercase tracking-[0.4em] text-white/80">
         Roster
       </h2>
-      {roster.length === 0 ? (
-        <p className="mt-3 text-sm text-white/60">No members yet.</p>
-      ) : (
-        <div className="mt-4 space-y-2">
-          {roster.map((member) => (
+      <div className="mt-4 space-y-2">
+        {slots.map((slotNumber) => {
+          const member = memberBySlot.get(slotNumber);
+          const hasMember = Boolean(member);
+          return (
             <div
-              key={`${member.slotNumber}-${member.userId}`}
-              className="flex items-center justify-between rounded-sm border border-white/10 px-3 py-2"
-              style={{
-                backgroundColor: resolveNametagColor(member.nametagColor),
-                color: nameplateTextColor(member.nametagColor),
-              }}
+              key={`slot-${slotNumber}`}
+              className="flex h-10 items-center justify-between rounded-sm border border-white/10 px-3"
+              style={
+                hasMember
+                  ? {
+                      backgroundColor: resolveNametagColor(
+                        member?.nametagColor
+                      ),
+                      color: nameplateTextColor(member?.nametagColor),
+                    }
+                  : {
+                      backgroundColor: "rgba(0,0,0,0.35)",
+                      color: "rgba(255,255,255,0.45)",
+                    }
+              }
             >
               <div className="flex items-center gap-3">
                 <div className="flex h-7 w-7 items-center justify-center rounded-sm bg-black/70 text-[11px] font-semibold text-white">
-                  {member.slotNumber}
+                  {slotNumber}
                 </div>
-                <span className="text-sm font-semibold">{member.displayName}</span>
+                <span className="text-sm font-semibold">
+                  {hasMember ? member?.displayName : "Empty"}
+                </span>
               </div>
               <div className="flex items-center gap-3">
-                {viewerUserId && member.userId !== viewerUserId && (
+                {hasMember && viewerUserId && member?.userId !== viewerUserId && (
                   <RosterFriendButton
                     targetUserId={member.userId}
                     initialState={
@@ -70,14 +90,16 @@ export default function LobbyRoster({
                     }
                   />
                 )}
-                <div className="rounded-sm border border-white/20 bg-black/60 px-2 py-1 text-[10px] font-semibold text-white">
-                  SR{member.srLevel}
-                </div>
+                {hasMember && (
+                  <div className="rounded-sm border border-white/20 bg-black/60 px-2 py-1 text-[10px] font-semibold text-white">
+                    SR{member?.srLevel}
+                  </div>
+                )}
               </div>
             </div>
-          ))}
-        </div>
-      )}
+          );
+        })}
+      </div>
     </section>
   );
 }

@@ -9,7 +9,6 @@ import ReportForm from "@/components/ReportForm";
 import HostLobbyNotifications from "@/components/HostLobbyNotifications";
 import LobbyChat from "@/components/LobbyChat";
 import LobbyBackground from "@/components/LobbyBackground";
-import { resolveNametagColor } from "@/lib/reach-colors";
 
 type LobbyPageProps = {
   params: { id: string };
@@ -147,14 +146,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
                     {lobby.title}
                   </h1>
                   <p className="mt-2 text-sm text-white/70">
-                    Hosted by{" "}
-                    <span
-                      style={{
-                        color: resolveNametagColor(lobby.host.nametagColor),
-                      }}
-                    >
-                      {lobby.host.displayName}
-                    </span>
+                    Hosted by <span>{lobby.host.displayName}</span>
                   </p>
                 </div>
                 {lobby.isModded && (
@@ -210,7 +202,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
         </div>
 
         {canSeeRoster && (
-          <div className="mt-8 px-10 lg:mt-0 lg:fixed lg:right-10 lg:top-1/2 lg:w-[360px] lg:-translate-y-1/2">
+          <div className="mt-8 px-10 lg:mt-0 lg:fixed lg:right-10 lg:top-1/2 lg:w-[420px] lg:-translate-y-1/2">
             <LobbyRosterLive
               lobbyId={lobby.id}
               initialRoster={roster.map((member) => ({
@@ -226,6 +218,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
               viewerUserId={user?.id ?? null}
               friendIds={friendIds}
               pendingIds={pendingOutgoingIds}
+              slotsTotal={slotsTotal}
               className="border-white/10 bg-gradient-to-l from-black/60 via-black/35 to-transparent text-white backdrop-blur-sm"
             />
           </div>

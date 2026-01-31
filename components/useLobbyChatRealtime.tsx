@@ -62,7 +62,18 @@ export function useLobbyChatRealtime({
   const messageRef = useRef(onMessage);
   const typingStartRef = useRef(onTypingStart);
   const typingStopRef = useRef(onTypingStop);
-  const channelRef = useRef<any>(null);
+  type RealtimeChannel = {
+    subscribe: (
+      nameOrCallback:
+        | string
+        | ((message: { name?: string; data?: unknown }) => void),
+      callback?: (message: { name?: string; data?: unknown }) => void
+    ) => void;
+    unsubscribe: () => void;
+    publish: (name: string, data: unknown) => Promise<void>;
+  };
+
+  const channelRef = useRef<RealtimeChannel | null>(null);
   const clientRef = useRef<ReturnType<typeof createLobbyRealtimeClient> | null>(
     null
   );

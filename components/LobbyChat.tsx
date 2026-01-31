@@ -17,12 +17,14 @@ type LobbyChatProps = {
   lobbyId: string;
   viewerId: string;
   initialMessages: ChatMessage[];
+  className?: string;
 };
 
 export default function LobbyChat({
   lobbyId,
   viewerId,
   initialMessages,
+  className,
 }: LobbyChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [body, setBody] = useState("");
@@ -74,7 +76,11 @@ export default function LobbyChat({
   }
 
   return (
-    <section className="rounded-md border border-ink/10 bg-sand p-6">
+    <section
+      className={`rounded-md border border-ink/10 bg-sand p-6 ${
+        className ?? ""
+      }`}
+    >
       <h2 className="text-lg font-semibold text-ink">Lobby chat</h2>
       <div className="mt-4 max-h-80 space-y-3 overflow-y-auto rounded-sm border border-ink/10 bg-mist p-3 text-sm">
         {sortedMessages.length === 0 && (

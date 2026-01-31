@@ -18,6 +18,7 @@ type LobbyRosterLiveProps = {
   viewerUserId?: string | null;
   friendIds?: string[];
   pendingIds?: string[];
+  className?: string;
 };
 
 export default function LobbyRosterLive({
@@ -26,6 +27,7 @@ export default function LobbyRosterLive({
   viewerUserId,
   friendIds = [],
   pendingIds = [],
+  className,
 }: LobbyRosterLiveProps) {
   const [roster, setRoster] = useState<RosterMember[]>(initialRoster);
 
@@ -45,6 +47,7 @@ export default function LobbyRosterLive({
       viewerUserId={viewerUserId}
       friendIds={friendIds}
       pendingIds={pendingIds}
+      className={className}
     />
   );
 }

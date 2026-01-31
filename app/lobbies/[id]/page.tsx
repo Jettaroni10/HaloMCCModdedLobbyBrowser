@@ -8,7 +8,7 @@ import LobbyRosterLive from "@/components/LobbyRosterLive";
 import ReportForm from "@/components/ReportForm";
 import HostLobbyNotifications from "@/components/HostLobbyNotifications";
 import LobbyChat from "@/components/LobbyChat";
-import LobbyMapImage from "@/components/LobbyMapImage";
+import LobbyBackground from "@/components/LobbyBackground";
 import { resolveNametagColor } from "@/lib/reach-colors";
 
 type LobbyPageProps = {
@@ -128,109 +128,117 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
     })) ?? [];
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-6 py-12">
-      <HostLobbyNotifications enabled={isHost} />
-      <div className="rounded-md border border-ink/10 bg-mist p-8">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-xs uppercase tracking-[0.4em] text-ink/50">
-              Lobby
-            </p>
-            <h1 className="mt-2 text-3xl font-semibold text-ink">
-              {lobby.title}
-            </h1>
-            <p className="mt-2 text-sm text-ink/60">
-              Hosted by{" "}
-              <span
-                style={{
-                  color: resolveNametagColor(lobby.host.nametagColor),
-                }}
-              >
-                {lobby.host.displayName}
-              </span>
-            </p>
+    <div className="relative min-h-screen overflow-hidden">
+      <LobbyBackground lobbyId={lobby.id} />
+      <div className="relative z-10">
+        <div className="mx-auto w-full max-w-6xl px-6 py-10">
+          <HostLobbyNotifications enabled={isHost} />
+          <div className="flex flex-col gap-6 lg:max-w-2xl">
+            <div className="rounded-md border border-white/10 bg-gradient-to-r from-black/70 via-black/40 to-transparent p-6 text-white backdrop-blur-sm">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.4em] text-white/60">
+                    Lobby
+                  </p>
+                  <h1 className="mt-2 text-3xl font-semibold">
+                    {lobby.title}
+                  </h1>
+                  <p className="mt-2 text-sm text-white/70">
+                    Hosted by{" "}
+                    <span
+                      style={{
+                        color: resolveNametagColor(lobby.host.nametagColor),
+                      }}
+                    >
+                      {lobby.host.displayName}
+                    </span>
+                  </p>
+                </div>
+                {lobby.isModded && (
+                  <span className="rounded-sm bg-white/10 px-4 py-1 text-xs font-semibold text-white">
+                    Modded lobby
+                  </span>
+                )}
+              </div>
+              <p className="mt-4 text-sm text-white/70">
+                {lobby.mode} · {lobby.map}
+              </p>
+              <div className="mt-4 flex flex-wrap gap-3 text-xs uppercase tracking-[0.2em] text-white/60">
+                <span>{formatEnum(lobby.game)}</span>
+                <span>•</span>
+                <span>{formatEnum(lobby.region)}</span>
+                <span>•</span>
+                <span>{formatEnum(lobby.voice)}</span>
+                <span>•</span>
+                <span>{formatEnum(lobby.vibe)}</span>
+                <span>•</span>
+                <span>
+                  Slots {slotsOpen}/{slotsTotal}
+                </span>
+              </div>
+            </div>
+
+            {!isHost && (isMember || isAccepted) ? (
+              <LobbyMemberPanel lobbyId={lobby.id} />
+            ) : (
+              !isHost && (
+                <LobbyRequestForm
+                  lobbyId={lobby.id}
+                  requiresEacOff={lobby.requiresEacOff}
+                  workshopCollectionUrl={lobby.workshopCollectionUrl}
+                  workshopItemUrls={lobby.workshopItemUrls}
+                  modNotes={lobby.modNotes}
+                  rulesNote={lobby.rulesNote}
+                  tags={lobby.tags}
+                  userSteamName={user?.steamName ?? null}
+                  isSignedIn={Boolean(user)}
+                />
+              )
+            )}
           </div>
-          {lobby.isModded && (
-            <span className="rounded-sm bg-clay/20 px-4 py-1 text-xs font-semibold text-ink">
-              Modded lobby
-            </span>
-          )}
         </div>
-        <p className="mt-4 text-sm text-ink/70">
-          {lobby.mode} · {lobby.map}
-        </p>
-        <div className="mt-4 flex flex-wrap gap-3 text-xs uppercase tracking-[0.2em] text-ink/60">
-          <span>{formatEnum(lobby.game)}</span>
-          <span>•</span>
-          <span>{formatEnum(lobby.region)}</span>
-          <span>•</span>
-          <span>{formatEnum(lobby.voice)}</span>
-          <span>•</span>
-          <span>{formatEnum(lobby.vibe)}</span>
-          <span>•</span>
-          <span>
-            Slots {slotsOpen}/{slotsTotal}
-          </span>
-        </div>
-      </div>
 
-      <LobbyMapImage
-        lobbyId={lobby.id}
-        hasImage={Boolean(lobby.mapImagePath)}
-      />
+        {canSeeRoster && (
+          <div className="mt-8 px-6 lg:mt-0 lg:fixed lg:right-6 lg:top-1/2 lg:w-[340px] lg:-translate-y-1/2">
+            <LobbyRosterLive
+              lobbyId={lobby.id}
+              initialRoster={roster.map((member) => ({
+                slotNumber: member.slotNumber,
+                displayName:
+                  member.user.steamName ||
+                  member.user.handle ||
+                  member.user.displayName,
+                srLevel: member.user.srLevel ?? 1,
+                userId: member.userId,
+                nametagColor: member.user.nametagColor,
+              }))}
+              viewerUserId={user?.id ?? null}
+              friendIds={friendIds}
+              pendingIds={pendingOutgoingIds}
+              className="max-h-[70vh] overflow-y-auto border-white/10 bg-gradient-to-l from-black/70 via-black/40 to-transparent text-white backdrop-blur-sm"
+            />
+          </div>
+        )}
 
-      {canSeeRoster && (
-        <LobbyRosterLive
-          lobbyId={lobby.id}
-          initialRoster={roster.map((member) => ({
-            slotNumber: member.slotNumber,
-            displayName:
-              member.user.steamName ||
-              member.user.handle ||
-              member.user.displayName,
-            srLevel: member.user.srLevel ?? 1,
-            userId: member.userId,
-            nametagColor: member.user.nametagColor,
-          }))}
-          viewerUserId={user?.id ?? null}
-          friendIds={friendIds}
-          pendingIds={pendingOutgoingIds}
-        />
-      )}
+        {canChat && user && (
+          <div className="mt-8 px-6 pb-10 lg:fixed lg:bottom-6 lg:left-6 lg:max-w-xl lg:pb-0">
+            <LobbyChat
+              lobbyId={lobby.id}
+              viewerId={user.id}
+              initialMessages={initialMessages}
+              className="border-white/10 bg-gradient-to-b from-black/75 via-black/55 to-black/30 text-white backdrop-blur-sm"
+            />
+          </div>
+        )}
 
-      {canChat && user && (
-        <LobbyChat
-          lobbyId={lobby.id}
-          viewerId={user.id}
-          initialMessages={initialMessages}
-        />
-      )}
-
-      {!isHost && (isMember || isAccepted) ? (
-        <LobbyMemberPanel lobbyId={lobby.id} />
-      ) : (
-        !isHost && (
-          <LobbyRequestForm
-            lobbyId={lobby.id}
-            requiresEacOff={lobby.requiresEacOff}
-            workshopCollectionUrl={lobby.workshopCollectionUrl}
-            workshopItemUrls={lobby.workshopItemUrls}
-            modNotes={lobby.modNotes}
-            rulesNote={lobby.rulesNote}
-            tags={lobby.tags}
-            userSteamName={user?.steamName ?? null}
+        <div className="mx-auto mt-6 flex w-full max-w-6xl items-center justify-end px-6 pb-12">
+          <ReportForm
+            targetType="LOBBY"
+            targetId={lobby.id}
+            label="Report lobby"
             isSignedIn={Boolean(user)}
           />
-        )
-      )}
-
-      <div className="flex items-center justify-end">
-        <ReportForm
-          targetType="LOBBY"
-          targetId={lobby.id}
-          label="Report lobby"
-          isSignedIn={Boolean(user)}
-        />
+        </div>
       </div>
     </div>
   );

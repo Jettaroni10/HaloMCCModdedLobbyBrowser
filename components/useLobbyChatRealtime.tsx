@@ -132,7 +132,10 @@ export function useLobbyChatRealtime({
       }
       channelRef.current = null;
       try {
-        client.close();
+        const state = client.connection?.state;
+        if (state !== "closed" && state !== "closing") {
+          client.close();
+        }
       } catch {
         // Ignore close errors (e.g., already closed during fast refresh).
       }

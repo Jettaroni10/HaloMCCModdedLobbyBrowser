@@ -1,10 +1,7 @@
 "use client";
 
 import RosterFriendButton from "./RosterFriendButton";
-import {
-  nameplateTextColor,
-  resolveNametagColor,
-} from "@/lib/reach-colors";
+import { nameplateTextColor, resolveNametagColor } from "@/lib/reach-colors";
 
 type LobbyRosterMember = {
   slotNumber: number;
@@ -40,19 +37,17 @@ export default function LobbyRoster({
           {roster.map((member) => (
             <div
               key={`${member.slotNumber}-${member.userId}`}
-              className="flex items-center justify-between rounded-sm border border-ink/10 bg-mist px-3 py-2"
+              className="flex items-center justify-between rounded-sm border border-ink/10 px-3 py-2"
+              style={{
+                backgroundColor: resolveNametagColor(member.nametagColor),
+                color: nameplateTextColor(member.nametagColor),
+              }}
             >
               <div className="flex items-center gap-3">
                 <div className="flex h-7 w-7 items-center justify-center rounded-sm bg-ink text-[11px] font-semibold text-sand">
                   {member.slotNumber}
                 </div>
-                <span
-                  className="rounded-sm px-3 py-1 text-sm font-semibold"
-                  style={{
-                    backgroundColor: resolveNametagColor(member.nametagColor),
-                    color: nameplateTextColor(member.nametagColor),
-                  }}
-                >
+                <span className="text-sm font-semibold">
                   {member.displayName}
                 </span>
               </div>
@@ -69,7 +64,7 @@ export default function LobbyRoster({
                     }
                   />
                 )}
-                <div className="rounded-sm border border-ink/20 px-2 py-1 text-[10px] font-semibold text-ink">
+                <div className="rounded-sm border border-ink/20 px-2 py-1 text-[10px] font-semibold">
                   SR{member.srLevel}
                 </div>
               </div>

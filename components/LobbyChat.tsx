@@ -41,6 +41,13 @@ export default function LobbyChat({
   );
   const typingActive = useRef(false);
   const typingStopTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
+
+  const scrollToBottom = useCallback(() => {
+    const el = listRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -100,6 +107,7 @@ export default function LobbyChat({
       | null;
     if (!Array.isArray(data)) return;
     setMessages(data);
+    requestAnimationFrame(scrollToBottom);
   }, [lobbyId]);
 
   useEffect(() => {
@@ -115,6 +123,10 @@ export default function LobbyChat({
       clearInterval(interval);
     };
   }, [loadMessages]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [sortedMessages.length, scrollToBottom]);
 
   const sortedMessages = useMemo(
     () =>
@@ -236,7 +248,10 @@ export default function LobbyChat({
   return (
     <section className={`${baseClass} ${className ?? ""}`}>
       <h2 className="text-lg font-semibold text-white">Lobby chat</h2>
-      <div className="scrollbar-dark mt-4 max-h-80 space-y-3 overflow-y-auto rounded-sm border border-white/10 bg-black/30 p-3 text-sm text-white/80">
+      <div
+        ref={listRef}
+        className="scrollbar-dark mt-4 max-h-80 space-y-3 overflow-y-auto rounded-sm border border-white/10 bg-black/30 p-3 text-sm text-white/80"
+      >
         {sortedMessages.length === 0 && (
           <p className="text-xs text-white/60">No messages yet.</p>
         )}

@@ -31,22 +31,24 @@ export default function LobbyRoster({
 
   return (
     <section
-      className={`rounded-md border border-ink/10 bg-sand p-6 ${
+      className={`rounded-md border border-white/10 bg-black/40 p-6 backdrop-blur-sm ${
         className ?? ""
       }`}
     >
-      <h2 className="text-lg font-semibold text-ink">Roster</h2>
+      <h2 className="text-xs font-semibold uppercase tracking-[0.4em] text-white/80">
+        Roster
+      </h2>
       {roster.length === 0 ? (
-        <p className="mt-3 text-sm text-ink/60">No members yet.</p>
+        <p className="mt-3 text-sm text-white/60">No members yet.</p>
       ) : (
         <div className="mt-4 space-y-2">
           {roster.map((member) => (
             <div
               key={`${member.slotNumber}-${member.userId}`}
-              className="flex items-center justify-between rounded-sm border border-white/10 bg-white/5 px-3 py-2"
+              className="flex items-center justify-between rounded-sm border border-white/10 bg-black/35 px-3 py-2 transition hover:bg-black/50"
             >
               <div className="flex items-center gap-3">
-                <div className="flex h-7 w-7 items-center justify-center rounded-sm bg-ink text-[11px] font-semibold text-sand">
+                <div className="flex h-7 w-7 items-center justify-center rounded-sm bg-black/70 text-[11px] font-semibold text-white">
                   {member.slotNumber}
                 </div>
                 <span
@@ -71,7 +73,7 @@ export default function LobbyRoster({
                     }
                   />
                 )}
-                <div className="rounded-sm border border-white/20 px-2 py-1 text-[10px] font-semibold text-white">
+                <div className="rounded-sm border border-white/20 bg-black/60 px-2 py-1 text-[10px] font-semibold text-white">
                   SR{member.srLevel}
                 </div>
               </div>

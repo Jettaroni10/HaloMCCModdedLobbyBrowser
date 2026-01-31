@@ -129,18 +129,21 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
-      <LobbyBackground lobbyId={lobby.id} />
+      <LobbyBackground
+        lobbyId={lobby.id}
+        hasRealImage={Boolean(lobby.mapImagePath)}
+      />
       <div className="relative z-10">
-        <div className="mx-auto w-full max-w-6xl px-6 py-10">
+        <div className="mx-auto w-full max-w-6xl px-10 py-8">
           <HostLobbyNotifications enabled={isHost} />
           <div className="flex flex-col gap-6 lg:max-w-2xl">
-            <div className="rounded-md border border-white/10 bg-gradient-to-r from-black/70 via-black/40 to-transparent p-6 text-white backdrop-blur-sm">
+            <div className="rounded-md border border-white/10 bg-gradient-to-r from-black/70 via-black/40 to-transparent p-7 text-white backdrop-blur-sm">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <p className="text-xs uppercase tracking-[0.4em] text-white/60">
                     Lobby
                   </p>
-                  <h1 className="mt-2 text-3xl font-semibold">
+                  <h1 className="mt-2 text-4xl font-semibold">
                     {lobby.title}
                   </h1>
                   <p className="mt-2 text-sm text-white/70">
@@ -163,7 +166,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
               <p className="mt-4 text-sm text-white/70">
                 {lobby.mode} · {lobby.map}
               </p>
-              <div className="mt-4 flex flex-wrap gap-3 text-xs uppercase tracking-[0.2em] text-white/60">
+              <div className="mt-3 flex flex-wrap gap-3 text-xs uppercase tracking-[0.25em] text-white/60">
                 <span>{formatEnum(lobby.game)}</span>
                 <span>•</span>
                 <span>{formatEnum(lobby.region)}</span>
@@ -175,6 +178,14 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
                 <span>
                   Slots {slotsOpen}/{slotsTotal}
                 </span>
+              </div>
+              <div className="mt-4">
+                <ReportForm
+                  targetType="LOBBY"
+                  targetId={lobby.id}
+                  label="Report lobby"
+                  isSignedIn={Boolean(user)}
+                />
               </div>
             </div>
 
@@ -199,7 +210,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
         </div>
 
         {canSeeRoster && (
-          <div className="mt-8 px-6 lg:mt-0 lg:fixed lg:right-6 lg:top-1/2 lg:w-[340px] lg:-translate-y-1/2">
+          <div className="mt-8 px-10 lg:mt-0 lg:fixed lg:right-10 lg:top-1/2 lg:w-[360px] lg:-translate-y-1/2">
             <LobbyRosterLive
               lobbyId={lobby.id}
               initialRoster={roster.map((member) => ({
@@ -215,13 +226,13 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
               viewerUserId={user?.id ?? null}
               friendIds={friendIds}
               pendingIds={pendingOutgoingIds}
-              className="max-h-[70vh] overflow-y-auto border-white/10 bg-gradient-to-l from-black/70 via-black/40 to-transparent text-white backdrop-blur-sm"
+              className="max-h-[70vh] overflow-y-auto border-white/10 bg-gradient-to-l from-black/60 via-black/35 to-transparent text-white backdrop-blur-sm"
             />
           </div>
         )}
 
         {canChat && user && (
-          <div className="mt-8 px-6 pb-10 lg:fixed lg:bottom-6 lg:left-6 lg:max-w-xl lg:pb-0">
+          <div className="mt-8 px-10 pb-10 lg:fixed lg:bottom-8 lg:left-10 lg:w-[520px] lg:max-w-[45vw] lg:pb-0">
             <LobbyChat
               lobbyId={lobby.id}
               viewerId={user.id}
@@ -230,15 +241,6 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
             />
           </div>
         )}
-
-        <div className="mx-auto mt-6 flex w-full max-w-6xl items-center justify-end px-6 pb-12">
-          <ReportForm
-            targetType="LOBBY"
-            targetId={lobby.id}
-            label="Report lobby"
-            isSignedIn={Boolean(user)}
-          />
-        </div>
       </div>
     </div>
   );

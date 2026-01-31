@@ -75,16 +75,15 @@ export default function LobbyChat({
     }
   }
 
+  const baseClass =
+    "rounded-md border border-white/10 bg-black/40 p-6 backdrop-blur-sm";
+
   return (
-    <section
-      className={`rounded-md border border-ink/10 bg-sand p-6 ${
-        className ?? ""
-      }`}
-    >
-      <h2 className="text-lg font-semibold text-ink">Lobby chat</h2>
-      <div className="mt-4 max-h-80 space-y-3 overflow-y-auto rounded-sm border border-ink/10 bg-mist p-3 text-sm">
+    <section className={`${baseClass} ${className ?? ""}`}>
+      <h2 className="text-lg font-semibold text-white">Lobby chat</h2>
+      <div className="mt-4 max-h-80 space-y-3 overflow-y-auto rounded-sm border border-white/10 bg-black/30 p-3 text-sm text-white/80">
         {sortedMessages.length === 0 && (
-          <p className="text-xs text-ink/60">No messages yet.</p>
+          <p className="text-xs text-white/60">No messages yet.</p>
         )}
         {sortedMessages.map((message) => {
           const time = new Date(message.createdAt).toLocaleTimeString([], {
@@ -94,11 +93,11 @@ export default function LobbyChat({
           return (
             <div
               key={message.id}
-              className={`rounded-sm border border-ink/10 px-3 py-2 ${
-                message.senderUserId === viewerId ? "bg-sand" : "bg-mist"
+              className={`rounded-sm border border-white/10 px-3 py-2 ${
+                message.senderUserId === viewerId ? "bg-black/30" : "bg-black/20"
               }`}
             >
-              <div className="flex items-center justify-between text-xs text-ink/60">
+              <div className="flex items-center justify-between text-xs text-white/60">
                 <span
                   className="font-semibold"
                   style={{
@@ -109,7 +108,7 @@ export default function LobbyChat({
                 </span>
                 <span>{time}</span>
               </div>
-              <p className="mt-1 text-sm text-ink/80">{message.body}</p>
+              <p className="mt-1 text-sm text-white/80">{message.body}</p>
             </div>
           );
         })}
@@ -120,12 +119,12 @@ export default function LobbyChat({
           value={body}
           onChange={(event) => setBody(event.target.value)}
           placeholder="Send a message"
-          className="flex-1 rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
+          className="flex-1 rounded-sm border border-white/10 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-white/40"
         />
         <button
           type="submit"
           disabled={sending}
-          className="rounded-sm bg-ink px-4 py-2 text-sm font-semibold text-sand disabled:opacity-60"
+          className="rounded-sm bg-white/15 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
         >
           {sending ? "Sending..." : "Send"}
         </button>

@@ -124,10 +124,6 @@ export default function LobbyChat({
     };
   }, [loadMessages]);
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [sortedMessages.length, scrollToBottom]);
-
   const sortedMessages = useMemo(
     () =>
       [...messages].sort(
@@ -135,6 +131,10 @@ export default function LobbyChat({
       ),
     [messages]
   );
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [sortedMessages.length, scrollToBottom]);
 
   async function handleSend(
     event: React.FormEvent<HTMLFormElement>,

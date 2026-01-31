@@ -106,11 +106,20 @@ export function useLobbyChatRealtime({
     };
 
     const safeSubscribe = (
-      fn: () => void,
+      fn: () => void | Promise<unknown>,
       label: string
     ) => {
       try {
-        fn();
+        const result = fn();
+        if (result && typeof (result as Promise<unknown>).catch === "function") {
+          (result as Promise<unknown>).catch((error) => {
+            console.warn("Ably subscribe failed", {
+              lobbyId,
+              label,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          });
+        }
       } catch (error) {
         console.warn("Ably subscribe failed", {
           lobbyId,
@@ -126,8 +135,20 @@ export function useLobbyChatRealtime({
 
     return () => {
       try {
-        channel.unsubscribe();
-        typingChannel.unsubscribe();
+        const unsubscribeResult = channel.unsubscribe();
+        if (
+          unsubscribeResult &&
+          typeof (unsubscribeResult as Promise<unknown>).catch === "function"
+        ) {
+          (unsubscribeResult as Promise<unknown>).catch(() => {});
+        }
+        const typingUnsub = typingChannel.unsubscribe();
+        if (
+          typingUnsub &&
+          typeof (typingUnsub as Promise<unknown>).catch === "function"
+        ) {
+          (typingUnsub as Promise<unknown>).catch(() => {});
+        }
       } catch {
         // ignore
       }

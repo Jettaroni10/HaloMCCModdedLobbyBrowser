@@ -135,20 +135,8 @@ export function useLobbyChatRealtime({
 
     return () => {
       try {
-        const unsubscribeResult = channel.unsubscribe();
-        if (
-          unsubscribeResult &&
-          typeof (unsubscribeResult as Promise<unknown>).catch === "function"
-        ) {
-          (unsubscribeResult as Promise<unknown>).catch(() => {});
-        }
-        const typingUnsub = typingChannel.unsubscribe();
-        if (
-          typingUnsub &&
-          typeof (typingUnsub as Promise<unknown>).catch === "function"
-        ) {
-          (typingUnsub as Promise<unknown>).catch(() => {});
-        }
+        channel.unsubscribe();
+        typingChannel.unsubscribe();
       } catch {
         // ignore
       }

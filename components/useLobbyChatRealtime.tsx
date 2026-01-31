@@ -104,13 +104,32 @@ export function useLobbyChatRealtime({
       typingStopRef.current?.(message.data);
     };
 
-    channel.subscribe(handleMessage);
-    typingChannel.subscribe(handleTypingStart);
-    typingChannel.subscribe(handleTypingStop);
+    const safeSubscribe = (
+      fn: () => void,
+      label: string
+    ) => {
+      try {
+        fn();
+      } catch (error) {
+        console.warn("Ably subscribe failed", {
+          lobbyId,
+          label,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    };
+
+    safeSubscribe(() => channel.subscribe(handleMessage), "message");
+    safeSubscribe(() => typingChannel.subscribe(handleTypingStart), "typing:start");
+    safeSubscribe(() => typingChannel.subscribe(handleTypingStop), "typing:stop");
 
     return () => {
-      channel.unsubscribe();
-      typingChannel.unsubscribe();
+      try {
+        channel.unsubscribe();
+        typingChannel.unsubscribe();
+      } catch {
+        // ignore
+      }
       channelRef.current = null;
       try {
         client.close();
@@ -126,9 +145,17 @@ export function useLobbyChatRealtime({
       const client = clientRef.current;
       if (!client) return;
       const event = state === "start" ? "typing:start" : "typing:stop";
-      await client.channels
-        .get(`lobby:${lobbyId}:typing`)
-        .publish(event, payload);
+      try {
+        await client.channels
+          .get(`lobby:${lobbyId}:typing`)
+          .publish(event, payload);
+      } catch (error) {
+        console.warn("Ably typing publish failed", {
+          lobbyId,
+          event,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     },
     [lobbyId]
   );

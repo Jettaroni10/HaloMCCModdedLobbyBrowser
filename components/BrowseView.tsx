@@ -2,11 +2,9 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { formatEnum } from "@/lib/format";
 import { formatMinutesAgo } from "@/lib/time";
-import {
-  parseEnum,
-  parseStringArray,
-} from "@/lib/validation";
+import { parseEnum, parseStringArray } from "@/lib/validation";
 import { Games, Regions, Vibes, Voices } from "@/lib/types";
+import { getSignedReadUrl } from "@/lib/lobby-images";
 
 type BrowseViewProps = {
   searchParams?: Record<string, string | string[] | undefined>;
@@ -48,9 +46,28 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
       })
     : [];
 
+  const imageUrls = new Map<string, string | null>();
+  if (dbReady) {
+    await Promise.all(
+      lobbies.map(async (lobby) => {
+        if (!lobby.mapImagePath) {
+          imageUrls.set(lobby.id, null);
+          return;
+        }
+        try {
+          const url = await getSignedReadUrl(lobby.mapImagePath);
+          imageUrls.set(lobby.id, url);
+        } catch {
+          imageUrls.set(lobby.id, null);
+        }
+      })
+    );
+  }
+
   const decoratedLobbies = lobbies.map((lobby) => ({
     ...lobby,
     slotsOpen: Math.max(0, lobby.slotsTotal - lobby._count.members),
+    mapImageUrl: imageUrls.get(lobby.id) ?? null,
   }));
 
   return (
@@ -165,34 +182,55 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
         {decoratedLobbies.map((lobby) => (
           <div
             key={lobby.id}
-            className="rounded-sm border border-ink/10 bg-sand p-5"
+            className="relative overflow-hidden rounded-sm border border-ink/10 bg-sand p-5"
           >
+            <div
+              className="absolute inset-0 -z-10 bg-cover bg-center"
+              style={{
+                backgroundImage: `url(${
+                  lobby.mapImageUrl ?? "/images/map-placeholder.webp"
+                })`,
+              }}
+            />
+            <div
+              className={`absolute inset-0 -z-10 ${
+                lobby.mapImageUrl ? "bg-black/20" : "bg-[#081826]/65"
+              }`}
+            />
+            <div
+              className="absolute inset-0 -z-10"
+              style={{
+                background: lobby.mapImageUrl
+                  ? "radial-gradient(circle at 50% 20%, rgba(0,0,0,0.05), rgba(0,0,0,0.35) 70%)"
+                  : "radial-gradient(circle at 50% 20%, rgba(0,0,0,0.35), rgba(0,0,0,0.85) 70%)",
+              }}
+            />
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-xl font-semibold text-ink">
+                <h2 className="text-xl font-semibold text-white">
                   {lobby.title}
                 </h2>
-                <p className="text-sm text-ink/60">
+                <p className="text-sm text-white/70">
                   {formatEnum(lobby.game)} · {lobby.mode} · {lobby.map}
                 </p>
-                <p className="text-xs uppercase tracking-[0.3em] text-ink/50">
+                <p className="text-xs uppercase tracking-[0.3em] text-white/60">
                   {formatEnum(lobby.region)}
                 </p>
               </div>
               <div className="flex flex-col items-end gap-2 text-xs">
                 {lobby.isModded && (
-                  <span className="rounded-sm bg-clay/20 px-3 py-1 font-semibold text-ink">
+                  <span className="rounded-sm bg-white/10 px-3 py-1 font-semibold text-white">
                     Modded
                   </span>
                 )}
                 {lobby.voice === "MIC_REQUIRED" && (
-                  <span className="rounded-sm bg-ink/10 px-3 py-1 font-semibold text-ink">
+                  <span className="rounded-sm bg-white/10 px-3 py-1 font-semibold text-white">
                     Mic required
                   </span>
                 )}
               </div>
             </div>
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-ink/60">
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-white/70">
               <span>{formatEnum(lobby.vibe)}</span>
               {lobby.slotsTotal !== null && (
                 <>
@@ -203,11 +241,11 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
                 </>
               )}
             </div>
-            <div className="mt-3 flex items-center justify-between text-xs text-ink/60">
+            <div className="mt-3 flex items-center justify-between text-xs text-white/70">
               <span>{formatMinutesAgo(lobby.lastHeartbeatAt, now)}</span>
               <Link
                 href={`/lobbies/${lobby.id}`}
-                className="rounded-sm border border-ink/20 px-4 py-1.5 text-xs font-semibold text-ink hover:border-ink/40"
+                className="rounded-sm border border-white/30 px-4 py-1.5 text-xs font-semibold text-white hover:border-white/60"
               >
                 View lobby
               </Link>

@@ -185,5 +185,16 @@ export async function POST(
     });
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({
+    ok: true,
+    message: {
+      id: created.id,
+      conversationId: created.conversationId,
+      senderUserId: created.senderUserId,
+      senderDisplayName: user.displayName,
+      senderNametagColor: user.nametagColor,
+      body: created.body,
+      createdAt: created.createdAt.toISOString(),
+    },
+  });
 }

@@ -33,9 +33,9 @@ export default function LobbyBackground({
   }, [lobbyId]);
 
   const src = url ?? fallbackUrl;
-  const baseTint = hasRealImage ? "bg-black/15" : "bg-[#081826]/70";
+  const baseTint = hasRealImage ? "bg-black/5" : "bg-[#081826]/70";
   const vignette = hasRealImage
-    ? "radial-gradient(circle at 50% 30%, rgba(0,0,0,0.05), rgba(0,0,0,0.45) 70%)"
+    ? "radial-gradient(circle at 50% 30%, rgba(0,0,0,0.02), rgba(0,0,0,0.25) 70%)"
     : "radial-gradient(circle at 50% 30%, rgba(0,0,0,0.35), rgba(0,0,0,0.85) 70%)";
 
   return (

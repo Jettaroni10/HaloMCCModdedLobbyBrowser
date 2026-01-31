@@ -43,7 +43,6 @@ export async function POST(
   );
   const note = normalizeText(body.note, LIMITS.note);
   const confirmedSubscribed = parseBoolean(body.confirmedSubscribed) ?? false;
-  const confirmedEacOff = parseBoolean(body.confirmedEacOff) ?? false;
 
   if (!requesterHandleText) {
     return NextResponse.json(
@@ -66,12 +65,6 @@ export async function POST(
     if (hasMods && !confirmedSubscribed) {
       return NextResponse.json(
         { error: "Please confirm mod subscription before requesting." },
-        { status: 400 }
-      );
-    }
-    if (lobby.requiresEacOff && !confirmedEacOff) {
-      return NextResponse.json(
-        { error: "Please confirm EAC Off acknowledgement." },
         { status: 400 }
       );
     }
@@ -147,7 +140,6 @@ export async function POST(
       requesterHandleText,
       note: note || null,
       confirmedSubscribed,
-      confirmedEacOff,
     },
   });
 
@@ -173,7 +165,6 @@ export async function POST(
       requesterHandleText: joinRequest.requesterHandleText,
       note: joinRequest.note,
       confirmedSubscribed: joinRequest.confirmedSubscribed,
-      confirmedEacOff: joinRequest.confirmedEacOff,
       status: "PENDING",
       createdAt: joinRequest.createdAt.toISOString(),
       lobby: {

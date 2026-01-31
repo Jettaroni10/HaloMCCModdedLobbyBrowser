@@ -8,12 +8,10 @@ function buildInviteChecklist(request: {
   requesterHandleText: string;
   requesterNametagColor?: string | null;
   confirmedSubscribed: boolean;
-  confirmedEacOff: boolean;
   lobby: {
     isModded: boolean;
     workshopCollectionUrl: string | null;
     workshopItemUrls: string[];
-    requiresEacOff: boolean;
   };
 }) {
   const inviteMessage = `Invite sent to ${request.requesterHandleText}. Please join when ready.`;
@@ -56,9 +54,7 @@ function buildInviteChecklist(request: {
     payload.modded = {
       workshopCollectionUrl: request.lobby.workshopCollectionUrl,
       workshopItemUrls: request.lobby.workshopItemUrls,
-      requiresEacOff: request.lobby.requiresEacOff,
       requesterConfirmedSubscribed: request.confirmedSubscribed,
-      requesterConfirmedEacOff: request.confirmedEacOff,
     };
   }
 
@@ -193,12 +189,10 @@ export async function POST(
     requesterHandleText: updated.requesterHandleText,
     requesterNametagColor: updated.requester.nametagColor,
     confirmedSubscribed: updated.confirmedSubscribed,
-    confirmedEacOff: updated.confirmedEacOff,
     lobby: {
       isModded: updated.lobby.isModded,
       workshopCollectionUrl: updated.lobby.workshopCollectionUrl,
       workshopItemUrls: updated.lobby.workshopItemUrls,
-      requiresEacOff: updated.lobby.requiresEacOff,
     },
   });
 

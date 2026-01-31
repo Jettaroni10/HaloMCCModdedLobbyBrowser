@@ -89,7 +89,6 @@ export async function POST(request: Request) {
   const workshopItemUrls = parseStringArray(body.workshopItemUrls)
     .map((url) => normalizeText(url, LIMITS.workshopUrl))
     .filter(Boolean);
-  const requiresEacOff = parseBoolean(body.requiresEacOff) ?? true;
   const modNotes = normalizeText(body.modNotes, LIMITS.modNotes);
 
   if (!title || !mode || !map || !rulesNote) {
@@ -131,7 +130,6 @@ export async function POST(request: Request) {
         isModded,
         workshopCollectionUrl,
         workshopItemUrls,
-        requiresEacOff,
         modNotes: modNotes || null,
         lastHeartbeatAt: now,
         expiresAt,

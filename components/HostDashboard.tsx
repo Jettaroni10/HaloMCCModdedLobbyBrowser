@@ -33,7 +33,6 @@ type JoinRequestSummary = {
   requesterNametagColor?: string | null;
   note: string | null;
   confirmedSubscribed: boolean;
-  confirmedEacOff: boolean;
   status: "PENDING" | "ACCEPTED" | "DECLINED";
   lobby: {
     id: string;
@@ -50,9 +49,7 @@ type InviteChecklist = {
   modded?: {
     workshopCollectionUrl: string | null;
     workshopItemUrls: string[];
-    requiresEacOff: boolean;
     requesterConfirmedSubscribed: boolean;
-    requesterConfirmedEacOff: boolean;
   };
   steps: { id: string; label: string; copyText?: string }[];
   copyStrings: Record<string, string>;
@@ -103,7 +100,6 @@ export default function HostDashboard({ lobbies, requests }: HostDashboardProps)
           requesterNametagColor: payload.requesterNametagColor ?? null,
           note: payload.note ?? null,
           confirmedSubscribed: payload.confirmedSubscribed ?? false,
-          confirmedEacOff: payload.confirmedEacOff ?? false,
           status: payload.status ?? "PENDING",
           lobby: payload.lobby,
         };
@@ -387,9 +383,7 @@ export default function HostDashboard({ lobbies, requests }: HostDashboardProps)
               )}
               {request.lobby.isModded && (
                 <div className="mt-3 text-xs text-ink/60">
-                  Mods: subscribed{" "}
-                  {request.confirmedSubscribed ? "yes" : "no"} · EAC off noted{" "}
-                  {request.confirmedEacOff ? "yes" : "no"}
+                  Mods: subscribed {request.confirmedSubscribed ? "yes" : "no"}
                 </div>
               )}
             </div>
@@ -460,10 +454,6 @@ export default function HostDashboard({ lobbies, requests }: HostDashboardProps)
                     Items: {checklist.modded.workshopItemUrls.length}
                   </p>
                 )}
-                <p className="mt-1">
-                  EAC off may be required:{" "}
-                  {checklist.modded.requiresEacOff ? "yes" : "no"}
-                </p>
               </div>
             )}
 

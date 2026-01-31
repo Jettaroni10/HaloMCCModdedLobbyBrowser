@@ -135,10 +135,6 @@ export async function PATCH(
     data.workshopItemUrls = workshopItemUrls;
   }
 
-  const requiresEacOff = parseBoolean(body.requiresEacOff);
-  if (typeof requiresEacOff === "boolean") {
-    data.requiresEacOff = requiresEacOff;
-  }
 
   const modNotes = normalizeText(body.modNotes, LIMITS.modNotes);
   if (modNotes) data.modNotes = modNotes;

@@ -10,7 +10,6 @@ type RequestCreatedPayload = {
     requesterHandleText: string;
     note: string | null;
     confirmedSubscribed: boolean;
-    confirmedEacOff: boolean;
     status: "PENDING";
     createdAt: string;
     lobby: {

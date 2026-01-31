@@ -22,7 +22,6 @@ type HostLobbyFormProps = {
     friendsOnly?: boolean;
     workshopCollectionUrl?: string;
     workshopItemUrls?: string[];
-    requiresEacOff?: boolean;
     modNotes?: string | null;
   };
   submitLabel?: string;
@@ -120,7 +119,6 @@ export default function HostLobbyForm({
       }
     });
     payload.friendsOnly = formData.get("friendsOnly") === "on";
-    payload.requiresEacOff = formData.get("requiresEacOff") === "on";
 
     const response = await fetch(action, {
       method: method.toUpperCase(),
@@ -364,15 +362,6 @@ export default function HostLobbyForm({
             defaultValue={(defaultValues?.workshopItemUrls ?? []).join("\n")}
             className="mt-2 w-full rounded-sm border border-ink/10 bg-sand px-3 py-2 text-sm"
           />
-        </label>
-        <label className="mt-4 flex items-center gap-3 text-sm font-semibold text-ink">
-          <input
-            name="requiresEacOff"
-            type="checkbox"
-            defaultChecked={defaultValues?.requiresEacOff ?? true}
-            className="h-4 w-4 rounded border-ink/20"
-          />
-          Host indicates EAC Off may be required
         </label>
         <label className="mt-4 block text-sm font-semibold text-ink">
           Mod notes

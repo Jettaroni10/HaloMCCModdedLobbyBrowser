@@ -187,7 +187,6 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
               !isHost && (
                 <LobbyRequestForm
                   lobbyId={lobby.id}
-                  requiresEacOff={lobby.requiresEacOff}
                   workshopCollectionUrl={lobby.workshopCollectionUrl}
                   workshopItemUrls={lobby.workshopItemUrls}
                   modNotes={lobby.modNotes}

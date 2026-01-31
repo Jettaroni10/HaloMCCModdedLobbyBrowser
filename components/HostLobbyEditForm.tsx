@@ -20,7 +20,6 @@ type HostLobbyEditFormProps = {
     friendsOnly: boolean;
     workshopCollectionUrl: string;
     workshopItemUrls: string[];
-    requiresEacOff: boolean;
     modNotes: string | null;
   };
 };
@@ -38,7 +37,6 @@ export default function HostLobbyEditForm({
       formData.entries()
     );
     payload.friendsOnly = formData.get("friendsOnly") === "on";
-    payload.requiresEacOff = formData.get("requiresEacOff") === "on";
 
     const response = await fetch(`/api/lobbies/${lobbyId}`, {
       method: "PATCH",

@@ -44,7 +44,6 @@ export default async function EditLobbyPage({ params }: PageProps) {
           friendsOnly: lobby.friendsOnly,
           workshopCollectionUrl: lobby.workshopCollectionUrl,
           workshopItemUrls: lobby.workshopItemUrls,
-          requiresEacOff: lobby.requiresEacOff,
           modNotes: lobby.modNotes,
         }}
       />

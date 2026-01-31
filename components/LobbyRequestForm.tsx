@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 
 type LobbyRequestFormProps = {
   lobbyId: string;
-  requiresEacOff: boolean;
   workshopCollectionUrl: string | null;
   workshopItemUrls: string[];
   modNotes: string | null;
@@ -16,7 +15,6 @@ type LobbyRequestFormProps = {
 
 export default function LobbyRequestForm({
   lobbyId,
-  requiresEacOff,
   workshopCollectionUrl,
   workshopItemUrls,
   modNotes,
@@ -28,7 +26,6 @@ export default function LobbyRequestForm({
   const [handleText, setHandleText] = useState("");
   const [note, setNote] = useState("");
   const [confirmedSubscribed, setConfirmedSubscribed] = useState(false);
-  const [confirmedEacOff, setConfirmedEacOff] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
@@ -41,7 +38,7 @@ export default function LobbyRequestForm({
     }
   }, [defaultHandle, handleText]);
 
-  const readinessOk = confirmedSubscribed && (!requiresEacOff || confirmedEacOff);
+  const readinessOk = confirmedSubscribed;
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -57,7 +54,6 @@ export default function LobbyRequestForm({
           requesterHandleText: handleText,
           note,
           confirmedSubscribed,
-          confirmedEacOff,
         }),
       });
 
@@ -140,11 +136,6 @@ export default function LobbyRequestForm({
               {modNotes}
             </p>
           )}
-          {requiresEacOff && (
-            <p className="mt-3 text-xs font-semibold text-ink/70">
-              Host indicates EAC Off may be required.
-            </p>
-          )}
         </div>
       </div>
 
@@ -182,17 +173,6 @@ export default function LobbyRequestForm({
             />
             I&apos;ve subscribed to required mods
           </label>
-          {requiresEacOff && (
-            <label className="mt-2 flex items-start gap-2 text-sm text-ink">
-              <input
-                type="checkbox"
-                checked={confirmedEacOff}
-                onChange={(event) => setConfirmedEacOff(event.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-ink/20"
-              />
-              I understand EAC Off may be required
-            </label>
-          )}
         </div>
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">

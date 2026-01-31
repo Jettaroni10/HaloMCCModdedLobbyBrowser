@@ -10,7 +10,6 @@ export type HostRequestCreatedEvent = {
   requesterNametagColor?: string | null;
   note?: string | null;
   confirmedSubscribed?: boolean;
-  confirmedEacOff?: boolean;
   status?: "PENDING" | "ACCEPTED" | "DECLINED";
   lobby: {
     id: string;

@@ -131,14 +131,7 @@ export function useLobbyChatRealtime({
         // ignore
       }
       channelRef.current = null;
-      try {
-        const state = client.connection?.state;
-        if (state !== "closed" && state !== "closing") {
-          client.close();
-        }
-      } catch {
-        // Ignore close errors (e.g., already closed during fast refresh).
-      }
+      // Avoid calling close; Ably can throw during fast refresh/unmount.
       clientRef.current = null;
     };
   }, [enabled, lobbyId]);

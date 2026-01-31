@@ -10,7 +10,7 @@ Not affiliated with Microsoft, Xbox, 343 Industries, or Halo.
 - Tailwind CSS
 - Prisma ORM + Postgres
 - Auth: handle/email with signed session cookie
-- Realtime: Server-Sent Events (SSE)
+- Realtime: Ably (chat) + Server-Sent Events (roster/host events)
 - Maintenance: cron cleanup endpoint
 
 ## Local setup
@@ -27,7 +27,7 @@ npm install
 cp .env.example .env
 ```
 
-3. Update `DATABASE_URL`, `AUTH_SECRET`, and `ADMIN_EMAILS` in `.env`, then run migrations:
+3. Update `DATABASE_URL`, `AUTH_SECRET`, `ADMIN_EMAILS`, and `ABLY_API_KEY` in `.env`, then run migrations:
 
 ```bash
 npx prisma migrate dev

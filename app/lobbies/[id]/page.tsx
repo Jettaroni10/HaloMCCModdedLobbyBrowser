@@ -203,6 +203,8 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
               <LobbyChat
                 lobbyId={lobby.id}
                 viewerId={user.id}
+                viewerDisplayName={user.displayName}
+                viewerNametagColor={user.nametagColor}
                 initialMessages={initialMessages}
                 className="border-white/10 bg-gradient-to-b from-black/75 via-black/55 to-black/30 text-white backdrop-blur-sm"
               />

@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useLobbyEvents } from "./useLobbyEvents";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { resolveNametagColor } from "@/lib/reach-colors";
+import { useLobbyChatRealtime } from "./useLobbyChatRealtime";
 
 type ChatMessage = {
   id: string;
@@ -11,11 +11,14 @@ type ChatMessage = {
   senderNametagColor?: string | null;
   body: string;
   createdAt: string;
+  status?: "sending" | "failed";
 };
 
 type LobbyChatProps = {
   lobbyId: string;
   viewerId: string;
+  viewerDisplayName: string;
+  viewerNametagColor?: string | null;
   initialMessages: ChatMessage[];
   className?: string;
 };
@@ -23,6 +26,8 @@ type LobbyChatProps = {
 export default function LobbyChat({
   lobbyId,
   viewerId,
+  viewerDisplayName,
+  viewerNametagColor,
   initialMessages,
   className,
 }: LobbyChatProps) {
@@ -30,14 +35,58 @@ export default function LobbyChat({
   const [body, setBody] = useState("");
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
+  const [typingUsers, setTypingUsers] = useState<Record<string, string>>({});
+  const typingTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(
+    new Map()
+  );
+  const typingActive = useRef(false);
+  const typingStopTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useLobbyEvents({
+  useEffect(() => {
+    return () => {
+      typingTimers.current.forEach((timer) => clearTimeout(timer));
+      typingTimers.current.clear();
+      if (typingStopTimer.current) {
+        clearTimeout(typingStopTimer.current);
+      }
+    };
+  }, []);
+
+  const { publishTyping } = useLobbyChatRealtime({
     lobbyId,
-    onMessageCreated: (message) => {
+    onMessage: (message) => {
       setMessages((prev) => {
         if (prev.some((item) => item.id === message.id)) return prev;
         return [...prev, message];
       });
+    },
+    onTypingStart: (payload) => {
+      if (payload.userId === viewerId) return;
+      setTypingUsers((prev) => ({
+        ...prev,
+        [payload.userId]: payload.displayName,
+      }));
+      const existing = typingTimers.current.get(payload.userId);
+      if (existing) clearTimeout(existing);
+      typingTimers.current.set(
+        payload.userId,
+        setTimeout(() => {
+          setTypingUsers((prev) => {
+            const next = { ...prev };
+            delete next[payload.userId];
+            return next;
+          });
+        }, 2000)
+      );
+    },
+    onTypingStop: (payload) => {
+      setTypingUsers((prev) => {
+        const next = { ...prev };
+        delete next[payload.userId];
+        return next;
+      });
+      const existing = typingTimers.current.get(payload.userId);
+      if (existing) clearTimeout(existing);
     },
   });
 
@@ -75,10 +124,35 @@ export default function LobbyChat({
     [messages]
   );
 
-  async function handleSend(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSend(
+    event: React.FormEvent<HTMLFormElement>,
+    overrideBody?: string
+  ) {
     event.preventDefault();
-    const trimmed = body.trim();
+    const trimmed = (overrideBody ?? body).trim();
     if (!trimmed) return;
+    if (typingStopTimer.current) {
+      clearTimeout(typingStopTimer.current);
+    }
+    if (typingActive.current) {
+      typingActive.current = false;
+      void publishTyping("stop", {
+        userId: viewerId,
+        displayName: viewerDisplayName,
+      });
+    }
+    const tempId = `temp-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const optimisticMessage: ChatMessage = {
+      id: tempId,
+      senderUserId: viewerId,
+      senderDisplayName: viewerDisplayName,
+      senderNametagColor: viewerNametagColor,
+      body: trimmed,
+      createdAt: new Date().toISOString(),
+      status: "sending",
+    };
+    setMessages((prev) => [...prev, optimisticMessage]);
+    setBody("");
     setSending(true);
     setError("");
     try {
@@ -97,22 +171,55 @@ export default function LobbyChat({
         | { message?: ChatMessage }
         | null;
       if (payload?.message) {
-        setMessages((prev) => {
-          if (prev.some((item) => item.id === payload.message?.id)) {
-            return prev;
-          }
-          return [...prev, payload.message];
-        });
+        setMessages((prev) =>
+          prev.map((item) =>
+            item.id === tempId ? { ...payload.message, status: "sent" } : item
+          )
+        );
       } else {
         await loadMessages();
       }
-      setBody("");
     } catch (err) {
+      setMessages((prev) =>
+        prev.map((item) =>
+          item.id === tempId ? { ...item, status: "failed" } : item
+        )
+      );
       setError(err instanceof Error ? err.message : "Message failed.");
     } finally {
       setSending(false);
     }
   }
+
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setBody(event.target.value);
+    if (!typingActive.current) {
+      typingActive.current = true;
+      void publishTyping("start", {
+        userId: viewerId,
+        displayName: viewerDisplayName,
+      });
+    }
+    if (typingStopTimer.current) {
+      clearTimeout(typingStopTimer.current);
+    }
+    typingStopTimer.current = setTimeout(() => {
+      typingActive.current = false;
+      void publishTyping("stop", {
+        userId: viewerId,
+        displayName: viewerDisplayName,
+      });
+    }, 1200);
+  };
+
+  const retryMessage = async (message: ChatMessage) => {
+    await handleSend(
+      {
+        preventDefault: () => {},
+      } as React.FormEvent<HTMLFormElement>,
+      message.body
+    );
+  };
 
   const baseClass =
     "rounded-md border border-white/10 bg-black/40 p-6 backdrop-blur-sm";
@@ -147,18 +254,38 @@ export default function LobbyChat({
                 </span>
                 <span>{time}</span>
               </div>
-              <p className="mt-1 text-sm text-white/80 break-words whitespace-pre-wrap">
-                {message.body}
-              </p>
+              <div className="mt-1 flex items-start justify-between gap-3 text-sm text-white/80">
+                <p className="break-words whitespace-pre-wrap">
+                  {message.body}
+                </p>
+                {message.status === "failed" && (
+                  <button
+                    type="button"
+                    onClick={() => retryMessage(message)}
+                    className="rounded-sm border border-white/30 px-2 py-1 text-[10px] font-semibold text-white/80 hover:border-white/60"
+                  >
+                    Retry
+                  </button>
+                )}
+                {message.status === "sending" && (
+                  <span className="text-[10px] text-white/50">Sending</span>
+                )}
+              </div>
             </div>
           );
         })}
       </div>
+      {Object.keys(typingUsers).length > 0 && (
+        <p className="mt-3 text-xs text-white/60">
+          {Object.values(typingUsers).join(", ")}{" "}
+          {Object.keys(typingUsers).length > 1 ? "are" : "is"} typing...
+        </p>
+      )}
       {error && <p className="mt-3 text-xs text-clay">{error}</p>}
       <form onSubmit={handleSend} className="mt-4 flex gap-2">
         <input
           value={body}
-          onChange={(event) => setBody(event.target.value)}
+          onChange={handleInputChange}
           placeholder="Send a message"
           className="flex-1 rounded-sm border border-white/10 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-white/40"
         />

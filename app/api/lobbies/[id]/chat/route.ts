@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { addXp, countXpEvents } from "@/lib/xp";
 import { emitLobbyMessageCreated } from "@/lib/lobby-events";
+import { publishLobbyEvent } from "@/lib/realtime/ablyServer";
+import { ensureLobbyChatAccess } from "@/lib/lobby-access";
 
 const MESSAGE_LIMIT = 500;
 
@@ -23,30 +25,6 @@ async function ensureLobbyConversation(lobbyId: string) {
   });
 }
 
-async function ensureAccess(lobbyId: string, userId: string) {
-  const lobby = await prisma.lobby.findUnique({
-    where: { id: lobbyId },
-    select: { id: true, hostUserId: true },
-  });
-  if (!lobby) {
-    return { ok: false, error: "Lobby not found.", status: 404 };
-  }
-  const isHost = lobby.hostUserId === userId;
-  if (isHost) {
-    return { ok: true, lobby, isHost };
-  }
-  const member = await prisma.lobbyMember.findUnique({
-    where: { lobbyId_userId: { lobbyId, userId } },
-  });
-  const acceptedRequest = await prisma.joinRequest.findFirst({
-    where: { lobbyId, requesterUserId: userId, status: "ACCEPTED" },
-  });
-  if (!member && !acceptedRequest) {
-    return { ok: false, error: "Forbidden.", status: 403 };
-  }
-  return { ok: true, lobby, isHost: false };
-}
-
 export async function GET(
   _request: Request,
   { params }: { params: { id: string } }
@@ -59,7 +37,7 @@ export async function GET(
     return NextResponse.json({ error: "Account is banned." }, { status: 403 });
   }
 
-  const access = await ensureAccess(params.id, user.id);
+  const access = await ensureLobbyChatAccess(params.id, user.id);
   if (!access.ok) {
     return NextResponse.json({ error: access.error }, { status: access.status });
   }
@@ -99,7 +77,7 @@ export async function POST(
     return NextResponse.json({ error: "Account is banned." }, { status: 403 });
   }
 
-  const access = await ensureAccess(params.id, user.id);
+  const access = await ensureLobbyChatAccess(params.id, user.id);
   if (!access.ok) {
     return NextResponse.json({ error: access.error }, { status: access.status });
   }
@@ -137,17 +115,25 @@ export async function POST(
     },
   });
 
+  const messagePayload = {
+    id: created.id,
+    conversationId: created.conversationId,
+    senderUserId: created.senderUserId,
+    senderDisplayName: user.displayName,
+    senderNametagColor: user.nametagColor,
+    body: created.body,
+    createdAt: created.createdAt.toISOString(),
+  };
+
   emitLobbyMessageCreated({
     lobbyId: params.id,
-    message: {
-      id: created.id,
-      conversationId: created.conversationId,
-      senderUserId: created.senderUserId,
-      senderDisplayName: user.displayName,
-      senderNametagColor: user.nametagColor,
-      body: created.body,
-      createdAt: created.createdAt.toISOString(),
-    },
+    message: messagePayload,
+  });
+
+  await publishLobbyEvent({
+    lobbyId: params.id,
+    event: "message:new",
+    payload: messagePayload,
   });
 
   if (messageBody.length >= 3 && lastMessage?.body !== messageBody) {
@@ -187,14 +173,6 @@ export async function POST(
 
   return NextResponse.json({
     ok: true,
-    message: {
-      id: created.id,
-      conversationId: created.conversationId,
-      senderUserId: created.senderUserId,
-      senderDisplayName: user.displayName,
-      senderNametagColor: user.nametagColor,
-      body: created.body,
-      createdAt: created.createdAt.toISOString(),
-    },
+    message: messagePayload,
   });
 }

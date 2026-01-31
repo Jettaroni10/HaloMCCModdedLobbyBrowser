@@ -1,26 +1,34 @@
 export const ReachColors = [
-  { name: "White", hex: "#FFFFFF" },
-  { name: "Red", hex: "#FE0000" },
-  { name: "Blue", hex: "#0201E3" },
-  { name: "Gray", hex: "#707E71" },
-  { name: "Yellow", hex: "#FFFF01" },
-  { name: "Green", hex: "#00FF01" },
-  { name: "Pink", hex: "#FF56B9" },
-  { name: "Purple", hex: "#AB10F4" },
-  { name: "Cyan", hex: "#01FFFF" },
-  { name: "Cobalt", hex: "#6493ED" },
-  { name: "Orange", hex: "#FF7F00" },
-  { name: "Teal", hex: "#1ECC91" },
-  { name: "Sage", hex: "#006401" },
-  { name: "Brown", hex: "#603814" },
-  { name: "Tan", hex: "#C69C6C" },
-  { name: "Maroon", hex: "#9D0B0E" },
-  { name: "Salmon", hex: "#F5999E" },
+  { name: "Snow", hex: "#D9D9D6" },
+  { name: "Silver", hex: "#A8A9AD" },
+  { name: "Steel", hex: "#6F767D" },
+  { name: "Slate", hex: "#3F454C" },
+  { name: "Khaki", hex: "#8A7F67" },
+  { name: "Sand", hex: "#A09173" },
+  { name: "Tan", hex: "#8B6E4B" },
+  { name: "Brown", hex: "#4A3728" },
+  { name: "Olive", hex: "#4B5A3C" },
+  { name: "Sage", hex: "#5E6B53" },
+  { name: "Forest", hex: "#2F4B3A" },
+  { name: "Teal", hex: "#2E6A64" },
+  { name: "Cobalt", hex: "#2D4F8C" },
+  { name: "Navy", hex: "#1F2F4A" },
+  { name: "Purple", hex: "#4A3E63" },
+  { name: "Maroon", hex: "#5B2B2E" },
+  { name: "Brick", hex: "#7A3B2F" },
+  { name: "Rust", hex: "#8A4A2A" },
+  { name: "Orange", hex: "#B56A2B" },
+  { name: "Gold", hex: "#B59B3A" },
+  { name: "Yellow", hex: "#B8B04A" },
+  { name: "Crimson", hex: "#8B2F2F" },
+  { name: "Red", hex: "#A33A3A" },
+  { name: "Cyan", hex: "#3B8E9A" },
+  { name: "Pink", hex: "#A05C7A" },
 ] as const;
 
 export type ReachColorHex = (typeof ReachColors)[number]["hex"];
 
-export const DEFAULT_NAMETAG_COLOR = "#FFFFFF";
+export const DEFAULT_NAMETAG_COLOR = "#D9D9D6";
 
 export const ReachColorHexes = ReachColors.map((color) => color.hex);
 

@@ -57,42 +57,42 @@ export default function LobbyRoster({
           const member = memberBySlot.get(slotNumber);
           if (!member) {
             return (
-              <div
-                key={`slot-${slotNumber}`}
-                className="flex h-10 items-center justify-between rounded-sm border border-white/10 px-3"
-                style={{
-                  backgroundColor: "rgba(0,0,0,0.35)",
-                  color: "rgba(255,255,255,0.45)",
-                }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-sm bg-black/70 text-[11px] font-semibold text-white">
-                    {slotNumber}
-                  </div>
-                  <span className="text-sm font-semibold">Empty</span>
+            <div
+              key={`slot-${slotNumber}`}
+              className="flex h-10 items-center justify-between overflow-hidden rounded-sm border border-white/10 px-3"
+              style={{
+                backgroundColor: "rgba(0,0,0,0.35)",
+                color: "rgba(255,255,255,0.45)",
+              }}
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-7 w-7 items-center justify-center rounded-sm bg-black/70 text-[11px] font-semibold text-white">
+                  {slotNumber}
                 </div>
+                <span className="truncate text-sm font-semibold">Empty</span>
               </div>
-            );
-          }
+            </div>
+          );
+        }
 
           return (
             <div
               key={`slot-${slotNumber}`}
-              className="flex h-10 items-center justify-between rounded-sm border border-white/10 px-3"
+              className="flex h-10 items-center justify-between overflow-hidden rounded-sm border border-white/10 px-3"
               style={{
                 backgroundColor: resolveNametagColor(member.nametagColor),
                 color: nameplateTextColor(member.nametagColor),
               }}
             >
-              <div className="flex items-center gap-3">
+              <div className="flex min-w-0 items-center gap-3">
                 <div className="flex h-7 w-7 items-center justify-center rounded-sm bg-black/70 text-[11px] font-semibold text-white">
                   {slotNumber}
                 </div>
-                <span className="text-sm font-semibold">
+                <span className="truncate text-sm font-semibold">
                   {member.displayName}
                 </span>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex shrink-0 items-center gap-3">
                 {viewerUserId && member.userId !== viewerUserId && (
                   <RosterFriendButton
                     targetUserId={member.userId}

@@ -31,7 +31,12 @@ export default function LobbyRoster({
   const friendSet = new Set(friendIds);
   const pendingSet = new Set(pendingIds);
   const rowHeight = 40;
-  const totalHeight = slotsTotal * rowHeight + 80;
+  const rowGap = 8;
+  const headerAndPadding = 80;
+  const totalHeight =
+    slotsTotal * rowHeight +
+    Math.max(0, slotsTotal - 1) * rowGap +
+    headerAndPadding;
   const memberBySlot = new Map(
     roster.map((member) => [member.slotNumber, member])
   );

@@ -112,7 +112,11 @@ export function useLobbyChatRealtime({
       channel.unsubscribe();
       typingChannel.unsubscribe();
       channelRef.current = null;
-      client.close();
+      try {
+        client.close();
+      } catch {
+        // Ignore close errors (e.g., already closed during fast refresh).
+      }
       clientRef.current = null;
     };
   }, [enabled, lobbyId]);

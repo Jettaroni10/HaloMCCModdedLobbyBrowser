@@ -198,11 +198,20 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
                 />
               )
             )}
+
+            {canChat && user && (
+              <LobbyChat
+                lobbyId={lobby.id}
+                viewerId={user.id}
+                initialMessages={initialMessages}
+                className="border-white/10 bg-gradient-to-b from-black/75 via-black/55 to-black/30 text-white backdrop-blur-sm"
+              />
+            )}
           </div>
         </div>
 
         {canSeeRoster && (
-          <div className="mt-8 px-10 lg:mt-0 lg:fixed lg:right-10 lg:top-1/2 lg:w-[420px] lg:-translate-y-1/2">
+          <div className="mt-8 px-10 lg:mt-0 lg:fixed lg:right-10 lg:top-24 lg:w-[420px]">
             <LobbyRosterLive
               lobbyId={lobby.id}
               initialRoster={roster.map((member) => ({
@@ -220,17 +229,6 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
               pendingIds={pendingOutgoingIds}
               slotsTotal={slotsTotal}
               className="border-white/10 bg-gradient-to-l from-black/60 via-black/35 to-transparent text-white backdrop-blur-sm"
-            />
-          </div>
-        )}
-
-        {canChat && user && (
-          <div className="mt-8 px-10 pb-10 lg:fixed lg:bottom-8 lg:left-10 lg:w-[520px] lg:max-w-[45vw] lg:pb-0">
-            <LobbyChat
-              lobbyId={lobby.id}
-              viewerId={user.id}
-              initialMessages={initialMessages}
-              className="border-white/10 bg-gradient-to-b from-black/75 via-black/55 to-black/30 text-white backdrop-blur-sm"
             />
           </div>
         )}

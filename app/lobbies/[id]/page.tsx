@@ -133,7 +133,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
         hasRealImage={Boolean(lobby.mapImagePath)}
       />
       <div className="relative z-10">
-        <div className="fixed left-4 top-4 z-20 w-[min(92vw,640px)] lg:left-10 lg:top-8">
+        <div className="fixed left-4 top-24 z-20 w-[min(92vw,640px)] lg:left-10 lg:top-24">
           <HostLobbyNotifications enabled={isHost} />
           <div className="flex flex-col gap-6">
             <div className="rounded-md border border-white/10 bg-gradient-to-r from-black/70 via-black/40 to-transparent p-7 text-white backdrop-blur-sm">

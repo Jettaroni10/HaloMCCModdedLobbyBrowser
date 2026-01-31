@@ -5,6 +5,9 @@ import { createLobbyTokenRequest } from "@/lib/realtime/ablyServer";
 
 export const runtime = "nodejs";
 
+const LOBBY_ID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 function getLobbyId(request: Request) {
   const { searchParams } = new URL(request.url);
   const lobbyId = searchParams.get("lobbyId");
@@ -14,26 +17,53 @@ function getLobbyId(request: Request) {
 export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user || user.isBanned) {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    const response = NextResponse.json(
+      { error: "Unauthorized." },
+      { status: 401 }
+    );
+    response.headers.set("Cache-Control", "no-store");
+    return response;
   }
 
   const lobbyId = getLobbyId(request);
   if (!lobbyId) {
-    return NextResponse.json({ error: "Missing lobbyId." }, { status: 400 });
+    const response = NextResponse.json(
+      { error: "Missing lobbyId." },
+      { status: 400 }
+    );
+    response.headers.set("Cache-Control", "no-store");
+    return response;
+  }
+  if (!LOBBY_ID_PATTERN.test(lobbyId)) {
+    const response = NextResponse.json(
+      { error: "Invalid lobbyId." },
+      { status: 400 }
+    );
+    response.headers.set("Cache-Control", "no-store");
+    return response;
   }
 
   const access = await ensureLobbyChatAccess(lobbyId, user.id);
   if (!access.ok) {
-    return NextResponse.json({ error: access.error }, { status: access.status });
+    const response = NextResponse.json(
+      { error: access.error },
+      { status: access.status }
+    );
+    response.headers.set("Cache-Control", "no-store");
+    return response;
   }
 
   const tokenRequest = await createLobbyTokenRequest({
     lobbyId,
     clientId: user.id,
   });
-  return NextResponse.json(tokenRequest);
+  const response = NextResponse.json(tokenRequest);
+  response.headers.set("Cache-Control", "no-store");
+  return response;
 }
 
 export async function GET(request: Request) {
-  return POST(request);
+  const response = await POST(request);
+  response.headers.set("Cache-Control", "no-store");
+  return response;
 }

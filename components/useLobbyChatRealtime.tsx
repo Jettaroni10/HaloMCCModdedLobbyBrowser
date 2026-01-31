@@ -27,6 +27,28 @@ type UseLobbyChatRealtimeOptions = {
   onTypingStop?: (payload: TypingPayload) => void;
 };
 
+const MESSAGE_BODY_LIMIT = 500;
+
+function isMessagePayload(payload: unknown): payload is MessagePayload {
+  if (!payload || typeof payload !== "object") return false;
+  const data = payload as MessagePayload;
+  return (
+    typeof data.id === "string" &&
+    typeof data.conversationId === "string" &&
+    typeof data.senderUserId === "string" &&
+    typeof data.senderDisplayName === "string" &&
+    typeof data.body === "string" &&
+    data.body.length <= MESSAGE_BODY_LIMIT &&
+    typeof data.createdAt === "string"
+  );
+}
+
+function isTypingPayload(payload: unknown): payload is TypingPayload {
+  if (!payload || typeof payload !== "object") return false;
+  const data = payload as TypingPayload;
+  return typeof data.userId === "string" && typeof data.displayName === "string";
+}
+
 // Findings:
 // - Chat messages were rendered from server-fetched data only, so UI stayed stale.
 // - SSE relied on in-memory events, which don't propagate across Netlify functions.
@@ -63,24 +85,32 @@ export function useLobbyChatRealtime({
     const client = createLobbyRealtimeClient(lobbyId);
     clientRef.current = client;
     const channel = client.channels.get(`lobby:${lobbyId}`);
+    const typingChannel = client.channels.get(`lobby:${lobbyId}:typing`);
     channelRef.current = channel;
 
     const handleMessage = (message: Types.Message) => {
-      messageRef.current?.(message.data as MessagePayload);
+      if (message.name !== "message:new") return;
+      if (!isMessagePayload(message.data)) return;
+      messageRef.current?.(message.data);
     };
     const handleTypingStart = (message: Types.Message) => {
-      typingStartRef.current?.(message.data as TypingPayload);
+      if (message.name !== "typing:start") return;
+      if (!isTypingPayload(message.data)) return;
+      typingStartRef.current?.(message.data);
     };
     const handleTypingStop = (message: Types.Message) => {
-      typingStopRef.current?.(message.data as TypingPayload);
+      if (message.name !== "typing:stop") return;
+      if (!isTypingPayload(message.data)) return;
+      typingStopRef.current?.(message.data);
     };
 
-    channel.subscribe("message:new", handleMessage);
-    channel.subscribe("typing:start", handleTypingStart);
-    channel.subscribe("typing:stop", handleTypingStop);
+    channel.subscribe(handleMessage);
+    typingChannel.subscribe(handleTypingStart);
+    typingChannel.subscribe(handleTypingStop);
 
     return () => {
       channel.unsubscribe();
+      typingChannel.unsubscribe();
       channelRef.current = null;
       client.close();
       clientRef.current = null;
@@ -89,12 +119,14 @@ export function useLobbyChatRealtime({
 
   const publishTyping = useCallback(
     async (state: "start" | "stop", payload: TypingPayload) => {
-      const channel = channelRef.current;
-      if (!channel) return;
+      const client = clientRef.current;
+      if (!client) return;
       const event = state === "start" ? "typing:start" : "typing:stop";
-      await channel.publish(event, payload);
+      await client.channels
+        .get(`lobby:${lobbyId}:typing`)
+        .publish(event, payload);
     },
-    []
+    [lobbyId]
   );
 
   return { publishTyping };

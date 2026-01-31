@@ -20,7 +20,10 @@ export async function createLobbyTokenRequest(params: {
   return rest.auth.createTokenRequest({
     clientId: params.clientId,
     capability: {
-      [`lobby:${params.lobbyId}`]: ["publish", "subscribe"],
+      // Main lobby channel is subscribe-only to prevent client spoofing.
+      [`lobby:${params.lobbyId}`]: ["subscribe"],
+      // Typing channel is isolated and allows client publish/subscribe.
+      [`lobby:${params.lobbyId}:typing`]: ["publish", "subscribe"],
     },
   });
 }
@@ -35,7 +38,11 @@ export async function publishLobbyEvent(params: {
     await rest.channels
       .get(`lobby:${params.lobbyId}`)
       .publish(params.event, params.payload);
-  } catch {
-    // Realtime is best-effort; DB write already succeeded.
+  } catch (error) {
+    console.error("Ably publish failed", {
+      lobbyId: params.lobbyId,
+      event: params.event,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 }

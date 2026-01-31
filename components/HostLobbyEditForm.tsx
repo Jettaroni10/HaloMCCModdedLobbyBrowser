@@ -22,7 +22,6 @@ type HostLobbyEditFormProps = {
     workshopItemUrls: string[];
     requiresEacOff: boolean;
     modNotes: string | null;
-    mapImageUrl: string | null;
   };
 };
 
@@ -54,10 +53,7 @@ export default function HostLobbyEditForm({
 
   return (
     <div className="space-y-6">
-      <MapImageUploader
-        lobbyId={lobbyId}
-        initialImageUrl={defaultValues.mapImageUrl}
-      />
+      <MapImageUploader lobbyId={lobbyId} />
       <HostLobbyForm
         defaultValues={defaultValues}
         submitLabel="Save changes"

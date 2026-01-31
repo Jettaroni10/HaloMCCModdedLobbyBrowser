@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, isAdminUser } from "@/lib/auth";
 import { normalizeText } from "@/lib/validation";
-import { removeLobbyImage } from "@/lib/lobby-images";
+import { deleteLobbyImage } from "@/lib/lobby-images";
 
 async function readBody(request: Request) {
   const contentType = request.headers.get("content-type") ?? "";
@@ -33,10 +33,12 @@ export async function POST(request: Request) {
 
   const updated = await prisma.lobby.update({
     where: { id: lobbyId },
-    data: { isActive: false, mapImageUrl: null },
+    data: { isActive: false, mapImagePath: null },
   });
 
-  await removeLobbyImage(lobby.mapImageUrl);
+  if (lobby.mapImagePath) {
+    await deleteLobbyImage(lobby.mapImagePath);
+  }
 
   const isJson = (request.headers.get("content-type") ?? "").includes(
     "application/json"

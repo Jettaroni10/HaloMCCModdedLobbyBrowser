@@ -129,6 +129,7 @@ model Lobby {
   mode                   String
   map                    String
   mapImageUrl            String?
+  mapImagePath           String?
   region                 Region
   platform               Platform     @default(STEAM)
   voice                  Voice

@@ -8,7 +8,7 @@ import LobbyRosterLive from "@/components/LobbyRosterLive";
 import ReportForm from "@/components/ReportForm";
 import HostLobbyNotifications from "@/components/HostLobbyNotifications";
 import LobbyChat from "@/components/LobbyChat";
-import MapPreview from "@/components/MapPreview";
+import LobbyMapImage from "@/components/LobbyMapImage";
 import { resolveNametagColor } from "@/lib/reach-colors";
 
 type LobbyPageProps = {
@@ -174,14 +174,10 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
         </div>
       </div>
 
-      <section className="rounded-md border border-ink/10 bg-sand p-6">
-        <MapPreview imageUrl={lobby.mapImageUrl} />
-        <p className="mt-3 text-xs text-ink/60">
-          {lobby.mapImageUrl
-            ? "Map image uploaded by host"
-            : "Map image preview not provided."}
-        </p>
-      </section>
+      <LobbyMapImage
+        lobbyId={lobby.id}
+        hasImage={Boolean(lobby.mapImagePath)}
+      />
 
       {canSeeRoster && (
         <LobbyRosterLive

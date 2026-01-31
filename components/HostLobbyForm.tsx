@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Games, Regions, Vibes, Voices } from "@/lib/types";
 import TagsInput from "./TagsInput";
 import { downscaleImageFile } from "@/lib/image-client";
+import MapPreview from "./MapPreview";
 
 type HostLobbyFormProps = {
   defaultValues?: {
@@ -42,6 +43,65 @@ export default function HostLobbyForm({
   const router = useRouter();
   const defaultTags = useMemo(() => defaultValues?.tags ?? [], [defaultValues]);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [mapPreviewUrl, setMapPreviewUrl] = useState<string | null>(null);
+  const [mapFile, setMapFile] = useState<File | null>(null);
+
+  async function uploadMapImage(lobbyId: string, file: File) {
+    const prepared = await downscaleImageFile(file);
+    const ext =
+      prepared.name.split(".").pop()?.toLowerCase() ||
+      prepared.type.split("/")[1] ||
+      "webp";
+
+    const uploadUrlResponse = await fetch(
+      `/api/lobbies/${lobbyId}/map-image/upload-url`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contentType: prepared.type,
+          size: prepared.size,
+          ext,
+        }),
+      }
+    );
+    if (!uploadUrlResponse.ok) {
+      const payload = (await uploadUrlResponse.json()) as { error?: string };
+      throw new Error(payload.error ?? "Upload failed.");
+    }
+    const uploadPayload = (await uploadUrlResponse.json()) as {
+      uploadUrl: string;
+      objectPath: string;
+    };
+
+    const uploadResult = await fetch(uploadPayload.uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": prepared.type },
+      body: prepared,
+    });
+    if (!uploadResult.ok) {
+      throw new Error("Upload failed.");
+    }
+
+    const commitResponse = await fetch(
+      `/api/lobbies/${lobbyId}/map-image/commit`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ objectPath: uploadPayload.objectPath }),
+      }
+    );
+    if (!commitResponse.ok) {
+      const payload = (await commitResponse.json()) as { error?: string };
+      throw new Error(payload.error ?? "Upload failed.");
+    }
+
+    const refresh = await fetch(`/api/lobbies/${lobbyId}/map-image`);
+    if (refresh.ok) {
+      const payload = (await refresh.json()) as { url?: string | null };
+      setMapPreviewUrl(payload.url ?? null);
+    }
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     if (onSubmit) {
@@ -53,29 +113,19 @@ export default function HostLobbyForm({
 
     const form = event.currentTarget;
     const formData = new FormData(form);
-    if (enableMapImage) {
-      const file = formData.get("mapImage");
-      if (file instanceof File && file.size > 0) {
-        if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-          setSubmitError("Unsupported image format. Use JPG, PNG, or WebP.");
-          return;
-        }
-        if (file.size > 5 * 1024 * 1024) {
-          setSubmitError("Image is too large. Max 5 MB.");
-          return;
-        }
-        const processed = await downscaleImageFile(file);
-        formData.set("mapImage", processed);
-      } else {
-        formData.delete("mapImage");
+    const payload: Record<string, unknown> = {};
+    formData.forEach((value, key) => {
+      if (key !== "mapImage") {
+        payload[key] = value;
       }
-    } else {
-      formData.delete("mapImage");
-    }
+    });
+    payload.friendsOnly = formData.get("friendsOnly") === "on";
+    payload.requiresEacOff = formData.get("requiresEacOff") === "on";
 
     const response = await fetch(action, {
       method: method.toUpperCase(),
-      body: formData,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
@@ -88,6 +138,22 @@ export default function HostLobbyForm({
       }
       setSubmitError(message);
       return;
+    }
+
+    const created = (await response.json().catch(() => null)) as
+      | { id?: string }
+      | null;
+    const lobbyId = created?.id;
+
+    if (enableMapImage && mapFile && lobbyId) {
+      try {
+        await uploadMapImage(lobbyId, mapFile);
+      } catch (error) {
+        setSubmitError(
+          error instanceof Error ? error.message : "Upload failed."
+        );
+        return;
+      }
     }
 
     router.push("/host");
@@ -218,11 +284,40 @@ export default function HostLobbyForm({
           <p className="mt-1 text-xs text-ink/60">
             JPG, PNG, or WebP up to 5 MB. We will resize large images.
           </p>
+          {mapPreviewUrl && (
+            <div className="mt-3">
+              <MapPreview imageUrl={mapPreviewUrl} />
+            </div>
+          )}
           <input
             name="mapImage"
             type="file"
             accept="image/jpeg,image/png,image/webp"
             className="mt-3 text-xs text-ink/70"
+            onChange={(event) => {
+              const file = event.currentTarget.files?.[0];
+              if (!file) {
+                setMapFile(null);
+                setMapPreviewUrl(null);
+                return;
+              }
+              if (
+                !["image/jpeg", "image/png", "image/webp"].includes(file.type)
+              ) {
+                setSubmitError(
+                  "Unsupported image format. Use JPG, PNG, or WebP."
+                );
+                return;
+              }
+              if (file.size > 5 * 1024 * 1024) {
+                setSubmitError("Image is too large. Max 5 MB.");
+                return;
+              }
+              setSubmitError(null);
+              setMapFile(file);
+              const preview = URL.createObjectURL(file);
+              setMapPreviewUrl(preview);
+            }}
           />
         </div>
       )}

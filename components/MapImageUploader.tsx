@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import MapPreview from "./MapPreview";
 import { downscaleImageFile } from "@/lib/image-client";
 
@@ -9,17 +9,34 @@ const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 type MapImageUploaderProps = {
   lobbyId: string;
-  initialImageUrl?: string | null;
 };
 
-export default function MapImageUploader({
-  lobbyId,
-  initialImageUrl,
-}: MapImageUploaderProps) {
-  const [currentUrl, setCurrentUrl] = useState(initialImageUrl ?? null);
+function getFileExt(file: File) {
+  const nameParts = file.name.toLowerCase().split(".");
+  return nameParts.length > 1 ? nameParts[nameParts.length - 1] : "";
+}
+
+export default function MapImageUploader({ lobbyId }: MapImageUploaderProps) {
+  const [currentUrl, setCurrentUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    async function loadUrl() {
+      const response = await fetch(`/api/lobbies/${lobbyId}/map-image`);
+      if (!response.ok) return;
+      const payload = (await response.json()) as { url?: string | null };
+      if (active) {
+        setCurrentUrl(payload.url ?? null);
+      }
+    }
+    void loadUrl();
+    return () => {
+      active = false;
+    };
+  }, [lobbyId]);
 
   async function handleUpload(file: File) {
     if (!ACCEPTED_TYPES.includes(file.type)) {
@@ -35,19 +52,59 @@ export default function MapImageUploader({
     setBusy(true);
     try {
       const prepared = await downscaleImageFile(file);
-      const formData = new FormData();
-      formData.append("mapImage", prepared);
-      const response = await fetch(`/api/lobbies/${lobbyId}/image`, {
-        method: "POST",
-        body: formData,
-      });
-      if (!response.ok) {
-        const payload = (await response.json()) as { error?: string };
+      const ext = getFileExt(prepared) || prepared.type.split("/")[1] || "webp";
+      const uploadUrlResponse = await fetch(
+        `/api/lobbies/${lobbyId}/map-image/upload-url`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contentType: prepared.type,
+            size: prepared.size,
+            ext,
+          }),
+        }
+      );
+      if (!uploadUrlResponse.ok) {
+        const payload = (await uploadUrlResponse.json()) as { error?: string };
         setError(payload.error ?? "Upload failed.");
         return;
       }
-      const payload = (await response.json()) as { mapImageUrl?: string | null };
-      setCurrentUrl(payload.mapImageUrl ?? null);
+      const uploadPayload = (await uploadUrlResponse.json()) as {
+        uploadUrl: string;
+        objectPath: string;
+      };
+
+      const uploadResult = await fetch(uploadPayload.uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": prepared.type },
+        body: prepared,
+      });
+      if (!uploadResult.ok) {
+        setError("Upload failed.");
+        return;
+      }
+
+      const commitResponse = await fetch(
+        `/api/lobbies/${lobbyId}/map-image/commit`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ objectPath: uploadPayload.objectPath }),
+        }
+      );
+      if (!commitResponse.ok) {
+        const payload = (await commitResponse.json()) as { error?: string };
+        setError(payload.error ?? "Upload failed.");
+        return;
+      }
+
+      const refresh = await fetch(`/api/lobbies/${lobbyId}/map-image`);
+      if (refresh.ok) {
+        const payload = (await refresh.json()) as { url?: string | null };
+        setCurrentUrl(payload.url ?? null);
+      }
+
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -60,8 +117,8 @@ export default function MapImageUploader({
     setError(null);
     setBusy(true);
     try {
-      const response = await fetch(`/api/lobbies/${lobbyId}/image`, {
-        method: "DELETE",
+      const response = await fetch(`/api/lobbies/${lobbyId}/map-image/remove`, {
+        method: "POST",
       });
       if (!response.ok) {
         setError("Failed to remove image.");

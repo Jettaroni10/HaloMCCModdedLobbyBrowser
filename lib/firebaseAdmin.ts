@@ -30,17 +30,27 @@ function loadServiceAccount(): FirebaseServiceAccount {
   };
 }
 
-export function getFirebaseAdmin() {
-  if (admin.apps.length === 0) {
-    const serviceAccount = loadServiceAccount();
-    admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId: serviceAccount.project_id,
-        clientEmail: serviceAccount.client_email,
-        privateKey: serviceAccount.private_key,
-      }),
-      storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-    });
+function getAdminApp() {
+  if (admin.apps.length > 0) {
+    return admin.app();
   }
-  return admin;
+
+  const serviceAccount = loadServiceAccount();
+  return admin.initializeApp({
+    credential: admin.credential.cert({
+      projectId: serviceAccount.project_id,
+      clientEmail: serviceAccount.client_email,
+      privateKey: serviceAccount.private_key,
+    }),
+    storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+  });
+}
+
+export function getBucket() {
+  const bucketName = process.env.FIREBASE_STORAGE_BUCKET;
+  if (!bucketName) {
+    throw new Error("FIREBASE_STORAGE_BUCKET is missing.");
+  }
+  getAdminApp();
+  return admin.storage().bucket(bucketName);
 }

@@ -168,12 +168,21 @@ export default function LobbyChat({
         throw new Error(payload?.error || "Message failed.");
       }
       const payload = (await response.json().catch(() => null)) as
-        | { message?: ChatMessage }
+        | { message?: ChatMessage | null }
         | null;
       if (payload?.message) {
+        const resolvedMessage: ChatMessage = {
+          id: payload.message.id,
+          senderUserId: payload.message.senderUserId,
+          senderDisplayName: payload.message.senderDisplayName,
+          senderNametagColor: payload.message.senderNametagColor ?? null,
+          body: payload.message.body,
+          createdAt: payload.message.createdAt,
+          status: "sent",
+        };
         setMessages((prev) =>
           prev.map((item) =>
-            item.id === tempId ? { ...payload.message, status: "sent" } : item
+            item.id === tempId ? resolvedMessage : item
           )
         );
       } else {

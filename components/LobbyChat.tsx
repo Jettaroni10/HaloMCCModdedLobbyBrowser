@@ -93,13 +93,13 @@ export default function LobbyChat({
           return (
             <div
               key={message.id}
-              className={`rounded-sm border border-white/10 px-3 py-2 ${
+              className={`overflow-hidden rounded-sm border border-white/10 px-3 py-2 ${
                 message.senderUserId === viewerId ? "bg-black/30" : "bg-black/20"
               }`}
             >
-              <div className="flex items-center justify-between text-xs text-white/60">
+              <div className="flex min-w-0 items-center justify-between gap-2 text-xs text-white/60">
                 <span
-                  className="font-semibold"
+                  className="max-w-[70%] truncate font-semibold"
                   style={{
                     color: resolveNametagColor(message.senderNametagColor),
                   }}
@@ -108,7 +108,9 @@ export default function LobbyChat({
                 </span>
                 <span>{time}</span>
               </div>
-              <p className="mt-1 text-sm text-white/80">{message.body}</p>
+              <p className="mt-1 text-sm text-white/80 break-words whitespace-pre-wrap">
+                {message.body}
+              </p>
             </div>
           );
         })}

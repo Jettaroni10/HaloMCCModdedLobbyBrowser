@@ -2,6 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  .scrollbar-dark {
+    scrollbar-width: thin;
+    scrollbar-color: #3f454c #0b0f14;
+  }
+
+  .scrollbar-dark::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scrollbar-dark::-webkit-scrollbar-track {
+    background: #0b0f14;
+  }
+
+  .scrollbar-dark::-webkit-scrollbar-thumb {
+    background-color: #3f454c;
+    border-radius: 0;
+  }
+
+  .scrollbar-dark::-webkit-scrollbar-button {
+    width: 0;
+    height: 0;
+    display: none;
+  }
+}
+
 :root {
   --sand: 7 12 18;
   --mist: 12 18 26;

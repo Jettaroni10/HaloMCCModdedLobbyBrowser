@@ -81,7 +81,7 @@ export default function LobbyChat({
   return (
     <section className={`${baseClass} ${className ?? ""}`}>
       <h2 className="text-lg font-semibold text-white">Lobby chat</h2>
-      <div className="mt-4 max-h-80 space-y-3 overflow-y-auto rounded-sm border border-white/10 bg-black/30 p-3 text-sm text-white/80">
+      <div className="scrollbar-dark mt-4 max-h-80 space-y-3 overflow-y-auto rounded-sm border border-white/10 bg-black/30 p-3 text-sm text-white/80">
         {sortedMessages.length === 0 && (
           <p className="text-xs text-white/60">No messages yet.</p>
         )}

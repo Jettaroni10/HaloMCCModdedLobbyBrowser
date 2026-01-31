@@ -1,6 +1,5 @@
 export const ReachColors = [
   { name: "White", hex: "#FFFFFF" },
-  { name: "Black", hex: "#000000" },
   { name: "Red", hex: "#FE0000" },
   { name: "Blue", hex: "#0201E3" },
   { name: "Gray", hex: "#707E71" },

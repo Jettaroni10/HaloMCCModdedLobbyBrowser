@@ -226,7 +226,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
               viewerUserId={user?.id ?? null}
               friendIds={friendIds}
               pendingIds={pendingOutgoingIds}
-              className="max-h-[70vh] overflow-y-auto border-white/10 bg-gradient-to-l from-black/60 via-black/35 to-transparent text-white backdrop-blur-sm"
+              className="border-white/10 bg-gradient-to-l from-black/60 via-black/35 to-transparent text-white backdrop-blur-sm"
             />
           </div>
         )}

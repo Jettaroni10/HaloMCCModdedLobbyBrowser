@@ -1,7 +1,7 @@
 "use client";
 
 import RosterFriendButton from "./RosterFriendButton";
-import { resolveNametagColor } from "@/lib/reach-colors";
+import { nameplateTextColor, resolveNametagColor } from "@/lib/reach-colors";
 
 type LobbyRosterMember = {
   slotNumber: number;
@@ -45,20 +45,17 @@ export default function LobbyRoster({
           {roster.map((member) => (
             <div
               key={`${member.slotNumber}-${member.userId}`}
-              className="flex items-center justify-between rounded-sm border border-white/10 bg-black/35 px-3 py-2 transition hover:bg-black/50"
+              className="flex items-center justify-between rounded-sm border border-white/10 px-3 py-2"
+              style={{
+                backgroundColor: resolveNametagColor(member.nametagColor),
+                color: nameplateTextColor(member.nametagColor),
+              }}
             >
               <div className="flex items-center gap-3">
                 <div className="flex h-7 w-7 items-center justify-center rounded-sm bg-black/70 text-[11px] font-semibold text-white">
                   {member.slotNumber}
                 </div>
-                <span
-                  className="text-sm font-semibold"
-                  style={{
-                    color: resolveNametagColor(member.nametagColor),
-                  }}
-                >
-                  {member.displayName}
-                </span>
+                <span className="text-sm font-semibold">{member.displayName}</span>
               </div>
               <div className="flex items-center gap-3">
                 {viewerUserId && member.userId !== viewerUserId && (

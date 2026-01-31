@@ -4,7 +4,8 @@ type MapPreviewProps = {
 };
 
 export default function MapPreview({ imageUrl }: MapPreviewProps) {
-  const src = imageUrl ?? "/images/map-placeholder.webp";
+  const normalizedUrl = imageUrl ? imageUrl.replace(/\\/g, "/") : null;
+  const src = normalizedUrl ?? "/images/map-placeholder.webp";
   const isPlaceholder = !imageUrl;
 
   return (

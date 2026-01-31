@@ -24,23 +24,30 @@ export function validateLobbyImage(file: File) {
 export async function saveLobbyImage(file: File) {
   const extension = LOBBY_IMAGE_ALLOWED_TYPES.get(file.type) ?? "jpg";
   const filename = `${randomUUID()}.${extension}`;
-  const relativePath = path.join("uploads", "lobbies", filename);
-  const absolutePath = path.join(process.cwd(), "public", relativePath);
+  const relativeUrl = path.posix.join("uploads", "lobbies", filename);
+  const absolutePath = path.join(
+    process.cwd(),
+    "public",
+    "uploads",
+    "lobbies",
+    filename
+  );
   const buffer = Buffer.from(await file.arrayBuffer());
 
   await fs.mkdir(UPLOAD_ROOT, { recursive: true });
   await fs.writeFile(absolutePath, buffer);
 
   return {
-    mapImageUrl: `/${relativePath.replace(/\\\\/g, "/")}`,
+    mapImageUrl: `/${relativeUrl}`,
     absolutePath,
   };
 }
 
 export async function removeLobbyImage(mapImageUrl?: string | null) {
   if (!mapImageUrl) return;
-  if (!mapImageUrl.startsWith("/uploads/lobbies/")) return;
-  const relativePath = mapImageUrl.replace(/^\/+/, "");
+  const normalizedUrl = mapImageUrl.replace(/\\/g, "/");
+  if (!normalizedUrl.startsWith("/uploads/lobbies/")) return;
+  const relativePath = normalizedUrl.replace(/^\/+/, "");
   const absolutePath = path.join(process.cwd(), "public", relativePath);
   try {
     await fs.unlink(absolutePath);

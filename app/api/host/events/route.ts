@@ -30,6 +30,7 @@ export async function GET() {
       const handleRequestCreated = (payload: {
         hostUserId: string;
         requesterDisplayName: string;
+        requesterNametagColor?: string | null;
         request: {
           id: string;
           requesterHandleText: string;
@@ -42,6 +43,7 @@ export async function GET() {
           requestId: payload.request.id,
           lobbyId: payload.request.lobby.id,
           requesterDisplayName: payload.requesterDisplayName,
+          requesterNametagColor: payload.requesterNametagColor ?? null,
           requesterHandleText: payload.request.requesterHandleText,
         };
         send("request_created", requestData);

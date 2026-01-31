@@ -10,8 +10,24 @@ export default async function FriendsPage() {
       OR: [{ userAId: user.id }, { userBId: user.id }],
     },
     include: {
-      userA: { select: { id: true, handle: true, displayName: true, steamName: true } },
-      userB: { select: { id: true, handle: true, displayName: true, steamName: true } },
+      userA: {
+        select: {
+          id: true,
+          handle: true,
+          displayName: true,
+          steamName: true,
+          nametagColor: true,
+        },
+      },
+      userB: {
+        select: {
+          id: true,
+          handle: true,
+          displayName: true,
+          steamName: true,
+          nametagColor: true,
+        },
+      },
     },
   });
 
@@ -23,13 +39,22 @@ export default async function FriendsPage() {
       handle: other.handle,
       displayName: other.displayName,
       steamName: other.steamName,
+      nametagColor: other.nametagColor,
     };
   });
 
   const incomingRequests = await prisma.friendRequest.findMany({
     where: { toUserId: user.id, status: "PENDING" },
     include: {
-      fromUser: { select: { id: true, handle: true, displayName: true, steamName: true } },
+      fromUser: {
+        select: {
+          id: true,
+          handle: true,
+          displayName: true,
+          steamName: true,
+          nametagColor: true,
+        },
+      },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -37,7 +62,15 @@ export default async function FriendsPage() {
   const outgoingRequests = await prisma.friendRequest.findMany({
     where: { fromUserId: user.id, status: "PENDING" },
     include: {
-      toUser: { select: { id: true, handle: true, displayName: true, steamName: true } },
+      toUser: {
+        select: {
+          id: true,
+          handle: true,
+          displayName: true,
+          steamName: true,
+          nametagColor: true,
+        },
+      },
     },
     orderBy: { createdAt: "desc" },
   });

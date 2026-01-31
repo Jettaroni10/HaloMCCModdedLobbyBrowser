@@ -67,7 +67,7 @@ export async function GET(
     where: { conversationId: conversation.id },
     orderBy: { createdAt: "asc" },
     take: 50,
-    include: { sender: { select: { displayName: true } } },
+    include: { sender: { select: { displayName: true, nametagColor: true } } },
   });
 
   return NextResponse.json({
@@ -76,6 +76,7 @@ export async function GET(
       id: message.id,
       senderUserId: message.senderUserId,
       senderDisplayName: message.sender.displayName,
+      senderNametagColor: message.sender.nametagColor,
       body: message.body,
       createdAt: message.createdAt.toISOString(),
     })),
@@ -168,6 +169,7 @@ export async function POST(
     id: created.id,
     senderUserId: created.senderUserId,
     senderDisplayName: user.displayName,
+    senderNametagColor: user.nametagColor,
     body: created.body,
     createdAt: created.createdAt.toISOString(),
   });

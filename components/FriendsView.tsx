@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { resolveNametagColor } from "@/lib/reach-colors";
 
 type FriendUser = {
   id: string;
   handle: string;
   displayName: string;
   steamName: string | null;
+  nametagColor?: string | null;
 };
 
 type IncomingRequest = {
@@ -181,7 +183,14 @@ export default function FriendsView({
                 className="flex items-center justify-between rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
               >
                 <div>
-                  <p className="font-semibold text-ink">{result.displayName}</p>
+                  <p
+                    className="font-semibold"
+                    style={{
+                      color: resolveNametagColor(result.nametagColor),
+                    }}
+                  >
+                    {result.displayName}
+                  </p>
                   <p className="text-xs text-ink/60">@{result.handle}</p>
                 </div>
                 <button
@@ -214,7 +223,14 @@ export default function FriendsView({
                 className="flex items-center justify-between rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
               >
                 <div>
-                  <p className="font-semibold text-ink">
+                  <p
+                    className="font-semibold"
+                    style={{
+                      color: resolveNametagColor(
+                        request.fromUser.nametagColor
+                      ),
+                    }}
+                  >
                     {request.fromUser.displayName}
                   </p>
                   <p className="text-xs text-ink/60">
@@ -253,13 +269,18 @@ export default function FriendsView({
                   key={request.id}
                   className="flex items-center justify-between rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
                 >
-                  <div>
-                    <p className="font-semibold text-ink">
-                      {request.toUser.displayName}
-                    </p>
-                    <p className="text-xs text-ink/60">
-                      @{request.toUser.handle}
-                    </p>
+                <div>
+                  <p
+                    className="font-semibold"
+                    style={{
+                      color: resolveNametagColor(request.toUser.nametagColor),
+                    }}
+                  >
+                    {request.toUser.displayName}
+                  </p>
+                  <p className="text-xs text-ink/60">
+                    @{request.toUser.handle}
+                  </p>
                   </div>
                   <span className="text-xs text-ink/60">Pending</span>
                 </div>
@@ -281,7 +302,14 @@ export default function FriendsView({
                 className="flex items-center justify-between rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
               >
                 <div>
-                  <p className="font-semibold text-ink">{friend.displayName}</p>
+                  <p
+                    className="font-semibold"
+                    style={{
+                      color: resolveNametagColor(friend.nametagColor),
+                    }}
+                  >
+                    {friend.displayName}
+                  </p>
                   <p className="text-xs text-ink/60">@{friend.handle}</p>
                 </div>
                 <div className="flex items-center gap-2">

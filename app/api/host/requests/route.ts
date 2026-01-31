@@ -39,6 +39,7 @@ export async function GET() {
           id: true,
           displayName: true,
           handle: true,
+          nametagColor: true,
         },
       },
     },

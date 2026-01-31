@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { resolveNametagColor } from "@/lib/reach-colors";
 
 type ChatMessage = {
   id: string;
   senderUserId: string;
   senderDisplayName: string;
+  senderNametagColor?: string | null;
   body: string;
   createdAt: string;
 };
@@ -15,6 +17,7 @@ type DmChatProps = {
   viewerId: string;
   initialMessages: ChatMessage[];
   targetDisplayName: string;
+  targetNametagColor?: string | null;
 };
 
 export default function DmChat({
@@ -22,6 +25,7 @@ export default function DmChat({
   viewerId,
   initialMessages,
   targetDisplayName,
+  targetNametagColor,
 }: DmChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [body, setBody] = useState("");
@@ -59,7 +63,10 @@ export default function DmChat({
   return (
     <section className="rounded-md border border-ink/10 bg-sand p-6">
       <h2 className="text-lg font-semibold text-ink">
-        Direct messages · {targetDisplayName}
+        Direct messages ·{" "}
+        <span style={{ color: resolveNametagColor(targetNametagColor) }}>
+          {targetDisplayName}
+        </span>
       </h2>
       <div className="mt-4 max-h-80 space-y-3 overflow-y-auto rounded-sm border border-ink/10 bg-mist p-3 text-sm">
         {messages.length === 0 && (
@@ -78,7 +85,12 @@ export default function DmChat({
               }`}
             >
               <div className="flex items-center justify-between text-xs text-ink/60">
-                <span className="font-semibold text-ink">
+                <span
+                  className="font-semibold"
+                  style={{
+                    color: resolveNametagColor(message.senderNametagColor),
+                  }}
+                >
                   {message.senderDisplayName}
                 </span>
                 <span>{time}</span>

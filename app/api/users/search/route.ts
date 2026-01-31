@@ -31,6 +31,7 @@ export async function GET(request: Request) {
       handle: true,
       displayName: true,
       steamName: true,
+      nametagColor: true,
     },
     take: 10,
     orderBy: { displayName: "asc" },

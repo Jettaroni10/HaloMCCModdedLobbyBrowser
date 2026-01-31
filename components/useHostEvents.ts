@@ -7,6 +7,7 @@ export type HostRequestCreatedEvent = {
   requesterUserId: string;
   requesterHandleText: string;
   requesterDisplayName?: string | null;
+  requesterNametagColor?: string | null;
   note?: string | null;
   confirmedSubscribed?: boolean;
   confirmedEacOff?: boolean;

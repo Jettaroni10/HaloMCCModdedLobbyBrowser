@@ -166,6 +166,7 @@ export async function POST(
   emitRequestCreated({
     hostUserId: lobby.hostUserId,
     requesterDisplayName: user.displayName,
+    requesterNametagColor: user.nametagColor,
     request: {
       id: joinRequest.id,
       requesterUserId: joinRequest.requesterUserId,
@@ -190,6 +191,7 @@ export async function POST(
       requesterUserId: joinRequest.requesterUserId,
       requesterHandleText: joinRequest.requesterHandleText,
       requesterDisplayName: user.displayName,
+      requesterNametagColor: user.nametagColor,
       createdAt: joinRequest.createdAt.toISOString(),
     },
   });

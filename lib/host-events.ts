@@ -3,6 +3,7 @@ import { EventEmitter } from "events";
 type RequestCreatedPayload = {
   hostUserId: string;
   requesterDisplayName: string;
+  requesterNametagColor?: string | null;
   request: {
     id: string;
     requesterUserId: string;

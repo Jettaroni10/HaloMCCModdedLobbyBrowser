@@ -9,6 +9,7 @@ type RosterMember = {
   displayName: string;
   srLevel: number;
   userId: string;
+  nametagColor?: string | null;
 };
 
 type LobbyRosterLiveProps = {

@@ -92,6 +92,7 @@ model User {
   email           String?          @unique
   handle          String           @unique
   displayName     String
+  nametagColor    String           @default("#FFFFFF")
   passwordHash    String
   steamName       String?
   reputationScore Int              @default(0)

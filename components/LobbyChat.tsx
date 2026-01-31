@@ -2,11 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { useLobbyEvents } from "./useLobbyEvents";
+import { resolveNametagColor } from "@/lib/reach-colors";
 
 type ChatMessage = {
   id: string;
   senderUserId: string;
   senderDisplayName: string;
+  senderNametagColor?: string | null;
   body: string;
   createdAt: string;
 };
@@ -91,7 +93,12 @@ export default function LobbyChat({
               }`}
             >
               <div className="flex items-center justify-between text-xs text-ink/60">
-                <span className="font-semibold text-ink">
+                <span
+                  className="font-semibold"
+                  style={{
+                    color: resolveNametagColor(message.senderNametagColor),
+                  }}
+                >
                   {message.senderDisplayName}
                 </span>
                 <span>{time}</span>

@@ -15,7 +15,7 @@ export default async function DmPage({
   const user = await requireAuth();
   const target = await prisma.user.findUnique({
     where: { id: params.userId },
-    select: { id: true, displayName: true },
+    select: { id: true, displayName: true, nametagColor: true },
   });
   if (!target) {
     notFound();
@@ -40,7 +40,9 @@ export default async function DmPage({
         messages: {
           orderBy: { createdAt: "asc" },
           take: 50,
-          include: { sender: { select: { displayName: true } } },
+          include: {
+            sender: { select: { displayName: true, nametagColor: true } },
+          },
         },
       },
     })) ??
@@ -55,7 +57,9 @@ export default async function DmPage({
         messages: {
           orderBy: { createdAt: "asc" },
           take: 50,
-          include: { sender: { select: { displayName: true } } },
+          include: {
+            sender: { select: { displayName: true, nametagColor: true } },
+          },
         },
       },
     }));
@@ -64,6 +68,7 @@ export default async function DmPage({
     id: message.id,
     senderUserId: message.senderUserId,
     senderDisplayName: message.sender.displayName,
+    senderNametagColor: message.sender.nametagColor,
     body: message.body,
     createdAt: message.createdAt.toISOString(),
   }));
@@ -75,6 +80,7 @@ export default async function DmPage({
         viewerId={user.id}
         initialMessages={initialMessages}
         targetDisplayName={target.displayName}
+        targetNametagColor={target.nametagColor}
       />
     </div>
   );

@@ -48,6 +48,7 @@ export async function GET(
           steamName: true,
           handle: true,
           srLevel: true,
+          nametagColor: true,
         },
       },
     },
@@ -62,6 +63,7 @@ export async function GET(
         entry.user.displayName,
       srLevel: entry.user.srLevel ?? 1,
       userId: entry.userId,
+      nametagColor: entry.user.nametagColor,
     }))
   );
 }

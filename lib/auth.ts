@@ -10,6 +10,7 @@ export type SessionUser = Pick<
   | "email"
   | "handle"
   | "displayName"
+  | "nametagColor"
   | "steamName"
   | "reputationScore"
   | "srLevel"
@@ -97,6 +98,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
         email: true,
         handle: true,
         displayName: true,
+        nametagColor: true,
         steamName: true,
         reputationScore: true,
         srLevel: true,
@@ -120,6 +122,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
       email: true,
       handle: true,
       displayName: true,
+      nametagColor: true,
       steamName: true,
       reputationScore: true,
       srLevel: true,

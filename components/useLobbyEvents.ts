@@ -7,6 +7,7 @@ type LobbyMessageEvent = {
   conversationId: string;
   senderUserId: string;
   senderDisplayName: string;
+  senderNametagColor?: string | null;
   body: string;
   createdAt: string;
 };
@@ -20,6 +21,7 @@ type LobbyRequestEvent = {
   requesterUserId: string;
   requesterHandleText: string;
   requesterDisplayName: string;
+  requesterNametagColor?: string | null;
   createdAt: string;
 };
 

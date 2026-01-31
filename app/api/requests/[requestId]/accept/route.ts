@@ -6,6 +6,7 @@ import { emitLobbyRosterUpdated } from "@/lib/lobby-events";
 
 function buildInviteChecklist(request: {
   requesterHandleText: string;
+  requesterNametagColor?: string | null;
   confirmedSubscribed: boolean;
   confirmedEacOff: boolean;
   lobby: {
@@ -40,6 +41,7 @@ function buildInviteChecklist(request: {
   const payload: Record<string, unknown> = {
     requester: {
       handleText: request.requesterHandleText,
+      nametagColor: request.requesterNametagColor ?? null,
     },
     steps,
     copyStrings: {
@@ -78,7 +80,10 @@ export async function POST(
   const result = await prisma.$transaction(async (tx) => {
     const joinRequest = await tx.joinRequest.findUnique({
       where: { id: params.requestId },
-      include: { lobby: true },
+      include: {
+        lobby: true,
+        requester: { select: { nametagColor: true } },
+      },
     });
 
     if (!joinRequest) {
@@ -115,7 +120,10 @@ export async function POST(
         decidedAt: new Date(),
         decidedByUserId: user.id,
       },
-      include: { lobby: true },
+      include: {
+        lobby: true,
+        requester: { select: { nametagColor: true } },
+      },
     });
 
     await tx.lobbyMember.create({
@@ -183,6 +191,7 @@ export async function POST(
 
   const checklist = buildInviteChecklist({
     requesterHandleText: updated.requesterHandleText,
+    requesterNametagColor: updated.requester.nametagColor,
     confirmedSubscribed: updated.confirmedSubscribed,
     confirmedEacOff: updated.confirmedEacOff,
     lobby: {

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { createSessionToken, getSessionCookieName } from "@/lib/auth";
 import { normalizeHandleText, normalizeText } from "@/lib/validation";
 import { hashPassword } from "@/lib/password";
+import { DEFAULT_NAMETAG_COLOR } from "@/lib/reach-colors";
 
 export async function POST(request: Request) {
   const contentType = request.headers.get("content-type") ?? "";
@@ -81,6 +82,7 @@ export async function POST(request: Request) {
       email,
       handle,
       displayName,
+      nametagColor: DEFAULT_NAMETAG_COLOR,
       passwordHash,
       steamName: steamName || null,
     },

@@ -7,6 +7,7 @@ type LobbyMessageCreatedPayload = {
     conversationId: string;
     senderUserId: string;
     senderDisplayName: string;
+    senderNametagColor?: string | null;
     body: string;
     createdAt: string;
   };
@@ -23,6 +24,7 @@ type LobbyRequestCreatedPayload = {
     requesterUserId: string;
     requesterHandleText: string;
     requesterDisplayName: string;
+    requesterNametagColor?: string | null;
     createdAt: string;
   };
 };

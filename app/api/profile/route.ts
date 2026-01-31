@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { normalizeHandleText, normalizeText } from "@/lib/validation";
+import { isReachColor } from "@/lib/reach-colors";
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
@@ -25,10 +26,21 @@ export async function POST(request: Request) {
     body?.steamName ?? formData?.get("steamName"),
     48
   );
+  const rawColor = body?.nametagColor ?? formData?.get("nametagColor");
+  const nametagColor =
+    typeof rawColor === "string" && rawColor.trim().length > 0
+      ? rawColor.trim()
+      : "";
 
   if (!displayName) {
     return NextResponse.json(
       { error: "Display name is required." },
+      { status: 400 }
+    );
+  }
+  if (nametagColor && !isReachColor(nametagColor)) {
+    return NextResponse.json(
+      { error: "Nametag color must be selected from the palette." },
       { status: 400 }
     );
   }
@@ -38,6 +50,7 @@ export async function POST(request: Request) {
     data: {
       displayName,
       steamName: steamName || null,
+      ...(nametagColor ? { nametagColor } : {}),
     },
   });
 

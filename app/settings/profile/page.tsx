@@ -1,5 +1,6 @@
 import { requireAuth } from "@/lib/auth";
 import { xpRequired } from "@/lib/xp";
+import { ReachColors, resolveNametagColor } from "@/lib/reach-colors";
 
 export default async function ProfilePage() {
   const user = await requireAuth();
@@ -9,6 +10,7 @@ export default async function ProfilePage() {
   const xpToNext = Math.max(0, xpNeeded - xpThisLevel);
   const progressPercent =
     xpNeeded > 0 ? Math.min(100, Math.round((xpThisLevel / xpNeeded) * 100)) : 0;
+  const selectedColor = resolveNametagColor(user.nametagColor);
 
   return (
     <div className="mx-auto w-full max-w-3xl px-6 py-12">
@@ -61,6 +63,35 @@ export default async function ProfilePage() {
             className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
           />
         </label>
+
+        <div className="rounded-sm border border-ink/10 bg-mist px-4 py-3">
+          <p className="text-sm font-semibold text-ink">Nametag color</p>
+          <p className="mt-1 text-xs text-ink/60">
+            Choose a classic multiplayer color for your name.
+          </p>
+          <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-6">
+            {ReachColors.map((color) => (
+              <label
+                key={color.name}
+                className="flex flex-col items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-ink/60"
+                title={color.name}
+              >
+                <input
+                  type="radio"
+                  name="nametagColor"
+                  value={color.hex}
+                  defaultChecked={selectedColor === color.hex}
+                  className="peer sr-only"
+                />
+                <span
+                  className="h-10 w-10 rounded-sm border border-ink/20 shadow-sm peer-checked:ring-2 peer-checked:ring-ink peer-checked:ring-offset-2 peer-checked:ring-offset-mist"
+                  style={{ backgroundColor: color.hex }}
+                />
+                <span className="text-[9px] text-ink/70">{color.name}</span>
+              </label>
+            ))}
+          </div>
+        </div>
 
         <div className="rounded-sm border border-ink/10 bg-mist px-4 py-3 text-sm text-ink/70">
           <p>

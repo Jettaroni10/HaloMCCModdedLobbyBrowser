@@ -70,7 +70,7 @@ export async function GET(
     orderBy: { createdAt: "asc" },
     take: 50,
     include: {
-      sender: { select: { displayName: true } },
+      sender: { select: { displayName: true, nametagColor: true } },
     },
   });
 
@@ -80,6 +80,7 @@ export async function GET(
       conversationId: message.conversationId,
       senderUserId: message.senderUserId,
       senderDisplayName: message.sender.displayName,
+      senderNametagColor: message.sender.nametagColor,
       body: message.body,
       createdAt: message.createdAt.toISOString(),
     }))
@@ -143,6 +144,7 @@ export async function POST(
       conversationId: created.conversationId,
       senderUserId: created.senderUserId,
       senderDisplayName: user.displayName,
+      senderNametagColor: user.nametagColor,
       body: created.body,
       createdAt: created.createdAt.toISOString(),
     },

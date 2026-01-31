@@ -1,12 +1,14 @@
 "use client";
 
 import RosterFriendButton from "./RosterFriendButton";
+import { resolveNametagColor } from "@/lib/reach-colors";
 
 type LobbyRosterMember = {
   slotNumber: number;
   displayName: string;
   srLevel: number;
   userId: string;
+  nametagColor?: string | null;
 };
 
 type LobbyRosterProps = {
@@ -41,7 +43,12 @@ export default function LobbyRoster({
                 <div className="flex h-7 w-7 items-center justify-center rounded-sm bg-ink text-[11px] font-semibold text-sand">
                   {member.slotNumber}
                 </div>
-                <span className="text-sm font-semibold text-ink">
+                <span
+                  className="text-sm font-semibold"
+                  style={{
+                    color: resolveNametagColor(member.nametagColor),
+                  }}
+                >
                   {member.displayName}
                 </span>
               </div>

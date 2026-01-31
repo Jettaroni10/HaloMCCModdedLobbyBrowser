@@ -9,6 +9,7 @@ import ReportForm from "@/components/ReportForm";
 import HostLobbyNotifications from "@/components/HostLobbyNotifications";
 import LobbyChat from "@/components/LobbyChat";
 import MapPreview from "@/components/MapPreview";
+import { resolveNametagColor } from "@/lib/reach-colors";
 
 type LobbyPageProps = {
   params: { id: string };
@@ -28,7 +29,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
   const lobby = await prisma.lobby.findUnique({
     where: { id: params.id },
     include: {
-      host: { select: { displayName: true } },
+      host: { select: { displayName: true, nametagColor: true } },
     },
   });
 
@@ -65,7 +66,13 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
         orderBy: { slotNumber: "asc" },
         include: {
           user: {
-            select: { displayName: true, steamName: true, handle: true, srLevel: true },
+            select: {
+              displayName: true,
+              steamName: true,
+              handle: true,
+              srLevel: true,
+              nametagColor: true,
+            },
           },
         },
       })
@@ -103,7 +110,9 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
           messages: {
             orderBy: { createdAt: "asc" },
             take: 50,
-            include: { sender: { select: { displayName: true } } },
+            include: {
+              sender: { select: { displayName: true, nametagColor: true } },
+            },
           },
         },
       })
@@ -113,6 +122,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
       id: message.id,
       senderUserId: message.senderUserId,
       senderDisplayName: message.sender.displayName,
+      senderNametagColor: message.sender.nametagColor,
       body: message.body,
       createdAt: message.createdAt.toISOString(),
     })) ?? [];
@@ -130,7 +140,14 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
               {lobby.title}
             </h1>
             <p className="mt-2 text-sm text-ink/60">
-              Hosted by {lobby.host.displayName}
+              Hosted by{" "}
+              <span
+                style={{
+                  color: resolveNametagColor(lobby.host.nametagColor),
+                }}
+              >
+                {lobby.host.displayName}
+              </span>
             </p>
           </div>
           {lobby.isModded && (
@@ -177,6 +194,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
               member.user.displayName,
             srLevel: member.user.srLevel ?? 1,
             userId: member.userId,
+            nametagColor: member.user.nametagColor,
           }))}
           viewerUserId={user?.id ?? null}
           friendIds={friendIds}

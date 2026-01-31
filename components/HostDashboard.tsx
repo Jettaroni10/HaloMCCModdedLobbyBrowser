@@ -7,6 +7,7 @@ import {
   type HostRequestCreatedEvent,
   type HostLobbyExpiredEvent,
 } from "./useHostEvents";
+import { resolveNametagColor } from "@/lib/reach-colors";
 
 type LobbySummary = {
   id: string;
@@ -29,6 +30,7 @@ type JoinRequestSummary = {
   id: string;
   requesterUserId: string;
   requesterHandleText: string;
+  requesterNametagColor?: string | null;
   note: string | null;
   confirmedSubscribed: boolean;
   confirmedEacOff: boolean;
@@ -43,6 +45,7 @@ type JoinRequestSummary = {
 type InviteChecklist = {
   requester: {
     handleText: string;
+    nametagColor?: string | null;
   };
   modded?: {
     workshopCollectionUrl: string | null;
@@ -97,6 +100,7 @@ export default function HostDashboard({ lobbies, requests }: HostDashboardProps)
           id: payload.id,
           requesterUserId: payload.requesterUserId,
           requesterHandleText: payload.requesterHandleText,
+          requesterNametagColor: payload.requesterNametagColor ?? null,
           note: payload.note ?? null,
           confirmedSubscribed: payload.confirmedSubscribed ?? false,
           confirmedEacOff: payload.confirmedEacOff ?? false,
@@ -330,7 +334,15 @@ export default function HostDashboard({ lobbies, requests }: HostDashboardProps)
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="font-semibold text-ink">
-                    {request.requesterHandleText}
+                    <span
+                      style={{
+                        color: resolveNametagColor(
+                          request.requesterNametagColor
+                        ),
+                      }}
+                    >
+                      {request.requesterHandleText}
+                    </span>
                   </p>
                   <p className="text-xs text-ink/60">
                     Lobby: {request.lobby.title}
@@ -394,7 +406,15 @@ export default function HostDashboard({ lobbies, requests }: HostDashboardProps)
                   Invite checklist
                 </h3>
                 <p className="text-sm text-ink/70">
-                  {checklist.requester.handleText}
+                  <span
+                    style={{
+                      color: resolveNametagColor(
+                        checklist.requester.nametagColor
+                      ),
+                    }}
+                  >
+                    {checklist.requester.handleText}
+                  </span>
                 </p>
               </div>
               <button

@@ -18,6 +18,8 @@ import {
   validateLobbyImage,
 } from "@/lib/lobby-images";
 
+export const runtime = "nodejs";
+
 const LIMITS = {
   title: 80,
   mode: 60,

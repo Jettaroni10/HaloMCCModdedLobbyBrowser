@@ -1,6 +1,10 @@
 import { requireAuth } from "@/lib/auth";
 import { xpRequired } from "@/lib/xp";
-import { ReachColors, resolveNametagColor } from "@/lib/reach-colors";
+import {
+  ReachColors,
+  nameplateTextColor,
+  resolveNametagColor,
+} from "@/lib/reach-colors";
 
 export default async function ProfilePage() {
   const user = await requireAuth();
@@ -54,6 +58,26 @@ export default async function ProfilePage() {
             className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
           />
         </label>
+
+        <div className="rounded-sm border border-ink/10 bg-mist px-4 py-3 text-sm text-ink/70">
+          <p className="text-xs uppercase tracking-[0.3em] text-ink/50">
+            Nameplate preview
+          </p>
+          <div className="mt-3 inline-flex items-center gap-3">
+            <span
+              className="rounded-sm px-3 py-1 text-sm font-semibold"
+              style={{
+                backgroundColor: selectedColor,
+                color: nameplateTextColor(selectedColor),
+              }}
+            >
+              {user.displayName}
+            </span>
+            <span className="text-[10px] text-ink/60">
+              Current nametag color
+            </span>
+          </div>
+        </div>
         <label className="block text-sm font-semibold text-ink">
           Steam name
           <input

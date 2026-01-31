@@ -34,3 +34,15 @@ export function isReachColor(value?: string | null): value is ReachColorHex {
 export function resolveNametagColor(value?: string | null) {
   return isReachColor(value) ? value : DEFAULT_NAMETAG_COLOR;
 }
+
+export function nameplateTextColor(hex?: string | null) {
+  const value = resolveNametagColor(hex).replace("#", "");
+  if (value.length !== 6) {
+    return "#FFFFFF";
+  }
+  const r = parseInt(value.slice(0, 2), 16);
+  const g = parseInt(value.slice(2, 4), 16);
+  const b = parseInt(value.slice(4, 6), 16);
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+  return brightness > 170 ? "#0B0F14" : "#FFFFFF";
+}

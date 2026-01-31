@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import type { Types } from "ably";
 import { createLobbyRealtimeClient } from "@/lib/realtime/ablyClient";
 
 type MessagePayload = {
@@ -63,7 +62,7 @@ export function useLobbyChatRealtime({
   const messageRef = useRef(onMessage);
   const typingStartRef = useRef(onTypingStart);
   const typingStopRef = useRef(onTypingStop);
-  const channelRef = useRef<Types.RealtimeChannelCallbacks | null>(null);
+  const channelRef = useRef<any>(null);
   const clientRef = useRef<ReturnType<typeof createLobbyRealtimeClient> | null>(
     null
   );
@@ -88,17 +87,17 @@ export function useLobbyChatRealtime({
     const typingChannel = client.channels.get(`lobby:${lobbyId}:typing`);
     channelRef.current = channel;
 
-    const handleMessage = (message: Types.Message) => {
+    const handleMessage = (message: { name?: string; data?: unknown }) => {
       if (message.name !== "message:new") return;
       if (!isMessagePayload(message.data)) return;
       messageRef.current?.(message.data);
     };
-    const handleTypingStart = (message: Types.Message) => {
+    const handleTypingStart = (message: { name?: string; data?: unknown }) => {
       if (message.name !== "typing:start") return;
       if (!isTypingPayload(message.data)) return;
       typingStartRef.current?.(message.data);
     };
-    const handleTypingStop = (message: Types.Message) => {
+    const handleTypingStop = (message: { name?: string; data?: unknown }) => {
       if (message.name !== "typing:stop") return;
       if (!isTypingPayload(message.data)) return;
       typingStopRef.current?.(message.data);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLobbyEvents } from "./useLobbyEvents";
 import { resolveNametagColor } from "@/lib/reach-colors";
 
@@ -41,24 +41,31 @@ export default function LobbyChat({
     },
   });
 
+  const loadMessages = useCallback(async () => {
+    const response = await fetch(`/api/lobbies/${lobbyId}/chat`, {
+      cache: "no-store",
+    });
+    if (!response.ok) return;
+    const data = (await response.json().catch(() => null)) as
+      | ChatMessage[]
+      | null;
+    if (!Array.isArray(data)) return;
+    setMessages(data);
+  }, [lobbyId]);
+
   useEffect(() => {
     let active = true;
-    const fetchMessages = async () => {
-      const response = await fetch(`/api/lobbies/${lobbyId}/chat`);
-      if (!response.ok) return;
-      const data = (await response.json().catch(() => null)) as
-        | ChatMessage[]
-        | null;
-      if (!active || !Array.isArray(data)) return;
-      setMessages(data);
+    const safeLoad = async () => {
+      if (!active) return;
+      await loadMessages();
     };
-    void fetchMessages();
-    const interval = setInterval(fetchMessages, 15000);
+    void safeLoad();
+    const interval = setInterval(safeLoad, 15000);
     return () => {
       active = false;
       clearInterval(interval);
     };
-  }, [lobbyId]);
+  }, [loadMessages]);
 
   const sortedMessages = useMemo(
     () =>
@@ -96,6 +103,8 @@ export default function LobbyChat({
           }
           return [...prev, payload.message];
         });
+      } else {
+        await loadMessages();
       }
       setBody("");
     } catch (err) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { resolveNametagColor } from "@/lib/reach-colors";
 
 type ChatMessage = {
@@ -31,6 +31,11 @@ export default function DmChat({
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   async function handleSend(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -73,10 +78,12 @@ export default function DmChat({
           <p className="text-xs text-ink/60">No messages yet.</p>
         )}
         {messages.map((message) => {
-          const time = new Date(message.createdAt).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          });
+          const time = hydrated
+            ? new Date(message.createdAt).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : "";
           return (
             <div
               key={message.id}
@@ -93,7 +100,7 @@ export default function DmChat({
                 >
                   {message.senderDisplayName}
                 </span>
-                <span>{time}</span>
+                <span suppressHydrationWarning>{time}</span>
               </div>
               <p className="mt-1 text-sm text-ink/80">{message.body}</p>
             </div>

@@ -81,6 +81,7 @@ export default function HostDashboard({
   requests,
   hostUserId,
 }: HostDashboardProps) {
+  const [hydrated, setHydrated] = useState(false);
   const [activeLobbies, setActiveLobbies] = useState<LobbySummary[]>(lobbies);
   const [allRequests, setAllRequests] = useState<JoinRequestSummary[]>(requests);
   const [tab, setTab] = useState<JoinRequestSummary["status"]>("PENDING");
@@ -129,6 +130,10 @@ export default function HostDashboard({
     () => allRequests.filter((request) => request.status === tab),
     [allRequests, tab]
   );
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -253,9 +258,15 @@ export default function HostDashboard({
                   <p className="text-xs text-ink/60">
                     {lobby.game} · {lobby.mode} · {lobby.map}
                   </p>
-                  <p className="text-xs text-ink/50">
-                    {formatCountdown(lobby.expiresAt)} ·{" "}
-                    {formatUpdated(lobby.lastHeartbeatAt)}
+                  <p
+                    className="text-xs text-ink/50"
+                    suppressHydrationWarning
+                  >
+                    {hydrated
+                      ? `${formatCountdown(lobby.expiresAt)} · ${formatUpdated(
+                          lobby.lastHeartbeatAt
+                        )}`
+                      : "Checking status…"}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">

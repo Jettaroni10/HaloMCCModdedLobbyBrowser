@@ -33,6 +33,7 @@ export default function LobbyChat({
 }: LobbyChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [ui, setUi] = useState({ body: "", error: "", sending: false });
+  const [hydrated, setHydrated] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Record<string, string>>({});
   const typingTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(
     new Map()
@@ -45,6 +46,10 @@ export default function LobbyChat({
     const el = listRef.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
+  }, []);
+
+  useEffect(() => {
+    setHydrated(true);
   }, []);
 
   useEffect(() => {
@@ -256,10 +261,12 @@ export default function LobbyChat({
           <p className="text-xs text-white/60">No messages yet.</p>
         )}
         {sortedMessages.map((message) => {
-          const time = new Date(message.createdAt).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          });
+          const time = hydrated
+            ? new Date(message.createdAt).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : "";
           return (
             <div
               key={message.id}
@@ -276,7 +283,7 @@ export default function LobbyChat({
                 >
                   {message.senderDisplayName}
                 </span>
-                <span>{time}</span>
+                <span suppressHydrationWarning>{time}</span>
               </div>
               <div className="mt-1 flex items-start justify-between gap-3 text-sm text-white/80">
                 <p className="break-words whitespace-pre-wrap">

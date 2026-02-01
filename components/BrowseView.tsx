@@ -225,10 +225,7 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
             </div>
             <div className="relative z-20 mt-3 flex items-center justify-between text-xs text-white/70 drop-shadow-[0_1px_4px_rgba(0,0,0,0.75)]">
               <span>{formatMinutesAgo(lobby.lastHeartbeatAt, now)}</span>
-              <span
-                onClick={(event) => event.stopPropagation()}
-                className="rounded-sm border border-white/30 px-4 py-1.5 text-xs font-semibold text-white hover:border-white/60"
-              >
+              <span className="rounded-sm border border-white/30 px-4 py-1.5 text-xs font-semibold text-white hover:border-white/60">
                 View lobby
               </span>
             </div>

@@ -163,13 +163,13 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
         {decoratedLobbies.map((lobby) => (
           <div
             key={lobby.id}
-            className="relative overflow-hidden rounded-sm border border-ink/10 bg-transparent p-5"
+            className="relative min-h-[140px] overflow-hidden rounded-sm border border-ink/10 bg-transparent p-5"
           >
             <LobbyCardBackground
               lobbyId={lobby.id}
               hasImage={Boolean(lobby.mapImagePath)}
             />
-            <div className="flex items-start justify-between gap-4">
+            <div className="relative z-20 flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-xl font-semibold text-white">
                   {lobby.title}
@@ -194,7 +194,7 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
                 )}
               </div>
             </div>
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-white/70">
+            <div className="relative z-20 mt-3 flex flex-wrap items-center gap-2 text-xs text-white/70">
               <span>{formatEnum(lobby.vibe)}</span>
               {lobby.slotsTotal !== null && (
                 <>
@@ -205,7 +205,7 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
                 </>
               )}
             </div>
-            <div className="mt-3 flex items-center justify-between text-xs text-white/70">
+            <div className="relative z-20 mt-3 flex items-center justify-between text-xs text-white/70">
               <span>{formatMinutesAgo(lobby.lastHeartbeatAt, now)}</span>
               <Link
                 href={`/lobbies/${lobby.id}`}

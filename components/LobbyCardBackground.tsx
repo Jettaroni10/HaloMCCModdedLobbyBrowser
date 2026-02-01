@@ -45,23 +45,17 @@ export default function LobbyCardBackground({
 
   return (
     <>
-      <div
-        className="absolute inset-0 -z-10 bg-cover bg-center"
-        style={{ backgroundImage: `url("${src}")` }}
-      />
-      <div
-        className={`absolute inset-0 -z-10 ${
-          hasRealImage ? "bg-black/20" : "bg-[#081826]/35"
-        }`}
-      />
-      <div
-        className="absolute inset-0 -z-10"
-        style={{
-          background: hasRealImage
-            ? "radial-gradient(circle at 50% 20%, rgba(0,0,0,0.05), rgba(0,0,0,0.35) 70%)"
-            : "radial-gradient(circle at 50% 20%, rgba(0,0,0,0.2), rgba(0,0,0,0.6) 70%)",
-        }}
-      />
+      {hasRealImage ? (
+        <img
+          src={src}
+          alt=""
+          loading="lazy"
+          className="absolute inset-0 z-0 h-full w-full object-cover"
+        />
+      ) : (
+        <div className="absolute inset-0 z-0 bg-[#081826]/35" />
+      )}
+      <div className="absolute inset-0 z-10 bg-gradient-to-t from-slate-950/80 via-slate-950/30 to-transparent" />
     </>
   );
 }

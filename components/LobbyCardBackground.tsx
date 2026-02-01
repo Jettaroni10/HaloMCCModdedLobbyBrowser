@@ -20,7 +20,10 @@ export default function LobbyCardBackground({
       ) : (
         <div className="absolute inset-0 z-0 bg-slate-900" />
       )}
-      <div className="absolute inset-0 z-10 bg-gradient-to-t from-slate-950/80 via-slate-950/30 to-transparent" />
+      {/* Overlay layers (tint + sci-fi gradients). Tune opacities here for legibility. */}
+      <div className="absolute inset-0 z-10 bg-[#061326]/45" />
+      <div className="absolute inset-0 z-20 bg-gradient-to-r from-[#061326]/85 via-[#061326]/40 to-transparent" />
+      <div className="absolute inset-0 z-20 bg-gradient-to-t from-black/35 via-transparent to-black/10" />
     </>
   );
 }

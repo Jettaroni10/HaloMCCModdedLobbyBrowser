@@ -188,7 +188,10 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
             <LobbyCardBackground
               imageUrl={lobby.mapImageUrl}
             />
-            <div className="relative z-20 flex items-start justify-between gap-4">
+            <div
+              className="relative z-20 flex items-start justify-between gap-4"
+              style={{ textShadow: "0 2px 8px rgba(0,0,0,0.45)" }}
+            >
               <div>
                 <h2 className="text-xl font-semibold text-white">
                   {lobby.title}
@@ -213,7 +216,10 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
                 )}
               </div>
             </div>
-            <div className="relative z-20 mt-3 flex flex-wrap items-center gap-2 text-xs text-white/70">
+            <div
+              className="relative z-20 mt-3 flex flex-wrap items-center gap-2 text-xs text-white/70"
+              style={{ textShadow: "0 2px 8px rgba(0,0,0,0.45)" }}
+            >
               <span>{formatEnum(lobby.vibe)}</span>
               {lobby.slotsTotal !== null && (
                 <>
@@ -224,7 +230,10 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
                 </>
               )}
             </div>
-            <div className="relative z-20 mt-3 flex items-center justify-between text-xs text-white/70">
+            <div
+              className="relative z-20 mt-3 flex items-center justify-between text-xs text-white/70"
+              style={{ textShadow: "0 2px 8px rgba(0,0,0,0.45)" }}
+            >
               <span>{formatMinutesAgo(lobby.lastHeartbeatAt, now)}</span>
               <Link
                 href={`/lobbies/${lobby.id}`}

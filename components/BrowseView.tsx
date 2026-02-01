@@ -6,6 +6,7 @@ import { parseEnum, parseStringArray } from "@/lib/validation";
 import { Games, Regions, Vibes, Voices } from "@/lib/types";
 import LobbyCardBackground from "@/components/LobbyCardBackground";
 import { getSignedReadUrl } from "@/lib/lobby-images";
+import { getCurrentUser } from "@/lib/auth";
 
 type BrowseViewProps = {
   searchParams?: Record<string, string | string[] | undefined>;
@@ -21,6 +22,8 @@ function getParam(value: string | string[] | undefined) {
 export default async function BrowseView({ searchParams = {} }: BrowseViewProps) {
   const dbReady = Boolean(process.env.DATABASE_URL);
   const now = new Date();
+  const user = await getCurrentUser();
+  const userId = user?.id ?? null;
 
   const game = parseEnum(getParam(searchParams.game), Games);
   const region = parseEnum(getParam(searchParams.region), Regions);
@@ -43,6 +46,9 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
         include: {
           host: { select: { displayName: true } },
           _count: { select: { members: true } },
+          ...(userId
+            ? { members: { where: { userId }, select: { userId: true } } }
+            : {}),
         },
       })
     : [];
@@ -65,11 +71,22 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
     );
   }
 
-  const decoratedLobbies = lobbies.map((lobby) => ({
-    ...lobby,
-    slotsOpen: Math.max(0, lobby.slotsTotal - lobby._count.members),
-    mapImageUrl: imageUrls.get(lobby.id) ?? null,
-  }));
+  const decoratedLobbies = lobbies.map((lobby) => {
+    const isHosting = Boolean(userId && lobby.hostUserId === userId);
+    const isMember = Boolean(
+      userId &&
+        "members" in lobby &&
+        Array.isArray(lobby.members) &&
+        lobby.members.length > 0
+    );
+    return {
+      ...lobby,
+      slotsOpen: Math.max(0, lobby.slotsTotal - lobby._count.members),
+      mapImageUrl: imageUrls.get(lobby.id) ?? null,
+      isHosting,
+      isMember,
+    };
+  });
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-12">
@@ -184,7 +201,13 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
           <Link
             key={lobby.id}
             href={`/lobbies/${lobby.id}`}
-            className="relative min-h-[140px] overflow-hidden rounded-xl border border-ink/10 bg-transparent p-5 transition-transform duration-150 ease-out hover:scale-[1.01] hover:shadow-xl"
+            className={`relative min-h-[140px] overflow-hidden rounded-xl border border-ink/10 bg-transparent p-5 transition-transform duration-150 ease-out hover:scale-[1.01] hover:shadow-xl ${
+              lobby.isHosting
+                ? "ring-1 ring-clay/50"
+                : lobby.isMember
+                ? "ring-1 ring-moss/50"
+                : ""
+            }`}
           >
             <LobbyCardBackground imageUrl={lobby.mapImageUrl} />
             <div
@@ -204,6 +227,16 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
                   </p>
                 </div>
                 <div className="flex flex-col items-end gap-2 text-xs">
+                  {lobby.isHosting && (
+                    <span className="rounded-sm bg-clay/30 px-3 py-1 font-semibold text-white">
+                      Hosting
+                    </span>
+                  )}
+                  {!lobby.isHosting && lobby.isMember && (
+                    <span className="rounded-sm bg-moss/30 px-3 py-1 font-semibold text-white">
+                      In lobby
+                    </span>
+                  )}
                   {lobby.isModded && (
                     <span className="rounded-sm bg-white/10 px-3 py-1 font-semibold text-white">
                       Modded

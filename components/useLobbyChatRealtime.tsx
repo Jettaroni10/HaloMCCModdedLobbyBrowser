@@ -68,6 +68,7 @@ export function useLobbyChatRealtime({
   const clientRef = useRef<ReturnType<typeof createLobbyRealtimeClient> | null>(
     null
   );
+  const closedRef = useRef(false);
 
   useEffect(() => {
     messageRef.current = onMessage;
@@ -83,6 +84,8 @@ export function useLobbyChatRealtime({
 
   useEffect(() => {
     if (!enabled) return;
+    if (!lobbyId) return;
+    closedRef.current = false;
     const client = createLobbyRealtimeClient(lobbyId);
     clientRef.current = client;
     const channel = client.channels.get(`lobby:${lobbyId}`);
@@ -141,7 +144,14 @@ export function useLobbyChatRealtime({
         // ignore
       }
       channelRef.current = null;
-      // Avoid calling close; Ably can throw during fast refresh/unmount.
+      if (!closedRef.current) {
+        closedRef.current = true;
+        Promise.resolve()
+          .then(() => {
+            client.close();
+          })
+          .catch(() => {});
+      }
       clientRef.current = null;
     };
   }, [enabled, lobbyId]);

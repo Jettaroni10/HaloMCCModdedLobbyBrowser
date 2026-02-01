@@ -75,13 +75,42 @@ export default function MapImageUploader({ lobbyId }: MapImageUploaderProps) {
         objectPath: string;
       };
 
-      const uploadResult = await fetch(uploadPayload.uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": prepared.type },
-        body: prepared,
-      });
-      if (!uploadResult.ok) {
-        setError("Upload failed.");
+      let uploadedViaSigned = false;
+      try {
+        const uploadResult = await fetch(uploadPayload.uploadUrl, {
+          method: "PUT",
+          headers: { "Content-Type": prepared.type },
+          body: prepared,
+        });
+        uploadedViaSigned = uploadResult.ok;
+      } catch {
+        uploadedViaSigned = false;
+      }
+
+      if (!uploadedViaSigned) {
+        const formData = new FormData();
+        formData.append("file", prepared, prepared.name);
+        const fallbackResponse = await fetch(
+          `/api/lobbies/${lobbyId}/map-image/upload`,
+          {
+            method: "POST",
+            body: formData,
+          }
+        );
+        if (!fallbackResponse.ok) {
+          const payload = (await fallbackResponse.json().catch(() => null)) as
+            | { error?: string }
+            | null;
+          setError(payload?.error ?? "Upload failed. Check storage CORS.");
+          return;
+        }
+        const payload = (await fallbackResponse.json().catch(() => null)) as
+          | { url?: string | null }
+          | null;
+        setCurrentUrl(payload?.url ?? null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
         return;
       }
 

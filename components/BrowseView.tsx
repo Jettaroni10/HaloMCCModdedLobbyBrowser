@@ -5,6 +5,7 @@ import { formatMinutesAgo } from "@/lib/time";
 import { parseEnum, parseStringArray } from "@/lib/validation";
 import { Games, Regions, Vibes, Voices } from "@/lib/types";
 import LobbyCardBackground from "@/components/LobbyCardBackground";
+import { getSignedReadUrl } from "@/lib/lobby-images";
 
 type BrowseViewProps = {
   searchParams?: Record<string, string | string[] | undefined>;
@@ -46,9 +47,28 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
       })
     : [];
 
+  const imageUrls = new Map<string, string | null>();
+  if (dbReady) {
+    await Promise.all(
+      lobbies.map(async (lobby) => {
+        if (!lobby.mapImagePath) {
+          imageUrls.set(lobby.id, null);
+          return;
+        }
+        try {
+          const url = await getSignedReadUrl(lobby.mapImagePath);
+          imageUrls.set(lobby.id, url);
+        } catch {
+          imageUrls.set(lobby.id, null);
+        }
+      })
+    );
+  }
+
   const decoratedLobbies = lobbies.map((lobby) => ({
     ...lobby,
     slotsOpen: Math.max(0, lobby.slotsTotal - lobby._count.members),
+    mapImageUrl: imageUrls.get(lobby.id) ?? null,
   }));
 
   return (
@@ -166,8 +186,7 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
             className="relative min-h-[140px] overflow-hidden rounded-sm border border-ink/10 bg-transparent p-5"
           >
             <LobbyCardBackground
-              lobbyId={lobby.id}
-              hasImage={Boolean(lobby.mapImagePath)}
+              imageUrl={lobby.mapImageUrl}
             />
             <div className="relative z-20 flex items-start justify-between gap-4">
               <div>

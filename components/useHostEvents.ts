@@ -67,9 +67,9 @@ type UseHostEventsOptions = {
 };
 
 const MUTE_KEY = "mcc_host_mute_pings";
-const UNREAD_KEY = "hmccmcb:hostUnreadCount";
-const SOUND_LOCK_KEY = "hmccmcb:hostSoundLock";
-const TAB_ID_KEY = "hmccmcb:hostTabId";
+const UNREAD_KEY = "customs:hostUnreadCount";
+const SOUND_LOCK_KEY = "customs:hostSoundLock";
+const TAB_ID_KEY = "customs:hostTabId";
 
 function makeId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {

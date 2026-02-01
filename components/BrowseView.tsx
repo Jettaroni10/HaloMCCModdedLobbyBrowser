@@ -163,7 +163,7 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
         {decoratedLobbies.map((lobby) => (
           <div
             key={lobby.id}
-            className="relative overflow-hidden rounded-sm border border-ink/10 bg-sand p-5"
+            className="relative overflow-hidden rounded-sm border border-ink/10 bg-transparent p-5"
           >
             <LobbyCardBackground
               lobbyId={lobby.id}

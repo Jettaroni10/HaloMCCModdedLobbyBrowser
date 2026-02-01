@@ -203,9 +203,9 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
             href={`/lobbies/${lobby.id}`}
             className={`relative min-h-[140px] overflow-hidden rounded-xl border border-ink/10 bg-transparent p-5 transition-transform duration-150 ease-out hover:scale-[1.01] hover:shadow-xl ${
               lobby.isHosting
-                ? "ring-1 ring-clay/50"
+                ? "ring-2 ring-clay/80 shadow-[0_0_22px_rgba(74,163,255,0.35)]"
                 : lobby.isMember
-                ? "ring-1 ring-moss/50"
+                ? "ring-2 ring-[rgba(181,155,58,0.85)] shadow-[0_0_22px_rgba(181,155,58,0.35)]"
                 : ""
             }`}
           >
@@ -228,12 +228,12 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
                 </div>
                 <div className="flex flex-col items-end gap-2 text-xs">
                   {lobby.isHosting && (
-                    <span className="rounded-sm bg-clay/30 px-3 py-1 font-semibold text-white">
+                    <span className="rounded-sm border border-clay/60 bg-clay/40 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-white shadow-[0_0_14px_rgba(74,163,255,0.5)]">
                       Hosting
                     </span>
                   )}
                   {!lobby.isHosting && lobby.isMember && (
-                    <span className="rounded-sm bg-moss/30 px-3 py-1 font-semibold text-white">
+                    <span className="rounded-sm border border-[rgba(181,155,58,0.9)] bg-[rgba(181,155,58,0.35)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-white shadow-[0_0_14px_rgba(181,155,58,0.55)]">
                       In lobby
                     </span>
                   )}

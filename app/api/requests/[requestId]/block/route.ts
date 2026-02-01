@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { emitRequestDecided } from "@/lib/host-events";
 
 export async function POST(
   _request: Request,
@@ -46,6 +47,22 @@ export async function POST(
       status: "DECLINED",
       decidedAt: new Date(),
       decidedByUserId: user.id,
+    },
+    include: {
+      lobby: { select: { id: true, title: true, hostUserId: true } },
+    },
+  });
+
+  emitRequestDecided({
+    hostUserId: updated.lobby.hostUserId,
+    request: {
+      id: updated.id,
+      status: "DECLINED",
+      decidedByUserId: updated.decidedByUserId ?? null,
+      lobby: {
+        id: updated.lobby.id,
+        title: updated.lobby.title,
+      },
     },
   });
 

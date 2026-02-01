@@ -26,6 +26,16 @@ export type HostLobbyExpiredEvent = {
   expiresAt: string;
 };
 
+export type HostRequestDecidedEvent = {
+  id: string;
+  status: "ACCEPTED" | "DECLINED";
+  decidedByUserId: string | null;
+  lobby: {
+    id: string;
+    title: string;
+  };
+};
+
 type HostRequestCreatedEnvelope = {
   hostUserId: string;
   requesterDisplayName: string;
@@ -54,6 +64,19 @@ type HostLobbyExpiredEnvelope = {
   };
 };
 
+type HostRequestDecidedEnvelope = {
+  hostUserId: string;
+  request: {
+    id: string;
+    status: "ACCEPTED" | "DECLINED";
+    decidedByUserId: string | null;
+    lobby: {
+      id: string;
+      title: string;
+    };
+  };
+};
+
 type HostToast = {
   id: string;
   message: string;
@@ -63,6 +86,7 @@ type UseHostEventsOptions = {
   enabled?: boolean;
   hostUserId?: string | null;
   onRequestCreated?: (payload: HostRequestCreatedEvent) => void;
+  onRequestDecided?: (payload: HostRequestDecidedEvent) => void;
   onLobbyExpired?: (payload: HostLobbyExpiredEvent) => void;
 };
 
@@ -167,6 +191,27 @@ function normalizeExpiredPayload(payload: unknown): HostLobbyExpiredEvent | null
   return null;
 }
 
+function normalizeDecidedPayload(
+  payload: unknown
+): HostRequestDecidedEvent | null {
+  if (!payload || typeof payload !== "object") return null;
+  const data = payload as HostRequestDecidedEnvelope["request"] & {
+    request?: HostRequestDecidedEnvelope["request"];
+  };
+  if (data.request && typeof data.request.id === "string") {
+    return data.request;
+  }
+  if (typeof data.id === "string" && data.lobby && data.status) {
+    return {
+      id: data.id,
+      status: data.status,
+      decidedByUserId: data.decidedByUserId ?? null,
+      lobby: data.lobby,
+    };
+  }
+  return null;
+}
+
 export function useHostEvents(options: UseHostEventsOptions = {}) {
   const { enabled = true, hostUserId } = options;
   const [toasts, setToasts] = useState<HostToast[]>([]);
@@ -176,6 +221,7 @@ export function useHostEvents(options: UseHostEventsOptions = {}) {
   const mutedRef = useRef(muted);
   const soundBlockedRef = useRef(soundBlocked);
   const onRequestCreatedRef = useRef(options.onRequestCreated);
+  const onRequestDecidedRef = useRef(options.onRequestDecided);
   const onLobbyExpiredRef = useRef(options.onLobbyExpired);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -190,6 +236,10 @@ export function useHostEvents(options: UseHostEventsOptions = {}) {
   useEffect(() => {
     onRequestCreatedRef.current = options.onRequestCreated;
   }, [options.onRequestCreated]);
+
+  useEffect(() => {
+    onRequestDecidedRef.current = options.onRequestDecided;
+  }, [options.onRequestDecided]);
 
   useEffect(() => {
     onLobbyExpiredRef.current = options.onLobbyExpired;
@@ -279,6 +329,10 @@ export function useHostEvents(options: UseHostEventsOptions = {}) {
     setUnreadCount((prev) => prev + 1);
   }
 
+  function decrementUnread() {
+    setUnreadCount((prev) => Math.max(0, prev - 1));
+  }
+
   useEffect(() => {
     if (!enabled || !hostUserId) return;
     const client = createHostRealtimeClient();
@@ -305,6 +359,13 @@ export function useHostEvents(options: UseHostEventsOptions = {}) {
         incrementUnread();
         enqueueToast("Lobby expired");
         void playPing();
+      }
+
+      if (message.name === "request_decided") {
+        const payload = normalizeDecidedPayload(message.data);
+        if (!payload) return;
+        onRequestDecidedRef.current?.(payload);
+        decrementUnread();
       }
     };
 

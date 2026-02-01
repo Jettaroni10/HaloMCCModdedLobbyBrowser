@@ -57,7 +57,21 @@ export async function GET() {
         send("lobby_expired", payload.lobby);
       };
 
+      const handleRequestDecided = (payload: {
+        hostUserId: string;
+        request: {
+          id: string;
+          status: "ACCEPTED" | "DECLINED";
+          decidedByUserId: string | null;
+          lobby: { id: string; title: string };
+        };
+      }) => {
+        if (payload.hostUserId !== user.id) return;
+        send("request_decided", payload.request);
+      };
+
       hostEvents.on("request_created", handleRequestCreated);
+      hostEvents.on("request_decided", handleRequestDecided);
       hostEvents.on("lobby_expired", handleLobbyExpired);
 
       const ping = setInterval(() => {
@@ -68,6 +82,7 @@ export async function GET() {
         closed = true;
         clearInterval(ping);
         hostEvents.off("request_created", handleRequestCreated);
+        hostEvents.off("request_decided", handleRequestDecided);
         hostEvents.off("lobby_expired", handleLobbyExpired);
       };
     },

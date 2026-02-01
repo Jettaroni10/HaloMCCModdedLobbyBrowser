@@ -115,6 +115,13 @@ export default function HostDashboard({
         return [normalized, ...prev];
       });
     },
+    onRequestDecided: (payload) => {
+      setAllRequests((prev) =>
+        prev.map((item) =>
+          item.id === payload.id ? { ...item, status: payload.status } : item
+        )
+      );
+    },
     onLobbyExpired: (payload: HostLobbyExpiredEvent) => {
       setActiveLobbies((prev) =>
         prev.map((item) =>

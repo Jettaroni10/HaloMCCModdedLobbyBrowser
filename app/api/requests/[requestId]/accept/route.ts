@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { addXp } from "@/lib/xp";
 import { emitLobbyRosterUpdated } from "@/lib/lobby-events";
+import { emitRequestDecided } from "@/lib/host-events";
 
 function buildInviteChecklist(request: {
   requesterHandleText: string;
@@ -184,6 +185,18 @@ export async function POST(
   });
 
   emitLobbyRosterUpdated({ lobbyId: updated.lobbyId });
+  emitRequestDecided({
+    hostUserId: updated.lobby.hostUserId,
+    request: {
+      id: updated.id,
+      status: "ACCEPTED",
+      decidedByUserId: updated.decidedByUserId ?? null,
+      lobby: {
+        id: updated.lobbyId,
+        title: updated.lobby.title,
+      },
+    },
+  });
 
   const checklist = buildInviteChecklist({
     requesterHandleText: updated.requesterHandleText,

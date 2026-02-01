@@ -29,8 +29,22 @@ type LobbyExpiredPayload = {
   };
 };
 
+type RequestDecidedPayload = {
+  hostUserId: string;
+  request: {
+    id: string;
+    status: "ACCEPTED" | "DECLINED";
+    decidedByUserId: string | null;
+    lobby: {
+      id: string;
+      title: string;
+    };
+  };
+};
+
 type HostEventMap = {
   request_created: RequestCreatedPayload;
+  request_decided: RequestDecidedPayload;
   lobby_expired: LobbyExpiredPayload;
 };
 
@@ -61,4 +75,18 @@ export function emitLobbyExpired(payload: LobbyExpiredPayload) {
   });
 }
 
-export type { HostEventMap, RequestCreatedPayload, LobbyExpiredPayload };
+export function emitRequestDecided(payload: RequestDecidedPayload) {
+  hostEvents.emit("request_decided", payload);
+  void publishHostEvent({
+    hostUserId: payload.hostUserId,
+    event: "request_decided",
+    payload,
+  });
+}
+
+export type {
+  HostEventMap,
+  RequestCreatedPayload,
+  LobbyExpiredPayload,
+  RequestDecidedPayload,
+};

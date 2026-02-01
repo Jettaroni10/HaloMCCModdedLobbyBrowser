@@ -183,7 +183,7 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
         {decoratedLobbies.map((lobby) => (
           <div
             key={lobby.id}
-            className="relative min-h-[140px] overflow-hidden rounded-sm border border-ink/10 bg-transparent p-5"
+            className="relative min-h-[140px] overflow-hidden rounded-xl border border-ink/10 bg-transparent p-5"
           >
             <LobbyCardBackground
               imageUrl={lobby.mapImageUrl}

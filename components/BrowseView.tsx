@@ -187,47 +187,52 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
             className="relative min-h-[140px] overflow-hidden rounded-xl border border-ink/10 bg-transparent p-5 transition-transform duration-150 ease-out hover:scale-[1.01] hover:shadow-xl"
           >
             <LobbyCardBackground imageUrl={lobby.mapImageUrl} />
-            <div className="relative z-20 flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-semibold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)]">
-                  {lobby.title}
-                </h2>
-                <p className="text-sm text-white/70 drop-shadow-[0_1px_4px_rgba(0,0,0,0.75)]">
-                  {formatEnum(lobby.game)} · {lobby.mode} · {lobby.map}
-                </p>
-                <p className="text-xs uppercase tracking-[0.3em] text-white/60 drop-shadow-[0_1px_4px_rgba(0,0,0,0.75)]">
-                  {formatEnum(lobby.region)}
-                </p>
+            <div
+              className="relative z-20"
+              style={{ textShadow: "0 2px 8px rgba(0,0,0,0.85)" }}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-semibold text-white">
+                    {lobby.title}
+                  </h2>
+                  <p className="text-sm text-white/70">
+                    {formatEnum(lobby.game)} · {lobby.mode} · {lobby.map}
+                  </p>
+                  <p className="text-xs uppercase tracking-[0.3em] text-white/60">
+                    {formatEnum(lobby.region)}
+                  </p>
+                </div>
+                <div className="flex flex-col items-end gap-2 text-xs">
+                  {lobby.isModded && (
+                    <span className="rounded-sm bg-white/10 px-3 py-1 font-semibold text-white">
+                      Modded
+                    </span>
+                  )}
+                  {lobby.voice === "MIC_REQUIRED" && (
+                    <span className="rounded-sm bg-white/10 px-3 py-1 font-semibold text-white">
+                      Mic required
+                    </span>
+                  )}
+                </div>
               </div>
-              <div className="flex flex-col items-end gap-2 text-xs">
-                {lobby.isModded && (
-                  <span className="rounded-sm bg-white/10 px-3 py-1 font-semibold text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.75)]">
-                    Modded
-                  </span>
-                )}
-                {lobby.voice === "MIC_REQUIRED" && (
-                  <span className="rounded-sm bg-white/10 px-3 py-1 font-semibold text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.75)]">
-                    Mic required
-                  </span>
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-white/70">
+                <span>{formatEnum(lobby.vibe)}</span>
+                {lobby.slotsTotal !== null && (
+                  <>
+                    <span>•</span>
+                    <span>
+                      Slots {lobby.slotsOpen ?? "?"}/{lobby.slotsTotal}
+                    </span>
+                  </>
                 )}
               </div>
-            </div>
-            <div className="relative z-20 mt-3 flex flex-wrap items-center gap-2 text-xs text-white/70 drop-shadow-[0_1px_4px_rgba(0,0,0,0.75)]">
-              <span>{formatEnum(lobby.vibe)}</span>
-              {lobby.slotsTotal !== null && (
-                <>
-                  <span>•</span>
-                  <span>
-                    Slots {lobby.slotsOpen ?? "?"}/{lobby.slotsTotal}
-                  </span>
-                </>
-              )}
-            </div>
-            <div className="relative z-20 mt-3 flex items-center justify-between text-xs text-white/70 drop-shadow-[0_1px_4px_rgba(0,0,0,0.75)]">
-              <span>{formatMinutesAgo(lobby.lastHeartbeatAt, now)}</span>
-              <span className="rounded-sm border border-white/30 px-4 py-1.5 text-xs font-semibold text-white hover:border-white/60">
-                View lobby
-              </span>
+              <div className="mt-3 flex items-center justify-between text-xs text-white/70">
+                <span>{formatMinutesAgo(lobby.lastHeartbeatAt, now)}</span>
+                <span className="rounded-sm border border-white/30 px-4 py-1.5 text-xs font-semibold text-white hover:border-white/60">
+                  View lobby
+                </span>
+              </div>
             </div>
           </Link>
         ))}

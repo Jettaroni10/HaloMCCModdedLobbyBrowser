@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { normalizeHandleText, normalizeText } from "@/lib/validation";
+import { normalizeHandleText } from "@/lib/validation";
 import { isReachColor } from "@/lib/reach-colors";
 import { absoluteUrl } from "@/lib/url";
 
@@ -19,23 +19,30 @@ export async function POST(request: Request) {
     contentType.includes("application/json") ? await request.json() : null;
   const formData = body ? null : await request.formData();
 
-  const displayName = normalizeText(
-    body?.displayName ?? formData?.get("displayName"),
-    48
+  const gamertag = normalizeHandleText(
+    body?.gamertag ?? formData?.get("gamertag"),
+    32
   );
-  const steamName = normalizeHandleText(
-    body?.steamName ?? formData?.get("steamName"),
-    48
-  );
+  const emailRaw = body?.email ?? formData?.get("email");
+  const email =
+    typeof emailRaw === "string" && emailRaw.trim().length > 0
+      ? emailRaw.toLowerCase().trim()
+      : "";
   const rawColor = body?.nametagColor ?? formData?.get("nametagColor");
   const nametagColor =
     typeof rawColor === "string" && rawColor.trim().length > 0
       ? rawColor.trim()
       : "";
 
-  if (!displayName) {
+  if (!gamertag) {
     return NextResponse.json(
-      { error: "Display name is required." },
+      { error: "Gamertag is required." },
+      { status: 400 }
+    );
+  }
+  if (!email) {
+    return NextResponse.json(
+      { error: "Email is required." },
       { status: 400 }
     );
   }
@@ -46,11 +53,40 @@ export async function POST(request: Request) {
     );
   }
 
+  const existingEmail = await prisma.user.findFirst({
+    where: {
+      email: { equals: email, mode: "insensitive" },
+      id: { not: user.id },
+    },
+    select: { id: true },
+  });
+  if (existingEmail) {
+    return NextResponse.json(
+      { error: "That email is already in use." },
+      { status: 409 }
+    );
+  }
+
+  const existingGamertag = await prisma.user.findFirst({
+    where: {
+      gamertag: { equals: gamertag, mode: "insensitive" },
+      id: { not: user.id },
+    },
+    select: { id: true },
+  });
+  if (existingGamertag) {
+    return NextResponse.json(
+      { error: "That gamertag is already in use." },
+      { status: 409 }
+    );
+  }
+
   await prisma.user.update({
     where: { id: user.id },
     data: {
-      displayName,
-      steamName: steamName || null,
+      gamertag,
+      email,
+      needsGamertag: false,
       ...(nametagColor ? { nametagColor } : {}),
     },
   });

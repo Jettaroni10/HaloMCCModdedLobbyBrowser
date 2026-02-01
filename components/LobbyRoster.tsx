@@ -5,7 +5,7 @@ import { nameplateTextColor, resolveNametagColor } from "@/lib/reach-colors";
 
 type LobbyRosterMember = {
   slotNumber: number;
-  displayName: string;
+  gamertag: string;
   srLevel: number;
   userId: string;
   nametagColor?: string | null;
@@ -89,7 +89,7 @@ export default function LobbyRoster({
                   {slotNumber}
                 </div>
                 <span className="truncate text-sm font-semibold">
-                  {member.displayName}
+                  {member.gamertag}
                 </span>
               </div>
               <div className="flex shrink-0 items-center gap-3">

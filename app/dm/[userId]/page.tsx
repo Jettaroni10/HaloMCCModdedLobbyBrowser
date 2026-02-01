@@ -15,7 +15,7 @@ export default async function DmPage({
   const user = await requireAuth();
   const target = await prisma.user.findUnique({
     where: { id: params.userId },
-    select: { id: true, displayName: true, nametagColor: true },
+    select: { id: true, gamertag: true, nametagColor: true },
   });
   if (!target) {
     notFound();
@@ -41,7 +41,7 @@ export default async function DmPage({
           orderBy: { createdAt: "asc" },
           take: 50,
           include: {
-            sender: { select: { displayName: true, nametagColor: true } },
+            sender: { select: { gamertag: true, nametagColor: true } },
           },
         },
       },
@@ -58,7 +58,7 @@ export default async function DmPage({
           orderBy: { createdAt: "asc" },
           take: 50,
           include: {
-            sender: { select: { displayName: true, nametagColor: true } },
+            sender: { select: { gamertag: true, nametagColor: true } },
           },
         },
       },
@@ -68,7 +68,7 @@ export default async function DmPage({
     id: message.id,
     conversationId: conversation.id,
     senderUserId: message.senderUserId,
-    senderDisplayName: message.sender.displayName,
+    senderGamertag: message.sender.gamertag,
     senderNametagColor: message.sender.nametagColor,
     body: message.body,
     createdAt: message.createdAt.toISOString(),
@@ -80,9 +80,9 @@ export default async function DmPage({
         targetUserId={target.id}
         conversationId={conversation.id}
         viewerId={user.id}
-        viewerDisplayName={user.displayName}
+        viewerGamertag={user.gamertag}
         initialMessages={initialMessages}
-        targetDisplayName={target.displayName}
+        targetGamertag={target.gamertag}
         targetNametagColor={target.nametagColor}
       />
     </div>

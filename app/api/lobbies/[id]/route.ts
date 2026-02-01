@@ -45,7 +45,7 @@ export async function GET(
   const lobby = await prisma.lobby.findUnique({
     where: { id: params.id },
     include: {
-      host: { select: { displayName: true } },
+      host: { select: { gamertag: true } },
       _count: { select: { members: true } },
     },
   });

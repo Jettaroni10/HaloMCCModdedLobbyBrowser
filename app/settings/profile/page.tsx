@@ -6,8 +6,12 @@ import {
   resolveNametagColor,
 } from "@/lib/reach-colors";
 
-export default async function ProfilePage() {
-  const user = await requireAuth();
+type ProfilePageProps = {
+  searchParams?: Record<string, string | string[] | undefined>;
+};
+
+export default async function ProfilePage({ searchParams }: ProfilePageProps) {
+  const user = await requireAuth({ requireGamertag: false });
   const srLevel = user.srLevel ?? 1;
   const xpThisLevel = user.xpThisLevel ?? 0;
   const xpNeeded = xpRequired(srLevel);
@@ -15,6 +19,7 @@ export default async function ProfilePage() {
   const progressPercent =
     xpNeeded > 0 ? Math.min(100, Math.round((xpThisLevel / xpNeeded) * 100)) : 0;
   const selectedColor = resolveNametagColor(user.nametagColor);
+  const needsGamertag = Boolean(searchParams?.needsGamertag);
 
   return (
     <div className="mx-auto w-full max-w-3xl px-6 py-12">
@@ -28,6 +33,11 @@ export default async function ProfilePage() {
         method="post"
         className="mt-6 space-y-5 rounded-md border border-ink/10 bg-sand p-6"
       >
+        {needsGamertag && (
+          <div className="rounded-sm border border-clay/40 bg-mist px-4 py-3 text-sm text-clay">
+            Gamertag required. Please set your gamertag to continue.
+          </div>
+        )}
         <div className="rounded-sm border border-ink/10 bg-mist px-4 py-3 text-sm text-ink/70">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -50,11 +60,22 @@ export default async function ProfilePage() {
           </div>
         </div>
         <label className="block text-sm font-semibold text-ink">
-          Display name
+          Gamertag
           <input
-            name="displayName"
-            defaultValue={user.displayName ?? ""}
-            placeholder="Your host or player name"
+            name="gamertag"
+            defaultValue={user.gamertag ?? ""}
+            placeholder="Your gamertag"
+            required
+            className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
+          />
+        </label>
+        <label className="block text-sm font-semibold text-ink">
+          Email
+          <input
+            name="email"
+            type="email"
+            defaultValue={user.email ?? ""}
+            required
             className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
           />
         </label>
@@ -71,22 +92,13 @@ export default async function ProfilePage() {
                 color: nameplateTextColor(selectedColor),
               }}
             >
-              {user.displayName}
+              {user.gamertag}
             </span>
             <span className="text-[10px] text-ink/60">
               Current nametag color
             </span>
           </div>
         </div>
-        <label className="block text-sm font-semibold text-ink">
-          Steam name
-          <input
-            name="steamName"
-            defaultValue={user.steamName ?? ""}
-            placeholder="Optional"
-            className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
-          />
-        </label>
 
         <div className="rounded-sm border border-ink/10 bg-mist px-4 py-3">
           <p className="text-sm font-semibold text-ink">Nametag color</p>
@@ -120,18 +132,6 @@ export default async function ProfilePage() {
               ))}
             </div>
           </details>
-        </div>
-
-        <div className="rounded-sm border border-ink/10 bg-mist px-4 py-3 text-sm text-ink/70">
-          <p>
-            Handle: <span className="font-semibold text-ink">{user.handle}</span>
-          </p>
-          <p className="mt-1">
-            Email:{" "}
-            <span className="font-semibold text-ink">
-              {user.email ?? "Not set"}
-            </span>
-          </p>
         </div>
 
         <button

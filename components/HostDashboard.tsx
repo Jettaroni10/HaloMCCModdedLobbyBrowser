@@ -43,7 +43,7 @@ type JoinRequestSummary = {
 
 type InviteChecklist = {
   requester: {
-    handleText: string;
+    gamertag: string;
     nametagColor?: string | null;
   };
   modded?: {
@@ -444,7 +444,7 @@ export default function HostDashboard({
                       ),
                     }}
                   >
-                    {checklist.requester.handleText}
+                    {checklist.requester.gamertag}
                   </span>
                 </p>
               </div>

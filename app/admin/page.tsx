@@ -9,7 +9,7 @@ export default async function AdminPage() {
     orderBy: { createdAt: "desc" },
     include: {
       host: {
-        select: { email: true, displayName: true },
+        select: { gamertag: true },
       },
     },
   });
@@ -17,8 +17,8 @@ export default async function AdminPage() {
   const reports = await prisma.report.findMany({
     orderBy: { createdAt: "desc" },
     include: {
-      reporter: { select: { id: true, handle: true, displayName: true } },
-      resolvedBy: { select: { id: true, handle: true, displayName: true } },
+      reporter: { select: { id: true, gamertag: true } },
+      resolvedBy: { select: { id: true, gamertag: true } },
     },
   });
 
@@ -50,8 +50,7 @@ export default async function AdminPage() {
                   Target: {report.targetId}
                 </p>
                 <p className="text-xs text-ink/50">
-                  Reporter: {report.reporter.displayName} (
-                  {report.reporter.handle})
+                  Reporter: {report.reporter.gamertag}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -113,7 +112,7 @@ export default async function AdminPage() {
             <p className="mt-2 text-xs text-ink/50">
               Status: {report.status}
               {report.resolvedBy && (
-                <> · Resolved by {report.resolvedBy.displayName}</>
+                <> · Resolved by {report.resolvedBy.gamertag}</>
               )}
             </p>
           </div>
@@ -133,7 +132,7 @@ export default async function AdminPage() {
                   {lobby.title}
                 </h2>
                 <p className="text-sm text-ink/60">
-                  Host: {lobby.host.displayName || lobby.host.email}
+                  Host: {lobby.host.gamertag}
                 </p>
               </div>
               <form action="/api/admin/takedown-lobby" method="post">

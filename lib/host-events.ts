@@ -3,7 +3,7 @@ import { publishHostEvent } from "@/lib/realtime/ablyServer";
 
 type RequestCreatedPayload = {
   hostUserId: string;
-  requesterDisplayName: string;
+  requesterGamertag: string;
   requesterNametagColor?: string | null;
   request: {
     id: string;

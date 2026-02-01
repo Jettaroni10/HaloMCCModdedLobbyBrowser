@@ -37,8 +37,7 @@ export async function GET() {
       requester: {
         select: {
           id: true,
-          displayName: true,
-          handle: true,
+          gamertag: true,
           nametagColor: true,
         },
       },

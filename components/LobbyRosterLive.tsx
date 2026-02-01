@@ -6,7 +6,7 @@ import { useLobbyEvents } from "./useLobbyEvents";
 
 type RosterMember = {
   slotNumber: number;
-  displayName: string;
+  gamertag: string;
   srLevel: number;
   userId: string;
   nametagColor?: string | null;

@@ -7,7 +7,7 @@ type MessagePayload = {
   id: string;
   conversationId: string;
   senderUserId: string;
-  senderDisplayName: string;
+  senderGamertag: string;
   senderNametagColor?: string | null;
   body: string;
   createdAt: string;
@@ -15,7 +15,7 @@ type MessagePayload = {
 
 type TypingPayload = {
   userId: string;
-  displayName: string;
+  gamertag: string;
 };
 
 type UseLobbyChatRealtimeOptions = {
@@ -35,7 +35,7 @@ function isMessagePayload(payload: unknown): payload is MessagePayload {
     typeof data.id === "string" &&
     typeof data.conversationId === "string" &&
     typeof data.senderUserId === "string" &&
-    typeof data.senderDisplayName === "string" &&
+    typeof data.senderGamertag === "string" &&
     typeof data.body === "string" &&
     data.body.length <= MESSAGE_BODY_LIMIT &&
     typeof data.createdAt === "string"
@@ -45,7 +45,7 @@ function isMessagePayload(payload: unknown): payload is MessagePayload {
 function isTypingPayload(payload: unknown): payload is TypingPayload {
   if (!payload || typeof payload !== "object") return false;
   const data = payload as TypingPayload;
-  return typeof data.userId === "string" && typeof data.displayName === "string";
+  return typeof data.userId === "string" && typeof data.gamertag === "string";
 }
 
 // Findings:

@@ -7,7 +7,7 @@ export type HostRequestCreatedEvent = {
   id: string;
   requesterUserId: string;
   requesterHandleText: string;
-  requesterDisplayName?: string | null;
+  requesterGamertag?: string | null;
   requesterNametagColor?: string | null;
   note?: string | null;
   confirmedSubscribed?: boolean;
@@ -38,7 +38,7 @@ export type HostRequestDecidedEvent = {
 
 type HostRequestCreatedEnvelope = {
   hostUserId: string;
-  requesterDisplayName: string;
+  requesterGamertag: string;
   requesterNametagColor?: string | null;
   request: {
     id: string;
@@ -150,7 +150,7 @@ function normalizeRequestPayload(
   if (!payload || typeof payload !== "object") return null;
   const data = payload as HostRequestCreatedEvent & {
     request?: HostRequestCreatedEnvelope["request"];
-    requesterDisplayName?: string;
+    requesterGamertag?: string;
     requesterNametagColor?: string | null;
   };
 
@@ -159,7 +159,7 @@ function normalizeRequestPayload(
       id: data.request.id,
       requesterUserId: data.request.requesterUserId,
       requesterHandleText: data.request.requesterHandleText,
-      requesterDisplayName: data.requesterDisplayName,
+      requesterGamertag: data.requesterGamertag,
       requesterNametagColor: data.requesterNametagColor ?? null,
       note: data.request.note ?? null,
       confirmedSubscribed: data.request.confirmedSubscribed,
@@ -345,7 +345,7 @@ export function useHostEvents(options: UseHostEventsOptions = {}) {
         onRequestCreatedRef.current?.(payload);
         incrementUnread();
         const name =
-          payload.requesterDisplayName?.trim() ||
+          payload.requesterGamertag?.trim() ||
           payload.requesterHandleText ||
           "New requester";
         enqueueToast(`New request from ${name}`);

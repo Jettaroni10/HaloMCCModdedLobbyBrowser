@@ -7,7 +7,7 @@ import { useLobbyChatRealtime } from "./useLobbyChatRealtime";
 type ChatMessage = {
   id: string;
   senderUserId: string;
-  senderDisplayName: string;
+  senderGamertag: string;
   senderNametagColor?: string | null;
   body: string;
   createdAt: string;
@@ -17,7 +17,7 @@ type ChatMessage = {
 type LobbyChatProps = {
   lobbyId: string;
   viewerId: string;
-  viewerDisplayName: string;
+  viewerGamertag: string;
   viewerNametagColor?: string | null;
   initialMessages: ChatMessage[];
   className?: string;
@@ -26,7 +26,7 @@ type LobbyChatProps = {
 export default function LobbyChat({
   lobbyId,
   viewerId,
-  viewerDisplayName,
+  viewerGamertag,
   viewerNametagColor,
   initialMessages,
   className,
@@ -74,7 +74,7 @@ export default function LobbyChat({
       if (payload.userId === viewerId) return;
       setTypingUsers((prev) => ({
         ...prev,
-        [payload.userId]: payload.displayName,
+        [payload.userId]: payload.gamertag,
       }));
       const existing = typingTimers.current.get(payload.userId);
       if (existing) clearTimeout(existing);
@@ -153,14 +153,14 @@ export default function LobbyChat({
       typingActive.current = false;
       void publishTyping("stop", {
         userId: viewerId,
-        displayName: viewerDisplayName,
+        gamertag: viewerGamertag,
       });
     }
     const tempId = `temp-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const optimisticMessage: ChatMessage = {
       id: tempId,
       senderUserId: viewerId,
-      senderDisplayName: viewerDisplayName,
+      senderGamertag: viewerGamertag,
       senderNametagColor: viewerNametagColor,
       body: trimmed,
       createdAt: new Date().toISOString(),
@@ -187,7 +187,7 @@ export default function LobbyChat({
         const resolvedMessage: ChatMessage = {
           id: payload.message.id,
           senderUserId: payload.message.senderUserId,
-          senderDisplayName: payload.message.senderDisplayName,
+          senderGamertag: payload.message.senderGamertag,
           senderNametagColor: payload.message.senderNametagColor ?? null,
           body: payload.message.body,
           createdAt: payload.message.createdAt,
@@ -223,7 +223,7 @@ export default function LobbyChat({
       typingActive.current = true;
       void publishTyping("start", {
         userId: viewerId,
-        displayName: viewerDisplayName,
+        gamertag: viewerGamertag,
       });
     }
     if (typingStopTimer.current) {
@@ -233,7 +233,7 @@ export default function LobbyChat({
       typingActive.current = false;
       void publishTyping("stop", {
         userId: viewerId,
-        displayName: viewerDisplayName,
+        gamertag: viewerGamertag,
       });
     }, 1200);
   };
@@ -281,7 +281,7 @@ export default function LobbyChat({
                     color: resolveNametagColor(message.senderNametagColor),
                   }}
                 >
-                  {message.senderDisplayName}
+                  {message.senderGamertag}
                 </span>
                 <span suppressHydrationWarning>{time}</span>
               </div>

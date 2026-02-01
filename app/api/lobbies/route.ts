@@ -41,6 +41,12 @@ export async function POST(request: Request) {
   if (user.isBanned) {
     return NextResponse.json({ error: "Account is banned." }, { status: 403 });
   }
+  if (!user.gamertag || user.needsGamertag) {
+    return NextResponse.json(
+      { error: "Gamertag required before creating a lobby." },
+      { status: 403 }
+    );
+  }
 
   const createLimited = await isRateLimited(
     user.id,
@@ -220,7 +226,7 @@ export async function GET(request: Request) {
     },
     orderBy: { lastHeartbeatAt: "desc" },
     include: {
-      host: { select: { displayName: true } },
+      host: { select: { gamertag: true } },
       _count: { select: { members: true } },
     },
   });

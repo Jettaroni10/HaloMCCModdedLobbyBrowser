@@ -45,7 +45,7 @@ export default function SiteHeader({ user, isAdmin }: SiteHeaderProps) {
           {user ? (
             <>
               <Link href="/settings/profile" className="hover:text-ink/80">
-                <span>{user.displayName || "Profile"}</span>
+                <span>{user.gamertag || "Profile"}</span>
                 <span className="ml-2 rounded-sm border border-ink/20 px-2 py-0.5 text-[10px] font-semibold text-ink/70">
                   SR{user.srLevel ?? 1}
                 </span>

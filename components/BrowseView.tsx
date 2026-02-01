@@ -44,7 +44,7 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
         },
         orderBy: { lastHeartbeatAt: "desc" },
         include: {
-          host: { select: { displayName: true } },
+          host: { select: { gamertag: true } },
           _count: { select: { members: true } },
           ...(userId
             ? { members: { where: { userId }, select: { userId: true } } }

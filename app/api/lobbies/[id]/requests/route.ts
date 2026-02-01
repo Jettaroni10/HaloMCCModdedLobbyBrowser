@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import {
-  normalizeHandleText,
-  normalizeText,
-  parseBoolean,
-} from "@/lib/validation";
+import { normalizeText, parseBoolean } from "@/lib/validation";
 import { isRateLimited, recordRateLimitEvent } from "@/lib/rate-limit";
 import { emitRequestCreated } from "@/lib/host-events";
 import { emitLobbyRequestCreated, emitLobbyRosterUpdated } from "@/lib/lobby-events";
@@ -42,12 +38,15 @@ export async function POST(
         { status: 403 }
       );
     }
+    if (!user.gamertag || user.needsGamertag) {
+      return NextResponse.json(
+        { error: "Gamertag required before requesting an invite." },
+        { status: 403 }
+      );
+    }
 
     const body = await readBody(request);
-    const requesterHandleText = normalizeHandleText(
-      body.requesterHandleText,
-      48
-    );
+    const requesterHandleText = (user.gamertag ?? "").trim();
     const note = normalizeText(body.note, LIMITS.note);
     const confirmedSubscribed = parseBoolean(body.confirmedSubscribed) ?? false;
     const confirmCancelPending =
@@ -56,7 +55,7 @@ export async function POST(
 
     if (!requesterHandleText) {
       return NextResponse.json(
-        { error: "Steam name is required." },
+        { error: "Gamertag is required." },
         { status: 400 }
       );
     }
@@ -284,7 +283,7 @@ export async function POST(
 
     emitRequestCreated({
       hostUserId: lobby.hostUserId,
-      requesterDisplayName: user.displayName,
+      requesterGamertag: user.gamertag,
       requesterNametagColor: user.nametagColor,
       request: {
         id: joinRequest.id,
@@ -308,7 +307,7 @@ export async function POST(
         id: joinRequest.id,
         requesterUserId: joinRequest.requesterUserId,
         requesterHandleText: joinRequest.requesterHandleText,
-        requesterDisplayName: user.displayName,
+        requesterGamertag: user.gamertag,
         requesterNametagColor: user.nametagColor,
         createdAt: joinRequest.createdAt.toISOString(),
       },

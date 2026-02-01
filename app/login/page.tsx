@@ -3,7 +3,7 @@ type PageProps = {
 };
 
 const ERROR_MESSAGES: Record<string, string> = {
-  missing_fields: "Handle/email and password are required.",
+  missing_fields: "Email and password are required.",
   not_found: "No matching account found.",
   banned: "This account is banned.",
   invalid: "Invalid credentials.",
@@ -19,7 +19,7 @@ export default function LoginPage({ searchParams }: PageProps) {
     <div className="mx-auto w-full max-w-md px-6 py-12">
       <h1 className="text-3xl font-semibold text-ink">Sign in</h1>
       <p className="mt-2 text-sm text-ink/70">
-        Use your handle or email to access your profile.
+        Use your email and password to access your profile.
       </p>
 
       <form
@@ -33,21 +33,11 @@ export default function LoginPage({ searchParams }: PageProps) {
           </div>
         )}
         <label className="block text-sm font-semibold text-ink">
-          Handle
-          <input
-            name="handle"
-            type="text"
-            className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
-          />
-        </label>
-        <div className="text-center text-xs uppercase tracking-[0.3em] text-ink/40">
-          or
-        </div>
-        <label className="block text-sm font-semibold text-ink">
           Email
           <input
             name="email"
             type="email"
+            required
             className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
           />
         </label>

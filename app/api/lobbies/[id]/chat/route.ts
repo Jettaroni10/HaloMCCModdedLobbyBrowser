@@ -37,6 +37,12 @@ export async function GET(
   if (user.isBanned) {
     return NextResponse.json({ error: "Account is banned." }, { status: 403 });
   }
+  if (!user.gamertag || user.needsGamertag) {
+    return NextResponse.json(
+      { error: "Gamertag required to access chat." },
+      { status: 403 }
+    );
+  }
 
   const access = await ensureLobbyChatAccess(params.id, user.id);
   if (!access.ok) {
@@ -49,7 +55,7 @@ export async function GET(
     orderBy: { createdAt: "asc" },
     take: 50,
     include: {
-      sender: { select: { displayName: true, nametagColor: true } },
+      sender: { select: { gamertag: true, nametagColor: true } },
     },
   });
 
@@ -58,7 +64,7 @@ export async function GET(
       id: message.id,
       conversationId: message.conversationId,
       senderUserId: message.senderUserId,
-      senderDisplayName: message.sender.displayName,
+      senderGamertag: message.sender.gamertag,
       senderNametagColor: message.sender.nametagColor,
       body: message.body,
       createdAt: message.createdAt.toISOString(),
@@ -78,6 +84,12 @@ export async function POST(
     }
     if (user.isBanned) {
       return NextResponse.json({ error: "Account is banned." }, { status: 403 });
+    }
+    if (!user.gamertag || user.needsGamertag) {
+      return NextResponse.json(
+        { error: "Gamertag required to send chat messages." },
+        { status: 403 }
+      );
     }
 
     const access = await ensureLobbyChatAccess(params.id, user.id);
@@ -124,7 +136,7 @@ export async function POST(
       id: created.id,
       conversationId: created.conversationId,
       senderUserId: created.senderUserId,
-      senderDisplayName: user.displayName,
+      senderGamertag: user.gamertag,
       senderNametagColor: user.nametagColor,
       body: created.body,
       createdAt: created.createdAt.toISOString(),

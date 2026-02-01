@@ -13,18 +13,14 @@ export default async function FriendsPage() {
       userA: {
         select: {
           id: true,
-          handle: true,
-          displayName: true,
-          steamName: true,
+          gamertag: true,
           nametagColor: true,
         },
       },
       userB: {
         select: {
           id: true,
-          handle: true,
-          displayName: true,
-          steamName: true,
+          gamertag: true,
           nametagColor: true,
         },
       },
@@ -36,9 +32,7 @@ export default async function FriendsPage() {
       friendship.userAId === user.id ? friendship.userB : friendship.userA;
     return {
       id: other.id,
-      handle: other.handle,
-      displayName: other.displayName,
-      steamName: other.steamName,
+      gamertag: other.gamertag,
       nametagColor: other.nametagColor,
     };
   });
@@ -49,9 +43,7 @@ export default async function FriendsPage() {
       fromUser: {
         select: {
           id: true,
-          handle: true,
-          displayName: true,
-          steamName: true,
+          gamertag: true,
           nametagColor: true,
         },
       },
@@ -65,9 +57,7 @@ export default async function FriendsPage() {
       toUser: {
         select: {
           id: true,
-          handle: true,
-          displayName: true,
-          steamName: true,
+          gamertag: true,
           nametagColor: true,
         },
       },

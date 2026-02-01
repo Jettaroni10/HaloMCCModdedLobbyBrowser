@@ -44,9 +44,7 @@ export async function GET(
     include: {
       user: {
         select: {
-          displayName: true,
-          steamName: true,
-          handle: true,
+          gamertag: true,
           srLevel: true,
           nametagColor: true,
         },
@@ -57,10 +55,7 @@ export async function GET(
   return NextResponse.json(
     roster.map((entry) => ({
       slotNumber: entry.slotNumber,
-      displayName:
-        entry.user.steamName ||
-        entry.user.handle ||
-        entry.user.displayName,
+      gamertag: entry.user.gamertag,
       srLevel: entry.user.srLevel ?? 1,
       userId: entry.userId,
       nametagColor: entry.user.nametagColor,

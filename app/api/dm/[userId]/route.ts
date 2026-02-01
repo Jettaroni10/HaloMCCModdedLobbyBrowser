@@ -56,6 +56,12 @@ export async function GET(
   if (user.isBanned) {
     return NextResponse.json({ error: "Account is banned." }, { status: 403 });
   }
+  if (!user.gamertag || user.needsGamertag) {
+    return NextResponse.json(
+      { error: "Gamertag required to access messages." },
+      { status: 403 }
+    );
+  }
 
   const targetId = params.userId;
   const isFriend = await ensureFriendship(user.id, targetId);
@@ -68,7 +74,7 @@ export async function GET(
     where: { conversationId: conversation.id },
     orderBy: { createdAt: "asc" },
     take: 50,
-    include: { sender: { select: { displayName: true, nametagColor: true } } },
+    include: { sender: { select: { gamertag: true, nametagColor: true } } },
   });
 
   return NextResponse.json({
@@ -77,7 +83,7 @@ export async function GET(
       id: message.id,
       conversationId: conversation.id,
       senderUserId: message.senderUserId,
-      senderDisplayName: message.sender.displayName,
+      senderGamertag: message.sender.gamertag,
       senderNametagColor: message.sender.nametagColor,
       body: message.body,
       createdAt: message.createdAt.toISOString(),
@@ -95,6 +101,12 @@ export async function POST(
   }
   if (user.isBanned) {
     return NextResponse.json({ error: "Account is banned." }, { status: 403 });
+  }
+  if (!user.gamertag || user.needsGamertag) {
+    return NextResponse.json(
+      { error: "Gamertag required to send messages." },
+      { status: 403 }
+    );
   }
 
   const targetId = params.userId;
@@ -142,7 +154,7 @@ export async function POST(
     id: created.id,
     conversationId: created.conversationId,
     senderUserId: created.senderUserId,
-    senderDisplayName: user.displayName,
+    senderGamertag: user.gamertag,
     senderNametagColor: user.nametagColor,
     body: created.body,
     createdAt: created.createdAt.toISOString(),

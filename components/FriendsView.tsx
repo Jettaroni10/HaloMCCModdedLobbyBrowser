@@ -5,9 +5,7 @@ import { resolveNametagColor } from "@/lib/reach-colors";
 
 type FriendUser = {
   id: string;
-  handle: string;
-  displayName: string;
-  steamName: string | null;
+  gamertag: string;
   nametagColor?: string | null;
 };
 
@@ -157,13 +155,13 @@ export default function FriendsView({
       <section className="rounded-sm border border-ink/10 bg-sand p-6">
         <h2 className="text-lg font-semibold text-ink">Find players</h2>
         <p className="mt-2 text-sm text-ink/70">
-          Search by handle or display name to send friend requests.
+          Search by gamertag to send friend requests.
         </p>
         <form onSubmit={handleSearch} className="mt-4 flex flex-wrap gap-3">
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search handles or names"
+            placeholder="Search gamertags"
             className="flex-1 rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
           />
           <button
@@ -189,9 +187,8 @@ export default function FriendsView({
                       color: resolveNametagColor(result.nametagColor),
                     }}
                   >
-                    {result.displayName}
+                    {result.gamertag}
                   </p>
-                  <p className="text-xs text-ink/60">@{result.handle}</p>
                 </div>
                 <button
                   type="button"
@@ -231,10 +228,7 @@ export default function FriendsView({
                       ),
                     }}
                   >
-                    {request.fromUser.displayName}
-                  </p>
-                  <p className="text-xs text-ink/60">
-                    @{request.fromUser.handle}
+                    {request.fromUser.gamertag}
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -276,10 +270,7 @@ export default function FriendsView({
                       color: resolveNametagColor(request.toUser.nametagColor),
                     }}
                   >
-                    {request.toUser.displayName}
-                  </p>
-                  <p className="text-xs text-ink/60">
-                    @{request.toUser.handle}
+                    {request.toUser.gamertag}
                   </p>
                   </div>
                   <span className="text-xs text-ink/60">Pending</span>
@@ -308,9 +299,8 @@ export default function FriendsView({
                       color: resolveNametagColor(friend.nametagColor),
                     }}
                   >
-                    {friend.displayName}
+                    {friend.gamertag}
                   </p>
-                  <p className="text-xs text-ink/60">@{friend.handle}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <a

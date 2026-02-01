@@ -18,8 +18,8 @@ function buildInviteChecklist(request: {
   const inviteMessage = `Invite sent to ${request.requesterHandleText}. Please join when ready.`;
   const steps = [
     {
-      id: "copy-handle",
-      label: "Copy requester handle",
+      id: "copy-gamertag",
+      label: "Copy gamertag",
       copyText: request.requesterHandleText,
     },
     {
@@ -29,25 +29,25 @@ function buildInviteChecklist(request: {
     },
     {
       id: "open-overlay",
-      label: "Open Steam overlay",
+      label: "Open invite overlay or roster",
     },
     {
       id: "send-invite",
-      label: "Send invite manually",
+      label: "Send invite using the gamertag",
     },
   ];
 
   const payload: Record<string, unknown> = {
     requester: {
-      handleText: request.requesterHandleText,
+      gamertag: request.requesterHandleText,
       nametagColor: request.requesterNametagColor ?? null,
     },
     steps,
     copyStrings: {
-      requesterHandle: request.requesterHandleText,
+      requesterGamertag: request.requesterHandleText,
       inviteMessage,
       steamInstructions:
-        "Open Steam overlay (Shift+Tab) and invite the player from Friends.",
+        "Invite the player using their gamertag via Steam overlay, Xbox app, or in-game roster.",
     },
   };
 
@@ -72,6 +72,12 @@ export async function POST(
   }
   if (user.isBanned) {
     return NextResponse.json({ error: "Account is banned." }, { status: 403 });
+  }
+  if (!user.gamertag || user.needsGamertag) {
+    return NextResponse.json(
+      { error: "Gamertag required before sending invites." },
+      { status: 403 }
+    );
   }
 
   const result = await prisma.$transaction(async (tx) => {

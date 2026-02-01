@@ -8,7 +8,7 @@ type ChatMessage = {
   id: string;
   conversationId: string;
   senderUserId: string;
-  senderDisplayName: string;
+  senderGamertag: string;
   senderNametagColor?: string | null;
   body: string;
   createdAt: string;
@@ -19,9 +19,9 @@ type DmChatProps = {
   targetUserId: string;
   conversationId: string;
   viewerId: string;
-  viewerDisplayName: string;
+  viewerGamertag: string;
   initialMessages: ChatMessage[];
-  targetDisplayName: string;
+  targetGamertag: string;
   targetNametagColor?: string | null;
 };
 
@@ -29,9 +29,9 @@ export default function DmChat({
   targetUserId,
   conversationId,
   viewerId,
-  viewerDisplayName,
+  viewerGamertag,
   initialMessages,
-  targetDisplayName,
+  targetGamertag,
   targetNametagColor,
 }: DmChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
@@ -77,7 +77,7 @@ export default function DmChat({
       if (payload.userId === viewerId) return;
       setTypingUsers((prev) => ({
         ...prev,
-        [payload.userId]: payload.displayName,
+        [payload.userId]: payload.gamertag,
       }));
       const existing = typingTimers.current.get(payload.userId);
       if (existing) clearTimeout(existing);
@@ -156,7 +156,7 @@ export default function DmChat({
       typingActive.current = false;
       void publishTyping("stop", {
         userId: viewerId,
-        displayName: viewerDisplayName,
+        gamertag: viewerGamertag,
       });
     }
     const tempId = `temp-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -164,7 +164,7 @@ export default function DmChat({
       id: tempId,
       conversationId,
       senderUserId: viewerId,
-      senderDisplayName: viewerDisplayName,
+      senderGamertag: viewerGamertag,
       body: trimmed,
       createdAt: new Date().toISOString(),
       status: "sending",
@@ -191,7 +191,7 @@ export default function DmChat({
           id: payload.id,
           conversationId: payload.conversationId ?? conversationId,
           senderUserId: payload.senderUserId,
-          senderDisplayName: payload.senderDisplayName,
+          senderGamertag: payload.senderGamertag,
           senderNametagColor: payload.senderNametagColor ?? null,
           body: payload.body,
           createdAt: payload.createdAt,
@@ -227,7 +227,7 @@ export default function DmChat({
       typingActive.current = true;
       void publishTyping("start", {
         userId: viewerId,
-        displayName: viewerDisplayName,
+        gamertag: viewerGamertag,
       });
     }
     if (typingStopTimer.current) {
@@ -237,7 +237,7 @@ export default function DmChat({
       typingActive.current = false;
       void publishTyping("stop", {
         userId: viewerId,
-        displayName: viewerDisplayName,
+        gamertag: viewerGamertag,
       });
     }, 1200);
   };
@@ -256,7 +256,7 @@ export default function DmChat({
       <h2 className="text-lg font-semibold text-ink">
         Direct messages ·{" "}
         <span style={{ color: resolveNametagColor(targetNametagColor) }}>
-          {targetDisplayName}
+          {targetGamertag}
         </span>
       </h2>
       <div
@@ -287,7 +287,7 @@ export default function DmChat({
                     color: resolveNametagColor(message.senderNametagColor),
                   }}
                 >
-                  {message.senderDisplayName}
+                  {message.senderGamertag}
                 </span>
                 <span suppressHydrationWarning>{time}</span>
               </div>

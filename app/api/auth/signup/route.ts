@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { createSessionToken, getSessionCookieName } from "@/lib/auth";
-import { normalizeHandleText, normalizeText } from "@/lib/validation";
+import { normalizeHandleText } from "@/lib/validation";
 import { hashPassword } from "@/lib/password";
 import { DEFAULT_NAMETAG_COLOR } from "@/lib/reach-colors";
 import { absoluteUrl } from "@/lib/url";
@@ -13,13 +13,9 @@ export async function POST(request: Request) {
   const formData = body ? null : await request.formData();
   const isJson = contentType.includes("application/json");
 
-  const handle = normalizeHandleText(
-    body?.handle ?? formData?.get("handle"),
+  const gamertag = normalizeHandleText(
+    body?.gamertag ?? formData?.get("gamertag"),
     32
-  );
-  const displayName = normalizeText(
-    body?.displayName ?? formData?.get("displayName"),
-    48
   );
   const password =
     typeof (body?.password ?? formData?.get("password")) === "string"
@@ -29,16 +25,12 @@ export async function POST(request: Request) {
   const email =
     typeof emailRaw === "string" && emailRaw.trim().length > 0
       ? emailRaw.toLowerCase().trim()
-      : null;
-  const steamName = normalizeHandleText(
-    body?.steamName ?? formData?.get("steamName"),
-    48
-  );
+      : "";
 
-  if (!handle || !displayName || !password) {
+  if (!email || !password || !gamertag) {
     if (isJson) {
       return NextResponse.json(
-        { error: "Handle, display name, and password are required." },
+        { error: "Email, password, and gamertag are required." },
         { status: 400 }
       );
     }
@@ -47,45 +39,44 @@ export async function POST(request: Request) {
     );
   }
 
-  const existingHandle = await prisma.user.findUnique({
-    where: { handle },
+  const existingGamertag = await prisma.user.findFirst({
+    where: { gamertag: { equals: gamertag, mode: "insensitive" } },
   });
-  if (existingHandle) {
+  if (existingGamertag) {
     if (isJson) {
       return NextResponse.json(
-        { error: "That handle is already in use." },
+        { error: "That gamertag is already in use." },
         { status: 409 }
       );
     }
     return NextResponse.redirect(
-      absoluteUrl(request, "/signup?error=handle_taken")
+      absoluteUrl(request, "/signup?error=gamertag_taken")
     );
   }
 
-  if (email) {
-    const existingEmail = await prisma.user.findUnique({ where: { email } });
-    if (existingEmail) {
-      if (isJson) {
-        return NextResponse.json(
-          { error: "That email is already in use." },
-          { status: 409 }
-        );
-      }
-      return NextResponse.redirect(
-        absoluteUrl(request, "/signup?error=email_taken")
+  const existingEmail = await prisma.user.findFirst({
+    where: { email: { equals: email, mode: "insensitive" } },
+  });
+  if (existingEmail) {
+    if (isJson) {
+      return NextResponse.json(
+        { error: "That email is already in use." },
+        { status: 409 }
       );
     }
+    return NextResponse.redirect(
+      absoluteUrl(request, "/signup?error=email_taken")
+    );
   }
 
   const passwordHash = await hashPassword(password);
   const user = await prisma.user.create({
     data: {
       email,
-      handle,
-      displayName,
+      gamertag,
       nametagColor: DEFAULT_NAMETAG_COLOR,
       passwordHash,
-      steamName: steamName || null,
+      needsGamertag: false,
     },
   });
 

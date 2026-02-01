@@ -31,6 +31,14 @@ export async function POST(request: Request) {
     response.headers.set("Cache-Control", "no-store");
     return response;
   }
+  if (!user.gamertag || user.needsGamertag) {
+    const response = NextResponse.json(
+      { error: "Gamertag required." },
+      { status: 403 }
+    );
+    response.headers.set("Cache-Control", "no-store");
+    return response;
+  }
 
   const lobbyId = getLobbyId(request);
   const dmId = getDmId(request);

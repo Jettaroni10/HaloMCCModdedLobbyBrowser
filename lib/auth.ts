@@ -8,10 +8,9 @@ export type SessionUser = Pick<
   User,
   | "id"
   | "email"
-  | "handle"
-  | "displayName"
+  | "gamertag"
+  | "needsGamertag"
   | "nametagColor"
-  | "steamName"
   | "reputationScore"
   | "srLevel"
   | "xpTotal"
@@ -96,10 +95,9 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
       select: {
         id: true,
         email: true,
-        handle: true,
-        displayName: true,
+        gamertag: true,
+        needsGamertag: true,
         nametagColor: true,
-        steamName: true,
         reputationScore: true,
         srLevel: true,
         xpTotal: true,
@@ -120,10 +118,9 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
     select: {
       id: true,
       email: true,
-      handle: true,
-      displayName: true,
+      gamertag: true,
+      needsGamertag: true,
       nametagColor: true,
-      steamName: true,
       reputationScore: true,
       srLevel: true,
       xpTotal: true,
@@ -133,10 +130,14 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
   });
 }
 
-export async function requireAuth() {
+export async function requireAuth(options?: { requireGamertag?: boolean }) {
   const user = await getCurrentUser();
   if (!user) {
     redirect("/login");
+  }
+  const requireGamertag = options?.requireGamertag ?? true;
+  if (requireGamertag && (!user.gamertag || user.needsGamertag)) {
+    redirect("/settings/profile?needsGamertag=1");
   }
   return user;
 }

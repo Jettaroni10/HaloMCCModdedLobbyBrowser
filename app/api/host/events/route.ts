@@ -29,7 +29,7 @@ export async function GET() {
 
       const handleRequestCreated = (payload: {
         hostUserId: string;
-        requesterDisplayName: string;
+        requesterGamertag: string;
         requesterNametagColor?: string | null;
         request: {
           id: string;
@@ -42,7 +42,7 @@ export async function GET() {
           ...payload.request,
           requestId: payload.request.id,
           lobbyId: payload.request.lobby.id,
-          requesterDisplayName: payload.requesterDisplayName,
+          requesterGamertag: payload.requesterGamertag,
           requesterNametagColor: payload.requesterNametagColor ?? null,
           requesterHandleText: payload.request.requesterHandleText,
         };

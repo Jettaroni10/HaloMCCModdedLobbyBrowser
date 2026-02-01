@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { createSessionToken, getSessionCookieName } from "@/lib/auth";
-import { normalizeHandleText } from "@/lib/validation";
 import { verifyPassword } from "@/lib/password";
 import { absoluteUrl } from "@/lib/url";
 
@@ -12,24 +11,20 @@ export async function POST(request: Request) {
   const formData = body ? null : await request.formData();
   const isJson = contentType.includes("application/json");
 
-  const handle = normalizeHandleText(
-    body?.handle ?? formData?.get("handle"),
-    32
-  );
   const emailRaw = body?.email ?? formData?.get("email");
   const email =
     typeof emailRaw === "string" && emailRaw.trim().length > 0
       ? emailRaw.toLowerCase().trim()
-      : null;
+      : "";
   const password =
     typeof (body?.password ?? formData?.get("password")) === "string"
       ? String(body?.password ?? formData?.get("password"))
       : "";
 
-  if ((!handle && !email) || !password) {
+  if (!email || !password) {
     if (isJson) {
       return NextResponse.json(
-        { error: "Handle/email and password are required." },
+        { error: "Email and password are required." },
         { status: 400 }
       );
     }
@@ -39,12 +34,7 @@ export async function POST(request: Request) {
   }
 
   const user = await prisma.user.findFirst({
-    where: {
-      OR: [
-        handle ? { handle } : undefined,
-        email ? { email } : undefined,
-      ].filter(Boolean) as { handle?: string; email?: string }[],
-    },
+    where: { email: { equals: email, mode: "insensitive" } },
   });
 
   if (!user) {
@@ -100,7 +90,11 @@ export async function POST(request: Request) {
     return NextResponse.redirect(absoluteUrl(request, "/login?error=server"));
   }
 
-  const response = NextResponse.redirect(absoluteUrl(request, "/browse"));
+  const redirectPath =
+    !user.gamertag || user.needsGamertag
+      ? "/settings/profile?needsGamertag=1"
+      : "/browse";
+  const response = NextResponse.redirect(absoluteUrl(request, redirectPath));
   response.cookies.set(getSessionCookieName(), session.token, {
     httpOnly: true,
     sameSite: "lax",

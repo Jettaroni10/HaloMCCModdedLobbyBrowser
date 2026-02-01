@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 type LobbyRequestFormProps = {
   lobbyId: string;
@@ -9,7 +9,7 @@ type LobbyRequestFormProps = {
   modNotes: string | null;
   rulesNote: string;
   tags: string[];
-  userSteamName: string | null;
+  userGamertag: string | null;
   isSignedIn: boolean;
 };
 
@@ -20,10 +20,9 @@ export default function LobbyRequestForm({
   modNotes,
   rulesNote,
   tags,
-  userSteamName,
+  userGamertag,
   isSignedIn,
 }: LobbyRequestFormProps) {
-  const [handleText, setHandleText] = useState("");
   const [note, setNote] = useState("");
   const [confirmedSubscribed, setConfirmedSubscribed] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -36,13 +35,10 @@ export default function LobbyRequestForm({
   } | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
-  const defaultHandle = useMemo(() => userSteamName ?? "", [userSteamName]);
-
-  useEffect(() => {
-    if (!handleText) {
-      setHandleText(defaultHandle);
-    }
-  }, [defaultHandle, handleText]);
+  const resolvedGamertag = useMemo(
+    () => (userGamertag ?? "").trim(),
+    [userGamertag]
+  );
 
   const readinessOk = confirmedSubscribed;
 
@@ -61,7 +57,7 @@ export default function LobbyRequestForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           requesterPlatform: "STEAM",
-          requesterHandleText: handleText,
+          requesterHandleText: resolvedGamertag,
           note,
           confirmedSubscribed,
           confirmCancelPending: options?.confirmCancelPending ?? false,
@@ -216,6 +212,19 @@ export default function LobbyRequestForm({
               Sign in
             </a>
           </div>
+        ) : !resolvedGamertag ? (
+          <div className="mt-4 rounded-sm border border-clay/40 bg-mist p-4 text-sm text-ink/70">
+            <p className="font-semibold text-ink">Gamertag required</p>
+            <p className="mt-2">
+              Set your gamertag in profile settings to request an invite.
+            </p>
+            <a
+              href="/settings/profile?needsGamertag=1"
+              className="mt-3 inline-flex rounded-sm bg-ink px-4 py-2 text-xs font-semibold text-sand"
+            >
+              Update profile
+            </a>
+          </div>
         ) : (
           <>
         {conflict && (
@@ -285,14 +294,12 @@ export default function LobbyRequestForm({
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <label className="block text-sm font-semibold text-ink">
-            Steam name to invite
+            Gamertag
             <input
               name="requesterHandleText"
-              value={handleText}
-              onChange={(event) => setHandleText(event.target.value)}
-              placeholder="Steam name"
-              className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
-              required
+              value={resolvedGamertag}
+              readOnly
+              className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm text-ink/80"
             />
           </label>
           <label className="block text-sm font-semibold text-ink">
@@ -311,13 +318,13 @@ export default function LobbyRequestForm({
             </span>
           </label>
           <p className="text-xs text-ink/60">
-            By requesting, you consent to the host contacting you via a Steam
-            invite.
+            By requesting, you consent to the host contacting you via a
+            platform invite.
           </p>
           {error && <p className="text-xs text-clay">{error}</p>}
           <button
             type="submit"
-            disabled={!readinessOk || loading}
+            disabled={!readinessOk || loading || !resolvedGamertag}
             className="w-full rounded-sm bg-ink px-4 py-2 text-sm font-semibold text-sand disabled:cursor-not-allowed disabled:bg-ink/40"
           >
             {loading ? "Sending request..." : "Submit request"}

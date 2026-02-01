@@ -30,7 +30,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
   const lobby = await prisma.lobby.findUnique({
     where: { id: params.id },
     include: {
-      host: { select: { displayName: true, nametagColor: true } },
+      host: { select: { gamertag: true, nametagColor: true } },
     },
   });
 
@@ -77,9 +77,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
         include: {
           user: {
             select: {
-              displayName: true,
-              steamName: true,
-              handle: true,
+              gamertag: true,
               srLevel: true,
               nametagColor: true,
             },
@@ -111,7 +109,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
             orderBy: { createdAt: "asc" },
             take: 50,
             include: {
-              sender: { select: { displayName: true, nametagColor: true } },
+              sender: { select: { gamertag: true, nametagColor: true } },
             },
           },
         },
@@ -138,7 +136,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
     conversation?.messages.map((message) => ({
       id: message.id,
       senderUserId: message.senderUserId,
-      senderDisplayName: message.sender.displayName,
+      senderGamertag: message.sender.gamertag,
       senderNametagColor: message.sender.nametagColor,
       body: message.body,
       createdAt: message.createdAt.toISOString(),
@@ -170,7 +168,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
                     {lobby.title}
                   </h1>
                   <p className="mt-2 text-sm text-white/70">
-                    Hosted by <span>{lobby.host.displayName}</span>
+                    Hosted by <span>{lobby.host.gamertag}</span>
                   </p>
                 </div>
                 {lobby.isModded && (
@@ -216,7 +214,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
                   modNotes={lobby.modNotes}
                   rulesNote={lobby.rulesNote}
                   tags={lobby.tags}
-                  userSteamName={user?.steamName ?? null}
+                  userGamertag={user?.gamertag ?? null}
                   isSignedIn={Boolean(user)}
                 />
               )
@@ -226,7 +224,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
               <LobbyChat
                 lobbyId={lobby.id}
                 viewerId={user.id}
-                viewerDisplayName={user.displayName}
+                viewerGamertag={user.gamertag}
                 viewerNametagColor={user.nametagColor}
                 initialMessages={initialMessages}
                 className="border-white/10 bg-gradient-to-b from-black/75 via-black/55 to-black/30 text-white backdrop-blur-sm"
@@ -241,10 +239,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
               lobbyId={lobby.id}
               initialRoster={roster.map((member) => ({
                 slotNumber: member.slotNumber,
-                displayName:
-                  member.user.steamName ||
-                  member.user.handle ||
-                  member.user.displayName,
+                gamertag: member.user.gamertag,
                 srLevel: member.user.srLevel ?? 1,
                 userId: member.userId,
                 nametagColor: member.user.nametagColor,

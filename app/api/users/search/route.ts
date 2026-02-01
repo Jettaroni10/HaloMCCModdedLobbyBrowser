@@ -21,20 +21,15 @@ export async function GET(request: Request) {
   const results = await prisma.user.findMany({
     where: {
       isBanned: false,
-      OR: [
-        { handle: { contains: query, mode: "insensitive" } },
-        { displayName: { contains: query, mode: "insensitive" } },
-      ],
+      gamertag: { contains: query, mode: "insensitive" },
     },
     select: {
       id: true,
-      handle: true,
-      displayName: true,
-      steamName: true,
+      gamertag: true,
       nametagColor: true,
     },
     take: 10,
-    orderBy: { displayName: "asc" },
+    orderBy: { gamertag: "asc" },
   });
 
   return NextResponse.json(results);

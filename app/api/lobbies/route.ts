@@ -55,6 +55,21 @@ export async function POST(request: Request) {
     );
   }
 
+  const existingActive = await prisma.lobby.findFirst({
+    where: { hostUserId: user.id, isActive: true, expiresAt: { gt: new Date() } },
+    select: { id: true, title: true },
+  });
+  if (existingActive) {
+    return NextResponse.json(
+      {
+        error: "You already have an active lobby. Close it before creating another.",
+        code: "HOST_ACTIVE_LOBBY",
+        lobby: existingActive,
+      },
+      { status: 409 }
+    );
+  }
+
   const contentType = request.headers.get("content-type") ?? "";
   let body: Record<string, unknown> = {};
 

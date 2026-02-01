@@ -8,7 +8,7 @@ import {
 } from "@/lib/validation";
 import { isRateLimited, recordRateLimitEvent } from "@/lib/rate-limit";
 import { emitRequestCreated } from "@/lib/host-events";
-import { emitLobbyRequestCreated } from "@/lib/lobby-events";
+import { emitLobbyRequestCreated, emitLobbyRosterUpdated } from "@/lib/lobby-events";
 import { addXp, hasXpEvent } from "@/lib/xp";
 import { logPerf } from "@/lib/perf";
 import { absoluteUrl } from "@/lib/url";
@@ -50,6 +50,9 @@ export async function POST(
     );
     const note = normalizeText(body.note, LIMITS.note);
     const confirmedSubscribed = parseBoolean(body.confirmedSubscribed) ?? false;
+    const confirmCancelPending =
+      parseBoolean(body.confirmCancelPending) ?? false;
+    const confirmLeaveOther = parseBoolean(body.confirmLeaveOther) ?? false;
 
     if (!requesterHandleText) {
       return NextResponse.json(
@@ -77,6 +80,118 @@ export async function POST(
           { error: "Please confirm mod subscription before requesting." },
           { status: 400 }
         );
+      }
+    }
+
+    const pendingOther = await prisma.joinRequest.findMany({
+      where: {
+        requesterUserId: user.id,
+        status: "PENDING",
+        lobbyId: { not: lobby.id },
+      },
+      include: { lobby: { select: { id: true, title: true } } },
+    });
+
+    if (pendingOther.length > 0 && !confirmCancelPending) {
+      return NextResponse.json(
+        {
+          error:
+            "You already have a pending invite request in another lobby.",
+          code: "PENDING_OTHER_LOBBY",
+          pendingLobbies: pendingOther.map((item) => item.lobby),
+        },
+        { status: 409 }
+      );
+    }
+
+    const hostingOther = await prisma.lobby.findFirst({
+      where: {
+        hostUserId: user.id,
+        isActive: true,
+        expiresAt: { gt: new Date() },
+        id: { not: lobby.id },
+      },
+      select: { id: true, title: true },
+    });
+
+    if (hostingOther && !confirmLeaveOther) {
+      return NextResponse.json(
+        {
+          error:
+            "You are hosting another lobby. Close it to request a new invite.",
+          code: "HOSTING_OTHER_LOBBY",
+          lobby: hostingOther,
+        },
+        { status: 409 }
+      );
+    }
+
+    const membershipOther = await prisma.lobbyMember.findFirst({
+      where: {
+        userId: user.id,
+        lobbyId: { not: lobby.id },
+      },
+      include: { lobby: { select: { id: true, title: true } } },
+    });
+
+    if (membershipOther && !confirmLeaveOther) {
+      return NextResponse.json(
+        {
+          error:
+            "You are already in another lobby. Leave it to request a new invite.",
+          code: "IN_OTHER_LOBBY",
+          lobby: membershipOther.lobby,
+        },
+        { status: 409 }
+      );
+    }
+
+    if (pendingOther.length > 0 && confirmCancelPending) {
+      await prisma.joinRequest.updateMany({
+        where: {
+          requesterUserId: user.id,
+          status: "PENDING",
+          lobbyId: { not: lobby.id },
+        },
+        data: {
+          status: "DECLINED",
+          decidedAt: new Date(),
+          decidedByUserId: user.id,
+        },
+      });
+    }
+
+    if (confirmLeaveOther) {
+      if (hostingOther) {
+        await prisma.lobby.updateMany({
+          where: { hostUserId: user.id, isActive: true, id: { not: lobby.id } },
+          data: { isActive: false },
+        });
+        await prisma.joinRequest.updateMany({
+          where: {
+            lobbyId: hostingOther.id,
+            status: "PENDING",
+          },
+          data: { status: "DECLINED", decidedAt: new Date() },
+        });
+      }
+      if (membershipOther) {
+        await prisma.lobbyMember.deleteMany({
+          where: { lobbyId: membershipOther.lobby.id, userId: user.id },
+        });
+        await prisma.joinRequest.updateMany({
+          where: {
+            lobbyId: membershipOther.lobby.id,
+            requesterUserId: user.id,
+            status: "ACCEPTED",
+          },
+          data: {
+            status: "DECLINED",
+            decidedAt: new Date(),
+            decidedByUserId: user.id,
+          },
+        });
+        emitLobbyRosterUpdated({ lobbyId: membershipOther.lobby.id });
       }
     }
 

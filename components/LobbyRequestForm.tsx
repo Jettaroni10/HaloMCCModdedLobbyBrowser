@@ -29,6 +29,12 @@ export default function LobbyRequestForm({
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+  const [conflict, setConflict] = useState<{
+    type: "PENDING_OTHER_LOBBY" | "IN_OTHER_LOBBY" | "HOSTING_OTHER_LOBBY";
+    message: string;
+    lobbies: { id: string; title: string }[];
+  } | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
 
   const defaultHandle = useMemo(() => userSteamName ?? "", [userSteamName]);
 
@@ -40,9 +46,13 @@ export default function LobbyRequestForm({
 
   const readinessOk = confirmedSubscribed;
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function submitRequest(options?: {
+    confirmCancelPending?: boolean;
+    confirmLeaveOther?: boolean;
+  }) {
     setError("");
+    setInfo(null);
+    setConflict(null);
     setLoading(true);
 
     try {
@@ -54,22 +64,70 @@ export default function LobbyRequestForm({
           requesterHandleText: handleText,
           note,
           confirmedSubscribed,
+          confirmCancelPending: options?.confirmCancelPending ?? false,
+          confirmLeaveOther: options?.confirmLeaveOther ?? false,
         }),
       });
 
       if (!response.ok) {
         const payload = (await response.json().catch(() => null)) as
-          | { error?: string }
+          | {
+              error?: string;
+              code?: string;
+              pendingLobbies?: { id: string; title: string }[];
+              lobby?: { id: string; title: string };
+            }
           | null;
+        if (payload?.code === "PENDING_OTHER_LOBBY") {
+          setConflict({
+            type: "PENDING_OTHER_LOBBY",
+            message:
+              payload.error ??
+              "You already have a pending invite request in another lobby.",
+            lobbies: payload.pendingLobbies ?? [],
+          });
+          return;
+        }
+        if (payload?.code === "IN_OTHER_LOBBY") {
+          setConflict({
+            type: "IN_OTHER_LOBBY",
+            message:
+              payload.error ??
+              "You are already in another lobby. Leave it to continue.",
+            lobbies: payload.lobby ? [payload.lobby] : [],
+          });
+          return;
+        }
+        if (payload?.code === "HOSTING_OTHER_LOBBY") {
+          setConflict({
+            type: "HOSTING_OTHER_LOBBY",
+            message:
+              payload.error ??
+              "You are hosting another lobby. Close it to continue.",
+            lobbies: payload.lobby ? [payload.lobby] : [],
+          });
+          return;
+        }
         throw new Error(payload?.error || "Request failed.");
       }
 
+      if (options?.confirmCancelPending) {
+        setInfo("Previous pending invite request canceled.");
+      }
+      if (options?.confirmLeaveOther) {
+        setInfo("You have left the previous lobby.");
+      }
       setSuccess(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Request failed.");
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await submitRequest();
   }
 
   if (success) {
@@ -160,6 +218,56 @@ export default function LobbyRequestForm({
           </div>
         ) : (
           <>
+        {conflict && (
+          <div className="mt-4 rounded-sm border border-clay/40 bg-mist px-4 py-3 text-xs text-ink/70">
+            <p className="text-sm font-semibold text-ink">
+              Action required
+            </p>
+            <p className="mt-2">{conflict.message}</p>
+            {conflict.lobbies.length > 0 && (
+              <ul className="mt-2 space-y-1">
+                {conflict.lobbies.map((item) => (
+                  <li key={item.id} className="text-xs text-ink/70">
+                    • {item.title}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="mt-3 flex flex-wrap gap-2">
+              {conflict.type === "PENDING_OTHER_LOBBY" && (
+                <button
+                  type="button"
+                  onClick={() => submitRequest({ confirmCancelPending: true })}
+                  disabled={loading}
+                  className="rounded-sm bg-ink px-3 py-1 text-xs font-semibold text-sand disabled:opacity-60"
+                >
+                  Cancel pending request &amp; continue
+                </button>
+              )}
+              {(conflict.type === "IN_OTHER_LOBBY" ||
+                conflict.type === "HOSTING_OTHER_LOBBY") && (
+                <button
+                  type="button"
+                  onClick={() => submitRequest({ confirmLeaveOther: true })}
+                  disabled={loading}
+                  className="rounded-sm bg-ink px-3 py-1 text-xs font-semibold text-sand disabled:opacity-60"
+                >
+                  Leave other lobby &amp; continue
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setConflict(null)}
+                className="rounded-sm border border-ink/20 px-3 py-1 text-xs font-semibold text-ink"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+        {info && (
+          <p className="mt-3 text-xs font-semibold text-ink/70">{info}</p>
+        )}
         <div className="mt-4 rounded-sm border border-ink/10 bg-mist px-4 py-3 text-xs text-ink/70">
           <p className="text-sm font-semibold text-ink">
             Readiness checklist

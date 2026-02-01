@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { SessionUser } from "@/lib/auth";
+import HostNavLink from "@/components/HostNavLink";
 
 type SiteHeaderProps = {
   user: SessionUser | null;
@@ -27,9 +28,7 @@ export default function SiteHeader({ user, isAdmin }: SiteHeaderProps) {
           <Link href="/" className="hover:text-ink/80">
             Browse
           </Link>
-          <Link href="/host" className="hover:text-ink/80">
-            Host
-          </Link>
+          <HostNavLink hostUserId={user?.id ?? null} />
           {user && (
             <Link href="/friends" className="hover:text-ink/80">
               Friends

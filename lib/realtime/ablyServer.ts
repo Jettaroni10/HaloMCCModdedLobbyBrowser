@@ -15,6 +15,7 @@ function getRestClient() {
 export async function createRealtimeTokenRequest(params: {
   clientId: string;
   lobbyId?: string;
+  dmId?: string;
 }) {
   const rest = getRestClient();
   const capability: Record<string, ("publish" | "subscribe")[]> = {
@@ -27,6 +28,11 @@ export async function createRealtimeTokenRequest(params: {
     capability[`lobby:${params.lobbyId}`] = ["subscribe"];
     // Typing channel is isolated and allows client publish/subscribe.
     capability[`lobby:${params.lobbyId}:typing`] = ["publish", "subscribe"];
+  }
+
+  if (params.dmId) {
+    capability[`dm:${params.dmId}`] = ["subscribe"];
+    capability[`dm:${params.dmId}:typing`] = ["publish", "subscribe"];
   }
 
   return rest.auth.createTokenRequest({
@@ -67,6 +73,25 @@ export async function publishHostEvent(params: {
   } catch (error) {
     console.error("Ably host publish failed", {
       hostUserId: params.hostUserId,
+      event: params.event,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+export async function publishDmEvent(params: {
+  conversationId: string;
+  event: string;
+  payload: unknown;
+}) {
+  try {
+    const rest = getRestClient();
+    await rest.channels
+      .get(`dm:${params.conversationId}`)
+      .publish(params.event, params.payload);
+  } catch (error) {
+    console.error("Ably DM publish failed", {
+      conversationId: params.conversationId,
       event: params.event,
       error: error instanceof Error ? error.message : String(error),
     });

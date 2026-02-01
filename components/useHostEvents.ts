@@ -219,6 +219,13 @@ export function useHostEvents(options: UseHostEventsOptions = {}) {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    window.dispatchEvent(
+      new CustomEvent("customs:hostUnread", { detail: { count: unreadCount } })
+    );
+  }, [unreadCount]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
     const handleStorage = (event: StorageEvent) => {
       if (event.key === UNREAD_KEY) {
         setUnreadCount(parseUnread(event.newValue));

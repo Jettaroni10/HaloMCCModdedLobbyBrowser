@@ -66,6 +66,7 @@ export default async function DmPage({
 
   const initialMessages = conversation.messages.map((message) => ({
     id: message.id,
+    conversationId: conversation.id,
     senderUserId: message.senderUserId,
     senderDisplayName: message.sender.displayName,
     senderNametagColor: message.sender.nametagColor,
@@ -77,7 +78,9 @@ export default async function DmPage({
     <div className="mx-auto w-full max-w-4xl px-6 py-12">
       <DmChat
         targetUserId={target.id}
+        conversationId={conversation.id}
         viewerId={user.id}
+        viewerDisplayName={user.displayName}
         initialMessages={initialMessages}
         targetDisplayName={target.displayName}
         targetNametagColor={target.nametagColor}

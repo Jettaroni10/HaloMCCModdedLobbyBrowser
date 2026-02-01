@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { addXp, countXpEvents } from "@/lib/xp";
+import { publishDmEvent } from "@/lib/realtime/ablyServer";
 
 const MESSAGE_LIMIT = 500;
 
@@ -74,6 +75,7 @@ export async function GET(
     conversationId: conversation.id,
     messages: messages.map((message) => ({
       id: message.id,
+      conversationId: conversation.id,
       senderUserId: message.senderUserId,
       senderDisplayName: message.sender.displayName,
       senderNametagColor: message.sender.nametagColor,
@@ -136,6 +138,22 @@ export async function POST(
     },
   });
 
+  const messagePayload = {
+    id: created.id,
+    conversationId: created.conversationId,
+    senderUserId: created.senderUserId,
+    senderDisplayName: user.displayName,
+    senderNametagColor: user.nametagColor,
+    body: created.body,
+    createdAt: created.createdAt.toISOString(),
+  };
+
+  await publishDmEvent({
+    conversationId: conversation.id,
+    event: "message:new",
+    payload: messagePayload,
+  });
+
   if (messageBody.length >= 3 && lastMessage?.body !== messageBody) {
     const since = new Date(Date.now() - 10 * 60 * 1000);
     const recentCount = await countXpEvents(user.id, "MESSAGE_SENT", since);
@@ -166,11 +184,6 @@ export async function POST(
   }
 
   return NextResponse.json({
-    id: created.id,
-    senderUserId: created.senderUserId,
-    senderDisplayName: user.displayName,
-    senderNametagColor: user.nametagColor,
-    body: created.body,
-    createdAt: created.createdAt.toISOString(),
+    ...messagePayload,
   });
 }

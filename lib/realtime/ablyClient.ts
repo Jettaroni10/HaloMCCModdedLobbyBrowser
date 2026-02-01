@@ -15,3 +15,10 @@ export function createHostRealtimeClient() {
     authMethod: "POST",
   });
 }
+
+export function createDmRealtimeClient(conversationId: string) {
+  return new Ably.Realtime({
+    authUrl: `/api/realtime/auth?dmId=${encodeURIComponent(conversationId)}`,
+    authMethod: "POST",
+  });
+}

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { ensureLobbyChatAccess } from "@/lib/lobby-access";
+import { ensureDmChatAccess } from "@/lib/dm-access";
 import { createRealtimeTokenRequest } from "@/lib/realtime/ablyServer";
 
 export const runtime = "nodejs";
@@ -12,6 +13,12 @@ function getLobbyId(request: Request) {
   const { searchParams } = new URL(request.url);
   const lobbyId = searchParams.get("lobbyId");
   return lobbyId ?? "";
+}
+
+function getDmId(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const dmId = searchParams.get("dmId");
+  return dmId ?? "";
 }
 
 export async function POST(request: Request) {
@@ -26,6 +33,7 @@ export async function POST(request: Request) {
   }
 
   const lobbyId = getLobbyId(request);
+  const dmId = getDmId(request);
   if (lobbyId) {
     if (!LOBBY_ID_PATTERN.test(lobbyId)) {
       const response = NextResponse.json(
@@ -47,8 +55,29 @@ export async function POST(request: Request) {
     }
   }
 
+  if (dmId) {
+    if (!LOBBY_ID_PATTERN.test(dmId)) {
+      const response = NextResponse.json(
+        { error: "Invalid dmId." },
+        { status: 400 }
+      );
+      response.headers.set("Cache-Control", "no-store");
+      return response;
+    }
+    const access = await ensureDmChatAccess(dmId, user.id);
+    if (!access.ok) {
+      const response = NextResponse.json(
+        { error: access.error },
+        { status: access.status }
+      );
+      response.headers.set("Cache-Control", "no-store");
+      return response;
+    }
+  }
+
   const tokenRequest = await createRealtimeTokenRequest({
     lobbyId: lobbyId || undefined,
+    dmId: dmId || undefined,
     clientId: user.id,
   });
   const response = NextResponse.json(tokenRequest);

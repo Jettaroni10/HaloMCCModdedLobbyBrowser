@@ -12,14 +12,14 @@ export default function SiteHeader({ user, isAdmin }: SiteHeaderProps) {
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-sm bg-clay text-ink flex items-center justify-center font-semibold">
-            IC
+            CR
           </div>
           <div>
             <p className="text-sm uppercase tracking-[0.3em] text-ink/50">
-              Invite Coordinator
+              Customs on the Ring
             </p>
             <p className="text-lg font-semibold text-ink">
-              Halo MCC Custom Games
+              Halo MCC Customs
             </p>
           </div>
         </div>

@@ -1,4 +1,4 @@
-# Halo MCC Custom Games Invite Coordinator
+# Customs on the Ring
 
 Opt-in lobby listings and invite request tracking for Halo MCC custom games.
 

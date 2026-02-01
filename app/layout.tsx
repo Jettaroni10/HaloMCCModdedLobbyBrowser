@@ -5,9 +5,9 @@ import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
 
 export const metadata: Metadata = {
-  title: "Halo MCC Invite Coordinator",
+  title: "Customs on the Ring",
   description:
-    "Coordinate Halo MCC custom game invites with opt-in lobbies and mod metadata.",
+    "Customs on the Ring coordinates Halo MCC custom game invites with opt-in lobbies and mod metadata.",
 };
 
 export default async function RootLayout({

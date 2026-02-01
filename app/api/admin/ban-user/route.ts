@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, isAdminUser } from "@/lib/auth";
 import { normalizeText } from "@/lib/validation";
+import { absoluteUrl } from "@/lib/url";
 
 async function readBody(request: Request) {
   const contentType = request.headers.get("content-type") ?? "";
@@ -53,6 +54,6 @@ export async function POST(request: Request) {
   if (isJson) {
     return NextResponse.json(updated);
   }
-  return NextResponse.redirect(new URL("/admin", request.url));
+  return NextResponse.redirect(absoluteUrl(request, "/admin"));
 }
 

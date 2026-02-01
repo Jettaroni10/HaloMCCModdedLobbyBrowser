@@ -58,6 +58,7 @@ type InviteChecklist = {
 type HostDashboardProps = {
   lobbies: LobbySummary[];
   requests: JoinRequestSummary[];
+  hostUserId: string;
 };
 
 function formatCountdown(dateString: string) {
@@ -75,7 +76,11 @@ function formatUpdated(dateString: string) {
   return minutes <= 0 ? "Updated just now" : `Updated ${minutes} min ago`;
 }
 
-export default function HostDashboard({ lobbies, requests }: HostDashboardProps) {
+export default function HostDashboard({
+  lobbies,
+  requests,
+  hostUserId,
+}: HostDashboardProps) {
   const [activeLobbies, setActiveLobbies] = useState<LobbySummary[]>(lobbies);
   const [allRequests, setAllRequests] = useState<JoinRequestSummary[]>(requests);
   const [tab, setTab] = useState<JoinRequestSummary["status"]>("PENDING");
@@ -87,7 +92,10 @@ export default function HostDashboard({ lobbies, requests }: HostDashboardProps)
     markViewed,
     muted,
     setMuted,
+    soundBlocked,
+    enableSound,
   } = useHostEvents({
+    hostUserId,
     onRequestCreated: (payload: HostRequestCreatedEvent) => {
       setAllRequests((prev) => {
         if (prev.some((item) => item.id === payload.id)) {
@@ -293,15 +301,26 @@ export default function HostDashboard({ lobbies, requests }: HostDashboardProps)
               </span>
             )}
           </div>
-          <label className="flex items-center gap-2 text-xs font-semibold text-ink/60">
-            <input
-              type="checkbox"
-              checked={muted}
-              onChange={(event) => setMuted(event.target.checked)}
-              className="h-3.5 w-3.5 rounded border-ink/20"
-            />
-            Mute pings
-          </label>
+          <div className="flex items-center gap-3 text-xs font-semibold text-ink/60">
+            {soundBlocked && !muted && (
+              <button
+                type="button"
+                onClick={enableSound}
+                className="rounded-sm border border-ink/20 px-2 py-1 text-[10px] font-semibold text-ink/70"
+              >
+                🔔 Enable sounds
+              </button>
+            )}
+            <label className="flex items-center gap-2 text-xs font-semibold text-ink/60">
+              <input
+                type="checkbox"
+                checked={muted}
+                onChange={(event) => setMuted(event.target.checked)}
+                className="h-3.5 w-3.5 rounded border-ink/20"
+              />
+              Mute pings
+            </label>
+          </div>
         </div>
         <div className="mt-3 flex gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-ink/50">
           {(["PENDING", "ACCEPTED", "DECLINED"] as const).map((value) => (

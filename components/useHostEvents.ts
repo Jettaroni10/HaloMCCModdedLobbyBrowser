@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { createHostRealtimeClient } from "@/lib/realtime/ablyClient";
 
 export type HostRequestCreatedEvent = {
   id: string;
@@ -25,6 +26,34 @@ export type HostLobbyExpiredEvent = {
   expiresAt: string;
 };
 
+type HostRequestCreatedEnvelope = {
+  hostUserId: string;
+  requesterDisplayName: string;
+  requesterNametagColor?: string | null;
+  request: {
+    id: string;
+    requesterUserId: string;
+    requesterHandleText: string;
+    note: string | null;
+    confirmedSubscribed: boolean;
+    status: "PENDING";
+    createdAt: string;
+    lobby: {
+      id: string;
+      title: string;
+      isModded: boolean;
+    };
+  };
+};
+
+type HostLobbyExpiredEnvelope = {
+  hostUserId: string;
+  lobby: {
+    id: string;
+    expiresAt: string;
+  };
+};
+
 type HostToast = {
   id: string;
   message: string;
@@ -32,11 +61,15 @@ type HostToast = {
 
 type UseHostEventsOptions = {
   enabled?: boolean;
+  hostUserId?: string | null;
   onRequestCreated?: (payload: HostRequestCreatedEvent) => void;
   onLobbyExpired?: (payload: HostLobbyExpiredEvent) => void;
 };
 
 const MUTE_KEY = "mcc_host_mute_pings";
+const UNREAD_KEY = "hmccmcb:hostUnreadCount";
+const SOUND_LOCK_KEY = "hmccmcb:hostSoundLock";
+const TAB_ID_KEY = "hmccmcb:hostTabId";
 
 function makeId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -45,12 +78,103 @@ function makeId() {
   return Math.random().toString(36).slice(2);
 }
 
+function parseUnread(value: string | null) {
+  if (!value) return 0;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
+}
+
+function getTabId() {
+  if (typeof window === "undefined") return "server";
+  const existing = window.sessionStorage.getItem(TAB_ID_KEY);
+  if (existing) return existing;
+  const created = makeId();
+  window.sessionStorage.setItem(TAB_ID_KEY, created);
+  return created;
+}
+
+function acquireSoundLock() {
+  if (typeof window === "undefined") return true;
+  const now = Date.now();
+  const tabId = getTabId();
+  const raw = window.localStorage.getItem(SOUND_LOCK_KEY);
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw) as { tabId?: string; ts?: number };
+      if (
+        parsed?.ts &&
+        now - parsed.ts < 1500 &&
+        parsed.tabId &&
+        parsed.tabId !== tabId
+      ) {
+        return false;
+      }
+    } catch {
+      // ignore
+    }
+  }
+  window.localStorage.setItem(
+    SOUND_LOCK_KEY,
+    JSON.stringify({ tabId, ts: now })
+  );
+  return true;
+}
+
+function normalizeRequestPayload(
+  payload: unknown
+): HostRequestCreatedEvent | null {
+  if (!payload || typeof payload !== "object") return null;
+  const data = payload as HostRequestCreatedEvent & {
+    request?: HostRequestCreatedEnvelope["request"];
+    requesterDisplayName?: string;
+    requesterNametagColor?: string | null;
+  };
+
+  if (data.request && typeof data.request.id === "string") {
+    return {
+      id: data.request.id,
+      requesterUserId: data.request.requesterUserId,
+      requesterHandleText: data.request.requesterHandleText,
+      requesterDisplayName: data.requesterDisplayName,
+      requesterNametagColor: data.requesterNametagColor ?? null,
+      note: data.request.note ?? null,
+      confirmedSubscribed: data.request.confirmedSubscribed,
+      status: data.request.status,
+      lobby: data.request.lobby,
+      requestId: data.request.id,
+      lobbyId: data.request.lobby.id,
+    };
+  }
+
+  if (typeof data.id === "string" && data.lobby) {
+    return data;
+  }
+
+  return null;
+}
+
+function normalizeExpiredPayload(payload: unknown): HostLobbyExpiredEvent | null {
+  if (!payload || typeof payload !== "object") return null;
+  const data = payload as HostLobbyExpiredEnvelope["lobby"] & {
+    lobby?: HostLobbyExpiredEnvelope["lobby"];
+  };
+  if (data.lobby && typeof data.lobby.id === "string") {
+    return { id: data.lobby.id, expiresAt: data.lobby.expiresAt };
+  }
+  if (typeof data.id === "string" && typeof data.expiresAt === "string") {
+    return { id: data.id, expiresAt: data.expiresAt };
+  }
+  return null;
+}
+
 export function useHostEvents(options: UseHostEventsOptions = {}) {
-  const { enabled = true } = options;
+  const { enabled = true, hostUserId } = options;
   const [toasts, setToasts] = useState<HostToast[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [muted, setMuted] = useState(false);
+  const [muted, setMuted] = useState(true);
+  const [soundBlocked, setSoundBlocked] = useState(false);
   const mutedRef = useRef(muted);
+  const soundBlockedRef = useRef(soundBlocked);
   const onRequestCreatedRef = useRef(options.onRequestCreated);
   const onLobbyExpiredRef = useRef(options.onLobbyExpired);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -58,6 +182,10 @@ export function useHostEvents(options: UseHostEventsOptions = {}) {
   useEffect(() => {
     mutedRef.current = muted;
   }, [muted]);
+
+  useEffect(() => {
+    soundBlockedRef.current = soundBlocked;
+  }, [soundBlocked]);
 
   useEffect(() => {
     onRequestCreatedRef.current = options.onRequestCreated;
@@ -69,9 +197,13 @@ export function useHostEvents(options: UseHostEventsOptions = {}) {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const stored = window.localStorage.getItem(MUTE_KEY);
-    if (stored !== null) {
-      setMuted(stored === "true");
+    const storedMute = window.localStorage.getItem(MUTE_KEY);
+    if (storedMute !== null) {
+      setMuted(storedMute === "true");
+    }
+    const storedUnread = window.localStorage.getItem(UNREAD_KEY);
+    if (storedUnread !== null) {
+      setUnreadCount(parseUnread(storedUnread));
     }
   }, []);
 
@@ -79,6 +211,25 @@ export function useHostEvents(options: UseHostEventsOptions = {}) {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(MUTE_KEY, String(muted));
   }, [muted]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(UNREAD_KEY, String(unreadCount));
+  }, [unreadCount]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === UNREAD_KEY) {
+        setUnreadCount(parseUnread(event.newValue));
+      }
+      if (event.key === MUTE_KEY && event.newValue !== null) {
+        setMuted(event.newValue === "true");
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
 
   function enqueueToast(message: string) {
     const id = makeId();
@@ -88,50 +239,101 @@ export function useHostEvents(options: UseHostEventsOptions = {}) {
     }, 6000);
   }
 
-  function playPing() {
-    if (mutedRef.current) return;
-    if (!audioRef.current) {
-      audioRef.current = new Audio("/sfx/ping.mp3");
-      audioRef.current.volume = 0.6;
-    }
-    const audio = audioRef.current;
-    if (!audio) return;
-    audio.currentTime = 0;
-    audio.play().catch(() => {});
+  const playPing = useCallback(
+    async (force = false) => {
+      if (!force && mutedRef.current) return;
+      if (!force && soundBlockedRef.current) return;
+      if (!force && !acquireSoundLock()) return;
+
+      if (!audioRef.current) {
+        audioRef.current = new Audio("/sounds/notify.mp3");
+        audioRef.current.volume = 0.6;
+      }
+      const audio = audioRef.current;
+      if (!audio) return;
+      audio.currentTime = 0;
+      try {
+        await audio.play();
+        setSoundBlocked(false);
+      } catch {
+        if (!mutedRef.current) {
+          setSoundBlocked(true);
+        }
+      }
+    },
+    []
+  );
+
+  const enableSound = useCallback(async () => {
+    await playPing(true);
+  }, [playPing]);
+
+  function incrementUnread() {
+    setUnreadCount((prev) => prev + 1);
   }
 
   useEffect(() => {
-    if (!enabled) return;
-    const source = new EventSource("/api/host/events");
+    if (!enabled || !hostUserId) return;
+    const client = createHostRealtimeClient();
+    const channel = client.channels.get(`host:${hostUserId}`);
 
-    const handleRequestCreated = (event: MessageEvent) => {
-      const payload = JSON.parse(event.data) as HostRequestCreatedEvent;
-      if (onRequestCreatedRef.current) {
-        onRequestCreatedRef.current(payload);
+    const handleMessage = (message: { name?: string; data?: unknown }) => {
+      if (message.name === "request_created") {
+        const payload = normalizeRequestPayload(message.data);
+        if (!payload) return;
+        onRequestCreatedRef.current?.(payload);
+        incrementUnread();
+        const name =
+          payload.requesterDisplayName?.trim() ||
+          payload.requesterHandleText ||
+          "New requester";
+        enqueueToast(`New request from ${name}`);
+        void playPing();
       }
-      setUnreadCount((count) => count + 1);
-      const name =
-        payload.requesterDisplayName?.trim() ||
-        payload.requesterHandleText ||
-        "New requester";
-      enqueueToast(`New request from ${name}`);
-      playPing();
+
+      if (message.name === "lobby_expired") {
+        const payload = normalizeExpiredPayload(message.data);
+        if (!payload) return;
+        onLobbyExpiredRef.current?.(payload);
+        incrementUnread();
+        enqueueToast("Lobby expired");
+        void playPing();
+      }
     };
 
-    const handleLobbyExpired = (event: MessageEvent) => {
-      const payload = JSON.parse(event.data) as HostLobbyExpiredEvent;
-      if (onLobbyExpiredRef.current) {
-        onLobbyExpiredRef.current(payload);
+    try {
+      const subscribeResult = channel.subscribe(handleMessage);
+      if (
+        subscribeResult &&
+        typeof (subscribeResult as Promise<unknown>).catch === "function"
+      ) {
+        (subscribeResult as Promise<unknown>).catch((error) => {
+          console.warn("Ably host subscribe failed", {
+            hostUserId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
       }
-    };
-
-    source.addEventListener("request_created", handleRequestCreated);
-    source.addEventListener("lobby_expired", handleLobbyExpired);
+    } catch (error) {
+      console.warn("Ably host subscribe failed", {
+        hostUserId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
 
     return () => {
-      source.close();
+      try {
+        channel.unsubscribe();
+      } catch {
+        // ignore
+      }
+      try {
+        client.close();
+      } catch {
+        // ignore
+      }
     };
-  }, [enabled]);
+  }, [enabled, hostUserId, playPing]);
 
   function dismissToast(id: string) {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
@@ -148,5 +350,7 @@ export function useHostEvents(options: UseHostEventsOptions = {}) {
     markViewed,
     muted,
     setMuted,
+    soundBlocked,
+    enableSound,
   };
 }

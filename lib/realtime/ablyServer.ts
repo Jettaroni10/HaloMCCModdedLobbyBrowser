@@ -12,19 +12,26 @@ function getRestClient() {
   return restClient;
 }
 
-export async function createLobbyTokenRequest(params: {
-  lobbyId: string;
+export async function createRealtimeTokenRequest(params: {
   clientId: string;
+  lobbyId?: string;
 }) {
   const rest = getRestClient();
+  const capability: Record<string, ("publish" | "subscribe")[]> = {
+    // Host channel is subscribe-only for the current user.
+    [`host:${params.clientId}`]: ["subscribe"],
+  };
+
+  if (params.lobbyId) {
+    // Main lobby channel is subscribe-only to prevent client spoofing.
+    capability[`lobby:${params.lobbyId}`] = ["subscribe"];
+    // Typing channel is isolated and allows client publish/subscribe.
+    capability[`lobby:${params.lobbyId}:typing`] = ["publish", "subscribe"];
+  }
+
   return rest.auth.createTokenRequest({
     clientId: params.clientId,
-    capability: {
-      // Main lobby channel is subscribe-only to prevent client spoofing.
-      [`lobby:${params.lobbyId}`]: ["subscribe"],
-      // Typing channel is isolated and allows client publish/subscribe.
-      [`lobby:${params.lobbyId}:typing`]: ["publish", "subscribe"],
-    },
+    capability,
   });
 }
 
@@ -41,6 +48,25 @@ export async function publishLobbyEvent(params: {
   } catch (error) {
     console.error("Ably publish failed", {
       lobbyId: params.lobbyId,
+      event: params.event,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+export async function publishHostEvent(params: {
+  hostUserId: string;
+  event: string;
+  payload: unknown;
+}) {
+  try {
+    const rest = getRestClient();
+    await rest.channels
+      .get(`host:${params.hostUserId}`)
+      .publish(params.event, params.payload);
+  } catch (error) {
+    console.error("Ably host publish failed", {
+      hostUserId: params.hostUserId,
       event: params.event,
       error: error instanceof Error ? error.message : String(error),
     });

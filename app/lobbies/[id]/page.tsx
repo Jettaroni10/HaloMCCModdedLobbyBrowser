@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { formatEnum } from "@/lib/format";
 import { getCurrentUser } from "@/lib/auth";
+import { logPerf } from "@/lib/perf";
 import LobbyMemberPanel from "@/components/LobbyMemberPanel";
 import LobbyRequestForm from "@/components/LobbyRequestForm";
 import LobbyRosterLive from "@/components/LobbyRosterLive";
@@ -25,6 +26,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
     );
   }
 
+  const perfStart = Date.now();
   const lobby = await prisma.lobby.findUnique({
     where: { id: params.id },
     include: {
@@ -38,29 +40,38 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
 
   const user = await getCurrentUser();
   const isHost = Boolean(user && user.id === lobby.hostUserId);
-  const membership = user
-    ? await prisma.lobbyMember.findUnique({
+
+  const membershipPromise = user
+    ? prisma.lobbyMember.findUnique({
         where: { lobbyId_userId: { lobbyId: lobby.id, userId: user.id } },
       })
-    : null;
-  const acceptedRequest = user
-    ? await prisma.joinRequest.findFirst({
+    : Promise.resolve(null);
+  const acceptedRequestPromise = user
+    ? prisma.joinRequest.findFirst({
         where: {
           lobbyId: lobby.id,
           requesterUserId: user.id,
           status: "ACCEPTED",
         },
       })
-    : null;
+    : Promise.resolve(null);
+  const rosterCountPromise = prisma.lobbyMember.count({
+    where: { lobbyId: lobby.id },
+  });
+
+  const [membership, acceptedRequest, rosterCount] = await Promise.all([
+    membershipPromise,
+    acceptedRequestPromise,
+    rosterCountPromise,
+  ]);
+
   const isMember = Boolean(membership);
   const isAccepted = Boolean(acceptedRequest);
   const canSeeRoster = isHost || isMember || isAccepted;
   const canChat = canSeeRoster;
-  const rosterCount = await prisma.lobbyMember.count({
-    where: { lobbyId: lobby.id },
-  });
-  const roster = canSeeRoster
-    ? await prisma.lobbyMember.findMany({
+
+  const rosterPromise = canSeeRoster
+    ? prisma.lobbyMember.findMany({
         where: { lobbyId: lobby.id },
         orderBy: { slotNumber: "asc" },
         include: {
@@ -75,35 +86,25 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
           },
         },
       })
-    : [];
-  const friendIds =
+    : Promise.resolve([]);
+  const friendRowsPromise =
     user && canSeeRoster
-      ? await prisma.friendship
-          .findMany({
-            where: {
-              OR: [{ userAId: user.id }, { userBId: user.id }],
-            },
-            select: { userAId: true, userBId: true },
-          })
-          .then((rows) =>
-            rows.map((row) =>
-              row.userAId === user.id ? row.userBId : row.userAId
-            )
-          )
-      : [];
-  const pendingOutgoingIds =
+      ? prisma.friendship.findMany({
+          where: {
+            OR: [{ userAId: user.id }, { userBId: user.id }],
+          },
+          select: { userAId: true, userBId: true },
+        })
+      : Promise.resolve([]);
+  const pendingRowsPromise =
     user && canSeeRoster
-      ? await prisma.friendRequest
-          .findMany({
-            where: { fromUserId: user.id, status: "PENDING" },
-            select: { toUserId: true },
-          })
-          .then((rows) => rows.map((row) => row.toUserId))
-      : [];
-  const slotsTotal = lobby.slotsTotal ?? 16;
-  const slotsOpen = Math.max(0, slotsTotal - rosterCount);
-  const conversation = canChat
-    ? await prisma.conversation.findFirst({
+      ? prisma.friendRequest.findMany({
+          where: { fromUserId: user.id, status: "PENDING" },
+          select: { toUserId: true },
+        })
+      : Promise.resolve([]);
+  const conversationPromise = canChat
+    ? prisma.conversation.findFirst({
         where: { lobbyId: lobby.id, type: "LOBBY" },
         include: {
           messages: {
@@ -115,7 +116,24 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
           },
         },
       })
-    : null;
+    : Promise.resolve(null);
+
+  const [roster, friendRows, pendingRows, conversation] = await Promise.all([
+    rosterPromise,
+    friendRowsPromise,
+    pendingRowsPromise,
+    conversationPromise,
+  ]);
+
+  const friendIds = (friendRows as { userAId: string; userBId: string }[]).map(
+    (row) => (row.userAId === user?.id ? row.userBId : row.userAId)
+  );
+  const pendingOutgoingIds = (pendingRows as { toUserId: string }[]).map(
+    (row) => row.toUserId
+  );
+
+  const slotsTotal = lobby.slotsTotal ?? 16;
+  const slotsOpen = Math.max(0, slotsTotal - rosterCount);
   const initialMessages =
     conversation?.messages.map((message) => ({
       id: message.id,
@@ -126,6 +144,12 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
       createdAt: message.createdAt.toISOString(),
     })) ?? [];
 
+  logPerf("lobby page data", perfStart, {
+    rosterCount,
+    roster: roster.length,
+    messages: initialMessages.length,
+  });
+
   return (
     <div className="relative min-h-screen overflow-hidden">
       <LobbyBackground
@@ -134,7 +158,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
       />
       <div className="relative z-10">
         <div className="fixed left-4 top-24 z-20 w-[min(92vw,640px)] lg:left-10 lg:top-24">
-          <HostLobbyNotifications enabled={isHost} />
+          <HostLobbyNotifications enabled={isHost} hostUserId={user?.id} />
           <div className="flex flex-col gap-6">
             <div className="rounded-md border border-white/10 bg-gradient-to-r from-black/70 via-black/40 to-transparent p-7 text-white backdrop-blur-sm">
               <div className="flex flex-wrap items-center justify-between gap-4">

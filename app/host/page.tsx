@@ -2,22 +2,29 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import HostDashboard from "@/components/HostDashboard";
+import { logPerf } from "@/lib/perf";
 
 export default async function HostPage() {
   const user = await requireAuth();
-  const lobbies = await prisma.lobby.findMany({
-    where: { hostUserId: user.id, isActive: true },
-    orderBy: { lastHeartbeatAt: "desc" },
-    include: { _count: { select: { members: true } } },
-  });
-
-  const requests = await prisma.joinRequest.findMany({
-    where: { lobby: { hostUserId: user.id } },
-    orderBy: { createdAt: "desc" },
-    include: {
-      lobby: { select: { id: true, title: true, isModded: true } },
-      requester: { select: { nametagColor: true } },
-    },
+  const perfStart = Date.now();
+  const [lobbies, requests] = await Promise.all([
+    prisma.lobby.findMany({
+      where: { hostUserId: user.id, isActive: true },
+      orderBy: { lastHeartbeatAt: "desc" },
+      include: { _count: { select: { members: true } } },
+    }),
+    prisma.joinRequest.findMany({
+      where: { lobby: { hostUserId: user.id } },
+      orderBy: { createdAt: "desc" },
+      include: {
+        lobby: { select: { id: true, title: true, isModded: true } },
+        requester: { select: { nametagColor: true } },
+      },
+    }),
+  ]);
+  logPerf("host page data", perfStart, {
+    lobbies: lobbies.length,
+    requests: requests.length,
   });
 
   const serializedLobbies = lobbies.map((lobby) => ({
@@ -56,6 +63,7 @@ export default async function HostPage() {
       <HostDashboard
         lobbies={serializedLobbies}
         requests={serializedRequests}
+        hostUserId={user.id}
       />
     </div>
   );

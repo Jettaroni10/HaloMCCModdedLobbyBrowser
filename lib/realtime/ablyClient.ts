@@ -8,3 +8,10 @@ export function createLobbyRealtimeClient(lobbyId: string) {
     authMethod: "POST",
   });
 }
+
+export function createHostRealtimeClient() {
+  return new Ably.Realtime({
+    authUrl: `/api/realtime/auth`,
+    authMethod: "POST",
+  });
+}

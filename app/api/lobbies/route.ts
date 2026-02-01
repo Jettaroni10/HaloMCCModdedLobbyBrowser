@@ -12,6 +12,7 @@ import {
 import { Games, Regions, Vibes, Voices } from "@/lib/types";
 import { isRateLimited, recordRateLimitEvent } from "@/lib/rate-limit";
 import { addXp } from "@/lib/xp";
+import { absoluteUrl } from "@/lib/url";
 export const runtime = "nodejs";
 
 const LIMITS = {
@@ -166,7 +167,7 @@ export async function POST(request: Request) {
   if (isJson) {
     return NextResponse.json(lobby, { status: 201 });
   }
-  return NextResponse.redirect(new URL("/host", request.url));
+  return NextResponse.redirect(absoluteUrl(request, "/host"));
 }
 
 export async function GET(request: Request) {

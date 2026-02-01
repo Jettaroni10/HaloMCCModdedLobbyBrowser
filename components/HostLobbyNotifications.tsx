@@ -4,13 +4,23 @@ import { useHostEvents } from "./useHostEvents";
 
 type HostLobbyNotificationsProps = {
   enabled: boolean;
+  hostUserId?: string | null;
 };
 
 export default function HostLobbyNotifications({
   enabled,
+  hostUserId,
 }: HostLobbyNotificationsProps) {
-  const { toasts, dismissToast, unreadCount, markViewed, muted, setMuted } =
-    useHostEvents({ enabled });
+  const {
+    toasts,
+    dismissToast,
+    unreadCount,
+    markViewed,
+    muted,
+    setMuted,
+    soundBlocked,
+    enableSound,
+  } = useHostEvents({ enabled, hostUserId });
 
   if (!enabled) {
     return null;
@@ -69,6 +79,15 @@ export default function HostLobbyNotifications({
             </label>
           </div>
         </div>
+        {soundBlocked && !muted && (
+          <button
+            type="button"
+            onClick={enableSound}
+            className="mt-2 inline-flex items-center gap-2 rounded-sm border border-ink/20 px-2 py-1 text-[10px] font-semibold text-ink/70"
+          >
+            🔔 Click to enable notification sounds
+          </button>
+        )}
       </div>
     </>
   );

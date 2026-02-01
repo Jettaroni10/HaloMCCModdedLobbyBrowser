@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, isAdminUser } from "@/lib/auth";
+import { absoluteUrl } from "@/lib/url";
 
 export async function POST(
   request: Request,
@@ -26,6 +27,6 @@ export async function POST(
   if (isJson) {
     return NextResponse.json(updated);
   }
-  return NextResponse.redirect(new URL("/admin", request.url));
+  return NextResponse.redirect(absoluteUrl(request, "/admin"));
 }
 

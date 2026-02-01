@@ -1,4 +1,5 @@
 import { EventEmitter } from "events";
+import { publishHostEvent } from "@/lib/realtime/ablyServer";
 
 type RequestCreatedPayload = {
   hostUserId: string;
@@ -44,10 +45,20 @@ if (process.env.NODE_ENV !== "production") {
 
 export function emitRequestCreated(payload: RequestCreatedPayload) {
   hostEvents.emit("request_created", payload);
+  void publishHostEvent({
+    hostUserId: payload.hostUserId,
+    event: "request_created",
+    payload,
+  });
 }
 
 export function emitLobbyExpired(payload: LobbyExpiredPayload) {
   hostEvents.emit("lobby_expired", payload);
+  void publishHostEvent({
+    hostUserId: payload.hostUserId,
+    event: "lobby_expired",
+    payload,
+  });
 }
 
 export type { HostEventMap, RequestCreatedPayload, LobbyExpiredPayload };

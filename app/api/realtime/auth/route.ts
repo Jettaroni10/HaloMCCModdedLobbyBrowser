@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { ensureLobbyChatAccess } from "@/lib/lobby-access";
-import { createLobbyTokenRequest } from "@/lib/realtime/ablyServer";
+import { createRealtimeTokenRequest } from "@/lib/realtime/ablyServer";
 
 export const runtime = "nodejs";
 
@@ -26,35 +26,29 @@ export async function POST(request: Request) {
   }
 
   const lobbyId = getLobbyId(request);
-  if (!lobbyId) {
-    const response = NextResponse.json(
-      { error: "Missing lobbyId." },
-      { status: 400 }
-    );
-    response.headers.set("Cache-Control", "no-store");
-    return response;
-  }
-  if (!LOBBY_ID_PATTERN.test(lobbyId)) {
-    const response = NextResponse.json(
-      { error: "Invalid lobbyId." },
-      { status: 400 }
-    );
-    response.headers.set("Cache-Control", "no-store");
-    return response;
+  if (lobbyId) {
+    if (!LOBBY_ID_PATTERN.test(lobbyId)) {
+      const response = NextResponse.json(
+        { error: "Invalid lobbyId." },
+        { status: 400 }
+      );
+      response.headers.set("Cache-Control", "no-store");
+      return response;
+    }
+
+    const access = await ensureLobbyChatAccess(lobbyId, user.id);
+    if (!access.ok) {
+      const response = NextResponse.json(
+        { error: access.error },
+        { status: access.status }
+      );
+      response.headers.set("Cache-Control", "no-store");
+      return response;
+    }
   }
 
-  const access = await ensureLobbyChatAccess(lobbyId, user.id);
-  if (!access.ok) {
-    const response = NextResponse.json(
-      { error: access.error },
-      { status: access.status }
-    );
-    response.headers.set("Cache-Control", "no-store");
-    return response;
-  }
-
-  const tokenRequest = await createLobbyTokenRequest({
-    lobbyId,
+  const tokenRequest = await createRealtimeTokenRequest({
+    lobbyId: lobbyId || undefined,
     clientId: user.id,
   });
   const response = NextResponse.json(tokenRequest);

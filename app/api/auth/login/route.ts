@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { createSessionToken, getSessionCookieName } from "@/lib/auth";
 import { normalizeHandleText } from "@/lib/validation";
 import { verifyPassword } from "@/lib/password";
+import { absoluteUrl } from "@/lib/url";
 
 export async function POST(request: Request) {
   const contentType = request.headers.get("content-type") ?? "";
@@ -33,7 +34,7 @@ export async function POST(request: Request) {
       );
     }
     return NextResponse.redirect(
-      new URL("/login?error=missing_fields", request.url)
+      absoluteUrl(request, "/login?error=missing_fields")
     );
   }
 
@@ -54,7 +55,7 @@ export async function POST(request: Request) {
       );
     }
     return NextResponse.redirect(
-      new URL("/login?error=not_found", request.url)
+      absoluteUrl(request, "/login?error=not_found")
     );
   }
   if (user.isBanned) {
@@ -64,9 +65,7 @@ export async function POST(request: Request) {
         { status: 403 }
       );
     }
-    return NextResponse.redirect(
-      new URL("/login?error=banned", request.url)
-    );
+    return NextResponse.redirect(absoluteUrl(request, "/login?error=banned"));
   }
 
   if (!user.passwordHash) {
@@ -76,9 +75,7 @@ export async function POST(request: Request) {
         { status: 401 }
       );
     }
-    return NextResponse.redirect(
-      new URL("/login?error=invalid", request.url)
-    );
+    return NextResponse.redirect(absoluteUrl(request, "/login?error=invalid"));
   }
 
   const valid = await verifyPassword(password, user.passwordHash);
@@ -89,9 +86,7 @@ export async function POST(request: Request) {
         { status: 401 }
       );
     }
-    return NextResponse.redirect(
-      new URL("/login?error=invalid", request.url)
-    );
+    return NextResponse.redirect(absoluteUrl(request, "/login?error=invalid"));
   }
 
   const session = createSessionToken(user.id);
@@ -102,12 +97,10 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
-    return NextResponse.redirect(
-      new URL("/login?error=server", request.url)
-    );
+    return NextResponse.redirect(absoluteUrl(request, "/login?error=server"));
   }
 
-  const response = NextResponse.redirect(new URL("/browse", request.url));
+  const response = NextResponse.redirect(absoluteUrl(request, "/browse"));
   response.cookies.set(getSessionCookieName(), session.token, {
     httpOnly: true,
     sameSite: "lax",

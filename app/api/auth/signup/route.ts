@@ -4,6 +4,7 @@ import { createSessionToken, getSessionCookieName } from "@/lib/auth";
 import { normalizeHandleText, normalizeText } from "@/lib/validation";
 import { hashPassword } from "@/lib/password";
 import { DEFAULT_NAMETAG_COLOR } from "@/lib/reach-colors";
+import { absoluteUrl } from "@/lib/url";
 
 export async function POST(request: Request) {
   const contentType = request.headers.get("content-type") ?? "";
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
       );
     }
     return NextResponse.redirect(
-      new URL("/signup?error=missing_fields", request.url)
+      absoluteUrl(request, "/signup?error=missing_fields")
     );
   }
 
@@ -57,7 +58,7 @@ export async function POST(request: Request) {
       );
     }
     return NextResponse.redirect(
-      new URL("/signup?error=handle_taken", request.url)
+      absoluteUrl(request, "/signup?error=handle_taken")
     );
   }
 
@@ -71,7 +72,7 @@ export async function POST(request: Request) {
         );
       }
       return NextResponse.redirect(
-        new URL("/signup?error=email_taken", request.url)
+        absoluteUrl(request, "/signup?error=email_taken")
       );
     }
   }
@@ -96,12 +97,10 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
-    return NextResponse.redirect(
-      new URL("/signup?error=server", request.url)
-    );
+    return NextResponse.redirect(absoluteUrl(request, "/signup?error=server"));
   }
 
-  const response = NextResponse.redirect(new URL("/browse", request.url));
+  const response = NextResponse.redirect(absoluteUrl(request, "/browse"));
   response.cookies.set(getSessionCookieName(), session.token, {
     httpOnly: true,
     sameSite: "lax",

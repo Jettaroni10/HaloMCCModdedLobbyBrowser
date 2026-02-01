@@ -10,6 +10,20 @@ export const LOBBY_IMAGE_ALLOWED_TYPES = new Map([
 
 const ALLOWED_EXTS = new Set(["jpg", "jpeg", "png", "webp"]);
 
+type SignedUrlCacheEntry = {
+  url: string;
+  expiresAt: number;
+};
+
+const globalForSigned =
+  globalThis as unknown as { lobbyImageReadCache?: Map<string, SignedUrlCacheEntry> };
+const readUrlCache =
+  globalForSigned.lobbyImageReadCache ?? new Map<string, SignedUrlCacheEntry>();
+
+if (process.env.NODE_ENV !== "production") {
+  globalForSigned.lobbyImageReadCache = readUrlCache;
+}
+
 export function validateLobbyImageMeta(input: {
   contentType?: string;
   size?: number;
@@ -54,6 +68,11 @@ export async function getSignedUploadUrl(params: {
 }
 
 export async function getSignedReadUrl(objectPath: string) {
+  const now = Date.now();
+  const cached = readUrlCache.get(objectPath);
+  if (cached && cached.expiresAt - now > 60 * 1000) {
+    return cached.url;
+  }
   const bucket = getBucket();
   const file = bucket.file(objectPath);
   const [url] = await file.getSignedUrl({
@@ -61,6 +80,7 @@ export async function getSignedReadUrl(objectPath: string) {
     action: "read",
     expires: Date.now() + 10 * 60 * 1000,
   });
+  readUrlCache.set(objectPath, { url, expiresAt: now + 9 * 60 * 1000 });
   return url;
 }
 

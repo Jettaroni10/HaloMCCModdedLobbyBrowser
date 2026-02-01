@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { normalizeHandleText, normalizeText } from "@/lib/validation";
 import { isReachColor } from "@/lib/reach-colors";
+import { absoluteUrl } from "@/lib/url";
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
@@ -60,6 +61,6 @@ export async function POST(request: Request) {
   if (isJson) {
     return NextResponse.json({ ok: true });
   }
-  return NextResponse.redirect(new URL("/settings/profile", request.url));
+  return NextResponse.redirect(absoluteUrl(request, "/settings/profile"));
 }
 

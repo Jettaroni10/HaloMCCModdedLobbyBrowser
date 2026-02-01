@@ -6,7 +6,7 @@ export function getBaseUrl(request: Request) {
   let proto =
     forwardedProto.split(",")[0].trim() ||
     new URL(request.url).protocol.replace(":", "");
-  let host =
+  const host =
     forwardedHost.split(",")[0].trim() ||
     headers.get("host") ||
     new URL(request.url).host;

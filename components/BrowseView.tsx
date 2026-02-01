@@ -189,7 +189,7 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
             <LobbyCardBackground imageUrl={lobby.mapImageUrl} />
             <div
               className="relative z-20"
-              style={{ textShadow: "0 2px 8px rgba(0,0,0,0.85)" }}
+              style={{ textShadow: "0 4px 16px rgba(0,0,0,0.95)" }}
             >
               <div className="flex items-start justify-between gap-4">
                 <div>

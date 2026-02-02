@@ -1,11 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import MapPreview from "./MapPreview";
-import { downscaleImageFile } from "@/lib/image-client";
-
-const MAX_BYTES = 5 * 1024 * 1024;
-const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+import ImageCropUpload from "@/components/ImageCropUpload";
 
 type MapImageUploaderProps = {
   lobbyId: string;
@@ -14,11 +11,8 @@ type MapImageUploaderProps = {
 export default function MapImageUploader({ lobbyId }: MapImageUploaderProps) {
   const [currentUrl, setCurrentUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [errorMeta, setErrorMeta] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const lastFileRef = useRef<File | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -36,58 +30,9 @@ export default function MapImageUploader({ lobbyId }: MapImageUploaderProps) {
     };
   }, [lobbyId]);
 
-  async function handleUpload(file: File) {
-    if (!ACCEPTED_TYPES.includes(file.type)) {
-      setError("Unsupported image format. Use JPG, PNG, or WebP.");
-      setErrorMeta(null);
-      return;
-    }
-    if (file.size > MAX_BYTES) {
-      setError("Image is too large. Max 5 MB.");
-      setErrorMeta(null);
-      return;
-    }
-
-    lastFileRef.current = file;
-    setError(null);
-    setErrorMeta(null);
-    setSuccess(null);
-    setBusy(true);
-    try {
-      const prepared = await downscaleImageFile(file);
-      const formData = new FormData();
-      formData.append("file", prepared, prepared.name);
-      const response = await fetch(`/api/lobbies/${lobbyId}/map-image/upload`, {
-        method: "POST",
-        body: formData,
-      });
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as
-          | { error?: string; requestId?: string; stage?: string }
-          | null;
-        setError(payload?.error ?? "Upload failed.");
-        if (payload?.requestId) {
-          setErrorMeta(
-            `Request ID: ${payload.requestId}${
-              payload.stage ? ` (stage: ${payload.stage})` : ""
-            }`
-          );
-        }
-        return;
-      }
-      const payload = (await response.json().catch(() => null)) as
-        | { url?: string | null }
-        | null;
-      setCurrentUrl(payload?.url ?? null);
-      setSuccess("Image uploaded.");
-      setErrorMeta(null);
-
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    } finally {
-      setBusy(false);
-    }
+  function handleUploaded(url: string | null) {
+    setCurrentUrl(url);
+    setSuccess("Image uploaded.");
   }
 
   async function handleRemove() {
@@ -135,46 +80,23 @@ export default function MapImageUploader({ lobbyId }: MapImageUploaderProps) {
       <MapPreview imageUrl={currentUrl} />
 
       <div className="flex flex-wrap items-center gap-3">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          className="text-xs text-ink/70"
-          onChange={(event) => {
-            const file = event.currentTarget.files?.[0];
-            if (file) {
-              void handleUpload(file);
-            }
+        <ImageCropUpload
+          aspect={16 / 9}
+          maxWidth={1280}
+          maxHeight={720}
+          uploadUrl={`/api/lobbies/${lobbyId}/map-image/upload`}
+          label="Choose map image"
+          onUploaded={handleUploaded}
+          onError={(message) => {
+            setError(message);
           }}
-          disabled={busy}
         />
         {busy && (
           <span className="text-xs uppercase tracking-[0.3em] text-ink/50">
             Uploading…
           </span>
         )}
-        {error && (
-          <span className="text-xs text-clay">
-            {error}
-            {errorMeta ? (
-              <span className="ml-2 text-ink/60">{errorMeta}</span>
-            ) : null}
-          </span>
-        )}
-        {error && lastFileRef.current && (
-          <button
-            type="button"
-            onClick={() => {
-              if (lastFileRef.current) {
-                void handleUpload(lastFileRef.current);
-              }
-            }}
-            disabled={busy}
-            className="rounded-sm border border-ink/20 px-3 py-1 text-xs font-semibold text-ink/80 disabled:opacity-60"
-          >
-            Retry
-          </button>
-        )}
+        {error && <span className="text-xs text-clay">{error}</span>}
         {success && !error && (
           <span className="text-xs text-ink/70">{success}</span>
         )}

@@ -6,6 +6,7 @@ import { Games, Regions, Vibes, Voices } from "@/lib/types";
 import TagsInput from "./TagsInput";
 import { downscaleImageFile } from "@/lib/image-client";
 import MapPreview from "./MapPreview";
+import ImageCropUpload from "@/components/ImageCropUpload";
 
 type ModPackSummary = {
   id: string;
@@ -400,36 +401,21 @@ export default function HostLobbyForm({
               <MapPreview imageUrl={mapPreviewUrl} />
             </div>
           )}
-          <input
-            name="mapImage"
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            className="mt-3 text-xs text-ink/70"
-            onChange={(event) => {
-              const file = event.currentTarget.files?.[0];
-              if (!file) {
-                setMapFile(null);
-                setMapPreviewUrl(null);
-                return;
-              }
-              if (
-                !["image/jpeg", "image/png", "image/webp"].includes(file.type)
-              ) {
-                setSubmitError(
-                  "Unsupported image format. Use JPG, PNG, or WebP."
-                );
-                return;
-              }
-              if (file.size > 5 * 1024 * 1024) {
-                setSubmitError("Image is too large. Max 5 MB.");
-                return;
-              }
-              setSubmitError(null);
-              setMapFile(file);
-              const preview = URL.createObjectURL(file);
-              setMapPreviewUrl(preview);
-            }}
-          />
+          <div className="mt-3">
+            <ImageCropUpload
+              aspect={16 / 9}
+              maxWidth={1280}
+              maxHeight={720}
+              label="Choose map image"
+              onCropped={(file) => {
+                setSubmitError(null);
+                setMapFile(file);
+                const preview = URL.createObjectURL(file);
+                setMapPreviewUrl(preview);
+              }}
+              onError={(message) => setSubmitError(message)}
+            />
+          </div>
         </div>
       )}
 

@@ -19,6 +19,16 @@ type Likelihood = (typeof LIKELIHOOD_ORDER)[number];
 
 let visionClient: ImageAnnotatorClient | null = null;
 
+function hasVisionConfig() {
+  const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  if (json && json.trim().length > 0) return true;
+  return Boolean(
+    process.env.FIREBASE_PROJECT_ID &&
+      process.env.FIREBASE_CLIENT_EMAIL &&
+      process.env.FIREBASE_PRIVATE_KEY
+  );
+}
+
 function loadServiceAccount(): ServiceAccount {
   const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (json && json.trim().length > 0) {
@@ -64,7 +74,16 @@ function likelihoodAtLeast(value: Likelihood | undefined, min: Likelihood) {
 export async function checkImageSafe(objectPath: string) {
   const bucketName = process.env.FIREBASE_STORAGE_BUCKET ?? "";
   if (!bucketName) {
+    if (process.env.NODE_ENV !== "production") {
+      return { ok: true, skipped: true };
+    }
     throw new Error("FIREBASE_STORAGE_BUCKET is missing.");
+  }
+  if (!hasVisionConfig()) {
+    if (process.env.NODE_ENV !== "production") {
+      return { ok: true, skipped: true };
+    }
+    throw new Error("Firebase service account env vars are missing.");
   }
 
   const gcsUri = `gs://${bucketName}/${objectPath}`;

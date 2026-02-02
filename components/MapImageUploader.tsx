@@ -75,16 +75,20 @@ export default function MapImageUploader({ lobbyId }: MapImageUploaderProps) {
         objectPath: string;
       };
 
+      const bypassSigned =
+        typeof window !== "undefined" && window.location.hostname === "localhost";
       let uploadedViaSigned = false;
-      try {
-        const uploadResult = await fetch(uploadPayload.uploadUrl, {
-          method: "PUT",
-          headers: { "Content-Type": prepared.type },
-          body: prepared,
-        });
-        uploadedViaSigned = uploadResult.ok;
-      } catch {
-        uploadedViaSigned = false;
+      if (!bypassSigned) {
+        try {
+          const uploadResult = await fetch(uploadPayload.uploadUrl, {
+            method: "PUT",
+            headers: { "Content-Type": prepared.type },
+            body: prepared,
+          });
+          uploadedViaSigned = uploadResult.ok;
+        } catch {
+          uploadedViaSigned = false;
+        }
       }
 
       if (!uploadedViaSigned) {

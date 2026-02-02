@@ -89,6 +89,16 @@ export default function DmChat({
           next[tempIndex] = { ...message, status: "sent" };
           return next;
         }
+        if (message.senderUserId === viewerId) {
+          const fallbackIndex = prev.findIndex(
+            (item) => item.senderUserId === viewerId && item.status === "sending"
+          );
+          if (fallbackIndex >= 0) {
+            const next = [...prev];
+            next[fallbackIndex] = { ...message, status: "sent" };
+            return next;
+          }
+        }
         return [...prev, message];
       });
     },

@@ -73,13 +73,43 @@ export default function HostLobbyForm({
       objectPath: string;
     };
 
-    const uploadResult = await fetch(uploadPayload.uploadUrl, {
-      method: "PUT",
-      headers: { "Content-Type": prepared.type },
-      body: prepared,
-    });
-    if (!uploadResult.ok) {
-      throw new Error("Upload failed.");
+    const bypassSigned =
+      typeof window !== "undefined" && window.location.hostname === "localhost";
+    let uploadedViaSigned = false;
+    if (!bypassSigned) {
+      try {
+        const uploadResult = await fetch(uploadPayload.uploadUrl, {
+          method: "PUT",
+          headers: { "Content-Type": prepared.type },
+          body: prepared,
+        });
+        uploadedViaSigned = uploadResult.ok;
+      } catch {
+        uploadedViaSigned = false;
+      }
+    }
+
+    if (!uploadedViaSigned) {
+      const formData = new FormData();
+      formData.append("file", prepared, prepared.name);
+      const fallbackResponse = await fetch(
+        `/api/lobbies/${lobbyId}/map-image/upload`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+      if (!fallbackResponse.ok) {
+        const payload = (await fallbackResponse.json().catch(() => null)) as
+          | { error?: string }
+          | null;
+        throw new Error(payload?.error ?? "Upload failed.");
+      }
+      const payload = (await fallbackResponse.json().catch(() => null)) as
+        | { url?: string | null }
+        | null;
+      setMapPreviewUrl(payload?.url ?? null);
+      return;
     }
 
     const commitResponse = await fetch(
@@ -142,16 +172,20 @@ export default function HostLobbyForm({
       | { id?: string }
       | null;
     const lobbyId = created?.id;
+    let uploadError: string | null = null;
 
     if (enableMapImage && mapFile && lobbyId) {
       try {
         await uploadMapImage(lobbyId, mapFile);
       } catch (error) {
-        setSubmitError(
-          error instanceof Error ? error.message : "Upload failed."
-        );
-        return;
+        uploadError = error instanceof Error ? error.message : "Upload failed.";
       }
+    }
+
+    if (uploadError && lobbyId) {
+      setSubmitError(`${uploadError} You can re-upload from the host menu.`);
+      router.push(`/host/lobbies/${lobbyId}/edit?uploadFailed=1`);
+      return;
     }
 
     router.push("/host");

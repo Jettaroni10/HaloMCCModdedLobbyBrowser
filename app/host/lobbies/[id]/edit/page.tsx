@@ -5,9 +5,10 @@ import HostLobbyEditForm from "@/components/HostLobbyEditForm";
 
 type PageProps = {
   params: { id: string };
+  searchParams?: { uploadFailed?: string };
 };
 
-export default async function EditLobbyPage({ params }: PageProps) {
+export default async function EditLobbyPage({ params, searchParams }: PageProps) {
   const user = await requireAuth();
 
   const lobby = await prisma.lobby.findUnique({
@@ -28,6 +29,11 @@ export default async function EditLobbyPage({ params }: PageProps) {
       <p className="mt-2 text-sm text-ink/70">
         Update details and keep your lobby fresh.
       </p>
+      {searchParams?.uploadFailed && (
+        <div className="mt-4 rounded-sm border border-clay/40 bg-mist px-4 py-3 text-sm text-clay">
+          Map image upload failed. Please try again.
+        </div>
+      )}
       <HostLobbyEditForm
         lobbyId={lobby.id}
         defaultValues={{

@@ -434,69 +434,54 @@ export default function HostDashboard({
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h3 className="text-lg font-semibold text-ink">
-                  Invite checklist
+                  Invite player
                 </h3>
-                <p className="text-sm text-ink/70">
-                  <span
-                    style={{
-                      color: resolveNametagColor(
-                        checklist.requester.nametagColor
-                      ),
-                    }}
-                  >
-                    {checklist.requester.gamertag}
-                  </span>
+                <p className="mt-2 text-xs font-semibold uppercase tracking-[0.3em] text-ink/50">
+                  Gamertag
                 </p>
+                <div
+                  className="mt-1 rounded-sm border border-ink/10 bg-mist px-3 py-2 text-lg font-semibold text-ink"
+                  style={{
+                    color: resolveNametagColor(
+                      checklist.requester.nametagColor
+                    ),
+                  }}
+                >
+                  {checklist.requester.gamertag}
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setChecklist(null)}
-                className="text-sm text-ink/60"
-              >
-                Close
-              </button>
+              <div className="flex flex-col items-end gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigator.clipboard.writeText(checklist.requester.gamertag)
+                  }
+                  className="rounded-sm border border-ink/20 px-3 py-1 text-xs font-semibold text-ink"
+                >
+                  Copy gamertag
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setChecklist(null)}
+                  className="text-xs font-semibold text-ink/60"
+                >
+                  Close
+                </button>
+              </div>
             </div>
 
-            <ol className="mt-4 space-y-3 text-sm text-ink/70">
-              {checklist.steps.map((step) => (
-                <li key={step.id} className="rounded-sm border border-ink/10 p-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <span>{step.label}</span>
-                    {step.copyText && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          navigator.clipboard.writeText(step.copyText ?? "")
-                        }
-                        className="rounded-sm border border-ink/20 px-3 py-1 text-xs font-semibold text-ink"
-                      >
-                        Copy
-                      </button>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ol>
+            <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-ink/70">
+              <li>Open Halo MCC.</li>
+              <li>
+                Find {checklist.requester.gamertag} on your friends list or
+                recent players.
+              </li>
+              <li>Send an invite.</li>
+            </ul>
 
-            {checklist.modded && (
-              <div className="mt-4 rounded-sm border border-ink/10 bg-mist p-3 text-xs text-ink/70">
-                <p className="font-semibold text-ink">Modded lobby</p>
-                {checklist.modded.workshopCollectionUrl && (
-                  <p className="mt-1">
-                    Collection: {checklist.modded.workshopCollectionUrl}
-                  </p>
-                )}
-                {checklist.modded.workshopItemUrls.length > 0 && (
-                  <p className="mt-1">
-                    Items: {checklist.modded.workshopItemUrls.length}
-                  </p>
-                )}
-              </div>
-            )}
-
-            <div className="mt-4 space-y-2 text-xs text-ink/60">
-              <p>{checklist.copyStrings.steamInstructions}</p>
-            </div>
+            <p className="mt-3 text-xs text-ink/60">
+              You can invite via Steam overlay, Xbox app, or in-game roster.
+            </p>
           </div>
         </div>
       )}

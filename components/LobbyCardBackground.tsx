@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import FadeInImage from "./FadeInImage";
 
 type LobbyCardBackgroundProps = {
   imageUrl?: string | null;
@@ -19,8 +20,9 @@ export default function LobbyCardBackground({
 
   return (
     <>
-      {hasRealImage ? (
-        <img
+      <div className="absolute inset-0 z-0 bg-sand" />
+      {hasRealImage && (
+        <FadeInImage
           src={imageUrl ?? ""}
           alt=""
           loading="lazy"
@@ -28,8 +30,6 @@ export default function LobbyCardBackground({
           className="absolute inset-0 z-0 h-full w-full object-cover"
           onError={() => setFailed(true)}
         />
-      ) : (
-        <div className="absolute inset-0 z-0 bg-sand" />
       )}
       {/* Overlay layers (global tint + side shading + bottom shading). */}
       <div className="pointer-events-none absolute inset-0 z-10 bg-[#070c12]/35" />

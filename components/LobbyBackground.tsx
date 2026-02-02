@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import FadeInImage from "./FadeInImage";
 
 type LobbyBackgroundProps = {
   lobbyId: string;
@@ -32,19 +33,26 @@ export default function LobbyBackground({
     };
   }, [lobbyId]);
 
-  const src = url ?? fallbackUrl;
-  const baseTint = hasRealImage ? "bg-black/5" : "bg-[#081826]/35";
-  const vignette = hasRealImage
+  const showRealImage = hasRealImage && Boolean(url);
+  const baseTint = showRealImage ? "bg-black/5" : "bg-[#081826]/35";
+  const vignette = showRealImage
     ? "radial-gradient(circle at 50% 30%, rgba(0,0,0,0.02), rgba(0,0,0,0.25) 70%)"
     : "radial-gradient(circle at 50% 30%, rgba(0,0,0,0.2), rgba(0,0,0,0.6) 70%)";
 
   return (
     <>
       <img
-        src={src}
+        src={fallbackUrl}
         alt="Lobby map background"
         className="fixed inset-0 -z-20 h-full w-full object-cover"
       />
+      {showRealImage && url && (
+        <FadeInImage
+          src={url}
+          alt=""
+          className="fixed inset-0 -z-20 h-full w-full object-cover"
+        />
+      )}
       <div className={`fixed inset-0 -z-10 ${baseTint}`} />
       <div
         className="fixed inset-0 -z-10"

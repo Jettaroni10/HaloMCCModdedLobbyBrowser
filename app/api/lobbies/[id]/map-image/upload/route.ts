@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "crypto";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import {
@@ -8,7 +9,7 @@ import {
   validateLobbyImageMeta,
 } from "@/lib/lobby-images";
 import { getBucket } from "@/lib/firebaseAdmin";
-import { checkImageSafe } from "@/lib/vision";
+import { checkImageBufferSafe } from "@/lib/vision";
 
 export const runtime = "nodejs";
 
@@ -21,31 +22,76 @@ export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const requestId = randomUUID();
+  let stage = "START";
+  const hasStorageBucket = Boolean(process.env.FIREBASE_STORAGE_BUCKET);
+  const hasServiceAccountJson = Boolean(
+    process.env.FIREBASE_SERVICE_ACCOUNT_JSON
+  );
+  const hasServiceAccountParts = Boolean(
+    process.env.FIREBASE_PROJECT_ID &&
+      process.env.FIREBASE_CLIENT_EMAIL &&
+      process.env.FIREBASE_PRIVATE_KEY
+  );
+  const hasModerationKey = hasServiceAccountJson || hasServiceAccountParts;
+
+  const fail = (status: number, error: string, detail?: string) => {
+    console.error("MAP_IMAGE_UPLOAD_FAIL", {
+      requestId,
+      stage,
+      lobbyId: params.id,
+      status,
+      error,
+      detail,
+    });
+    return NextResponse.json(
+      { ok: false, requestId, stage, error, detail },
+      { status }
+    );
+  };
+
   try {
+    console.info("MAP_IMAGE_UPLOAD_START", {
+      requestId,
+      lobbyId: params.id,
+    });
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+      return fail(401, "Unauthorized.");
     }
     if (user.isBanned) {
-      return NextResponse.json({ error: "Account is banned." }, { status: 403 });
+      return fail(403, "Account is banned.");
     }
+    stage = "AUTH_OK";
+    console.info("MAP_IMAGE_UPLOAD_AUTH_OK", {
+      requestId,
+      lobbyId: params.id,
+      userId: user.id,
+    });
 
     const lobby = await prisma.lobby.findUnique({
       where: { id: params.id },
       select: { id: true, hostUserId: true, mapImagePath: true },
     });
     if (!lobby) {
-      return NextResponse.json({ error: "Lobby not found." }, { status: 404 });
+      return fail(404, "Lobby not found.");
     }
     if (lobby.hostUserId !== user.id) {
-      return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+      return fail(403, "Forbidden.");
     }
 
     const formData = await request.formData();
     const file = formData.get("file");
     if (!(file instanceof File)) {
-      return NextResponse.json({ error: "Missing file." }, { status: 400 });
+      stage = "PARSE_FORMDATA_OK";
+      return fail(400, "Missing file.");
     }
+    stage = "PARSE_FORMDATA_OK";
+    console.info("MAP_IMAGE_UPLOAD_PARSE_FORMDATA_OK", {
+      requestId,
+      lobbyId: lobby.id,
+      hasFile: true,
+    });
 
     const ext = getFileExt(file.name) || file.type.split("/")[1] || "webp";
     const validationError = validateLobbyImageMeta({
@@ -54,59 +100,102 @@ export async function POST(
       ext,
     });
     if (validationError) {
-      return NextResponse.json({ error: validationError }, { status: 400 });
+      stage = "FILE_OK";
+      return fail(400, validationError);
     }
+    if (file.size <= 0) {
+      stage = "FILE_OK";
+      return fail(400, "Empty file.");
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      stage = "FILE_OK";
+      return fail(413, "Image is too large. Max 5 MB.");
+    }
+    stage = "FILE_OK";
+    console.info("MAP_IMAGE_UPLOAD_FILE_OK", {
+      requestId,
+      lobbyId: lobby.id,
+      name: file.name,
+      mime: file.type,
+      size: file.size,
+    });
+
+    stage = "ENV_OK";
+    console.info("MAP_IMAGE_UPLOAD_ENV_OK", {
+      requestId,
+      lobbyId: lobby.id,
+      hasStorageBucket,
+      hasModerationKey,
+      hasServiceAccountJson,
+      hasServiceAccountParts,
+    });
 
     const objectPath = buildLobbyImagePath(lobby.id, ext);
     const buffer = Buffer.from(await file.arrayBuffer());
 
+    stage = "MOD_START";
+    try {
+      const review = await checkImageBufferSafe(buffer);
+      if (!review.ok) {
+        stage = "MOD_FAIL";
+        return fail(400, "Image not allowed.");
+      }
+      stage = "MOD_OK";
+      console.info("MAP_IMAGE_UPLOAD_MOD_OK", {
+        requestId,
+        lobbyId: lobby.id,
+      });
+    } catch (error) {
+      stage = "MOD_FAIL";
+      console.error("MAP_IMAGE_UPLOAD_MOD_FAIL", {
+        requestId,
+        lobbyId: lobby.id,
+        userId: user.id,
+        error,
+      });
+      return fail(503, "Moderation unavailable. Please try again.");
+    }
+
+    stage = "UPLOAD_START";
+    console.info("MAP_IMAGE_UPLOAD_UPLOAD_START", {
+      requestId,
+      lobbyId: lobby.id,
+      objectPath,
+    });
     const bucket = getBucket();
     await bucket.file(objectPath).save(buffer, {
       contentType: file.type,
       resumable: false,
     });
-
-    try {
-      const review = await checkImageSafe(objectPath);
-      if (!review.ok) {
-        await deleteLobbyImage(objectPath);
-        return NextResponse.json(
-          { error: "Image rejected by content policy." },
-          { status: 400 }
-        );
-      }
-    } catch (error) {
-      await deleteLobbyImage(objectPath);
-      console.error("Map image moderation failed", {
-        lobbyId: lobby.id,
-        userId: user.id,
-        error,
-      });
-      return NextResponse.json(
-        { error: "Image moderation failed. Please try again later." },
-        { status: 500 }
-      );
-    }
+    stage = "UPLOAD_OK";
+    console.info("MAP_IMAGE_UPLOAD_UPLOAD_OK", {
+      requestId,
+      lobbyId: lobby.id,
+      objectPath,
+    });
 
     if (lobby.mapImagePath) {
       await deleteLobbyImage(lobby.mapImagePath);
     }
 
+    stage = "DB_START";
+    console.info("MAP_IMAGE_UPLOAD_DB_START", {
+      requestId,
+      lobbyId: lobby.id,
+    });
     await prisma.lobby.update({
       where: { id: lobby.id },
       data: { mapImagePath: objectPath },
     });
+    stage = "DB_OK";
+    console.info("MAP_IMAGE_UPLOAD_DB_OK", {
+      requestId,
+      lobbyId: lobby.id,
+    });
 
     const url = await getSignedReadUrl(objectPath);
-    return NextResponse.json({ url });
+    return NextResponse.json({ ok: true, requestId, url });
   } catch (error) {
-    console.error("Map image upload failed", {
-      lobbyId: params.id,
-      error,
-    });
-    return NextResponse.json(
-      { error: "Upload failed. Please try again." },
-      { status: 500 }
-    );
+    return fail(500, "Upload failed. Please try again.", String(error));
   }
 }

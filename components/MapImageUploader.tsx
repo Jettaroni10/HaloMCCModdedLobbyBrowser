@@ -14,9 +14,11 @@ type MapImageUploaderProps = {
 export default function MapImageUploader({ lobbyId }: MapImageUploaderProps) {
   const [currentUrl, setCurrentUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [errorMeta, setErrorMeta] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const lastFileRef = useRef<File | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -37,14 +39,18 @@ export default function MapImageUploader({ lobbyId }: MapImageUploaderProps) {
   async function handleUpload(file: File) {
     if (!ACCEPTED_TYPES.includes(file.type)) {
       setError("Unsupported image format. Use JPG, PNG, or WebP.");
+      setErrorMeta(null);
       return;
     }
     if (file.size > MAX_BYTES) {
       setError("Image is too large. Max 5 MB.");
+      setErrorMeta(null);
       return;
     }
 
+    lastFileRef.current = file;
     setError(null);
+    setErrorMeta(null);
     setSuccess(null);
     setBusy(true);
     try {
@@ -57,9 +63,16 @@ export default function MapImageUploader({ lobbyId }: MapImageUploaderProps) {
       });
       if (!response.ok) {
         const payload = (await response.json().catch(() => null)) as
-          | { error?: string }
+          | { error?: string; requestId?: string; stage?: string }
           | null;
         setError(payload?.error ?? "Upload failed.");
+        if (payload?.requestId) {
+          setErrorMeta(
+            `Request ID: ${payload.requestId}${
+              payload.stage ? ` (stage: ${payload.stage})` : ""
+            }`
+          );
+        }
         return;
       }
       const payload = (await response.json().catch(() => null)) as
@@ -67,6 +80,7 @@ export default function MapImageUploader({ lobbyId }: MapImageUploaderProps) {
         | null;
       setCurrentUrl(payload?.url ?? null);
       setSuccess("Image uploaded.");
+      setErrorMeta(null);
 
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
@@ -139,7 +153,28 @@ export default function MapImageUploader({ lobbyId }: MapImageUploaderProps) {
             Uploading…
           </span>
         )}
-        {error && <span className="text-xs text-clay">{error}</span>}
+        {error && (
+          <span className="text-xs text-clay">
+            {error}
+            {errorMeta ? (
+              <span className="ml-2 text-ink/60">{errorMeta}</span>
+            ) : null}
+          </span>
+        )}
+        {error && lastFileRef.current && (
+          <button
+            type="button"
+            onClick={() => {
+              if (lastFileRef.current) {
+                void handleUpload(lastFileRef.current);
+              }
+            }}
+            disabled={busy}
+            className="rounded-sm border border-ink/20 px-3 py-1 text-xs font-semibold text-ink/80 disabled:opacity-60"
+          >
+            Retry
+          </button>
+        )}
         {success && !error && (
           <span className="text-xs text-ink/70">{success}</span>
         )}

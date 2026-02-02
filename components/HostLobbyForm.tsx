@@ -196,15 +196,18 @@ export default function HostLobbyForm({
       method: "POST",
       body: formData,
     });
-    if (!response.ok) {
-      const payload = (await response.json().catch(() => null)) as
-        | { error?: string }
-        | null;
-      throw new Error(payload?.error ?? "Upload failed.");
-    }
     const payload = (await response.json().catch(() => null)) as
-      | { url?: string | null }
+      | { url?: string | null; error?: string; requestId?: string; stage?: string }
       | null;
+    if (!response.ok) {
+      let message = payload?.error ?? "Upload failed.";
+      if (payload?.requestId) {
+        message = `${message} (Request ID: ${payload.requestId}${
+          payload.stage ? `, stage: ${payload.stage}` : ""
+        })`;
+      }
+      throw new Error(message);
+    }
     setMapPreviewUrl(payload?.url ?? null);
   }
 

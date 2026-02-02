@@ -93,6 +93,45 @@ function toLikelihoodString(value: VisionLikelihood): Likelihood | undefined {
     : undefined;
 }
 
+function evaluateSafeSearch(
+  annotation?: protos.google.cloud.vision.v1.ISafeSearchAnnotation | null
+) {
+  if (!annotation) {
+    return { ok: true };
+  }
+
+  const adult = toLikelihoodString(annotation.adult as VisionLikelihood);
+  const racy = toLikelihoodString(annotation.racy as VisionLikelihood);
+  const violence = toLikelihoodString(annotation.violence as VisionLikelihood);
+
+  if (likelihoodAtLeast(adult, "LIKELY")) {
+    return { ok: false, reason: "adult" };
+  }
+  if (likelihoodAtLeast(racy, "LIKELY")) {
+    return { ok: false, reason: "racy" };
+  }
+  if (likelihoodAtLeast(violence, "VERY_LIKELY")) {
+    return { ok: false, reason: "violence" };
+  }
+
+  return { ok: true };
+}
+
+export async function checkImageBufferSafe(buffer: Buffer) {
+  if (!hasVisionConfig()) {
+    if (process.env.NODE_ENV !== "production") {
+      return { ok: true, skipped: true };
+    }
+    throw new Error("Firebase service account env vars are missing.");
+  }
+
+  const client = getVisionClient();
+  const [result] = await client.safeSearchDetection({
+    image: { content: buffer },
+  });
+  return evaluateSafeSearch(result.safeSearchAnnotation ?? null);
+}
+
 export async function checkImageSafe(objectPath: string) {
   let bucketName = "";
   try {
@@ -138,19 +177,5 @@ export async function checkImageSafe(objectPath: string) {
     return { ok: true };
   }
 
-  const adult = toLikelihoodString(annotation.adult as VisionLikelihood);
-  const racy = toLikelihoodString(annotation.racy as VisionLikelihood);
-  const violence = toLikelihoodString(annotation.violence as VisionLikelihood);
-
-  if (likelihoodAtLeast(adult, "LIKELY")) {
-    return { ok: false, reason: "adult" };
-  }
-  if (likelihoodAtLeast(racy, "LIKELY")) {
-    return { ok: false, reason: "racy" };
-  }
-  if (likelihoodAtLeast(violence, "VERY_LIKELY")) {
-    return { ok: false, reason: "violence" };
-  }
-
-  return { ok: true };
+  return evaluateSafeSearch(annotation);
 }

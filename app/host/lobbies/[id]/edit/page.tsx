@@ -49,7 +49,7 @@ export default async function EditLobbyPage({ params, searchParams }: PageProps)
           slotsTotal: lobby.slotsTotal,
           friendsOnly: lobby.friendsOnly,
           modPackId: lobby.modPackId,
-          workshopCollectionUrl: lobby.workshopCollectionUrl,
+          workshopCollectionUrl: lobby.workshopCollectionUrl ?? "",
           workshopItemUrls: lobby.workshopItemUrls,
           modNotes: lobby.modNotes,
         }}

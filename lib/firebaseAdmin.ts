@@ -6,6 +6,29 @@ type FirebaseServiceAccount = {
   private_key: string;
 };
 
+function normalizeBucketName(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (trimmed.endsWith(".firebasestorage.app")) {
+    return trimmed.replace(".firebasestorage.app", ".appspot.com");
+  }
+  return trimmed;
+}
+
+export function getBucketName() {
+  const envBucket = normalizeBucketName(
+    process.env.FIREBASE_STORAGE_BUCKET ?? ""
+  );
+  if (envBucket) return envBucket;
+
+  const projectId = (process.env.FIREBASE_PROJECT_ID ?? "").trim();
+  if (projectId) {
+    return `${projectId}.appspot.com`;
+  }
+
+  throw new Error("FIREBASE_STORAGE_BUCKET is missing.");
+}
+
 function loadServiceAccount(): FirebaseServiceAccount {
   const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (json && json.trim().length > 0) {
@@ -42,15 +65,12 @@ function getAdminApp() {
       clientEmail: serviceAccount.client_email,
       privateKey: serviceAccount.private_key,
     }),
-    storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+    storageBucket: getBucketName(),
   });
 }
 
 export function getBucket() {
-  const bucketName = process.env.FIREBASE_STORAGE_BUCKET;
-  if (!bucketName) {
-    throw new Error("FIREBASE_STORAGE_BUCKET is missing.");
-  }
+  const bucketName = getBucketName();
   getAdminApp();
   return admin.storage().bucket(bucketName);
 }

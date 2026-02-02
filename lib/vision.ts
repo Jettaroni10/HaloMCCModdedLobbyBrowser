@@ -1,4 +1,5 @@
 import { ImageAnnotatorClient } from "@google-cloud/vision";
+import { getBucketName } from "@/lib/firebaseAdmin";
 
 type ServiceAccount = {
   project_id: string;
@@ -72,7 +73,12 @@ function likelihoodAtLeast(value: Likelihood | undefined, min: Likelihood) {
 }
 
 export async function checkImageSafe(objectPath: string) {
-  const bucketName = process.env.FIREBASE_STORAGE_BUCKET ?? "";
+  let bucketName = "";
+  try {
+    bucketName = getBucketName();
+  } catch {
+    bucketName = "";
+  }
   if (!bucketName) {
     if (process.env.NODE_ENV !== "production") {
       return { ok: true, skipped: true };

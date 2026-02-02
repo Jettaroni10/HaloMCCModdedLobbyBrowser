@@ -74,6 +74,7 @@ export async function createBackendSession(
     error?: string;
     code?: string;
     redirectTo?: string;
+    needsGamertag?: boolean;
   };
 
   if (!response.ok) {

@@ -48,6 +48,11 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
         include: {
           host: { select: { gamertag: true, srLevel: true } },
           _count: { select: { members: true } },
+          modPack: {
+            select: {
+              modPackMods: { select: { isOptional: true } },
+            },
+          },
           ...(userId
             ? { members: { where: { userId }, select: { userId: true } } }
             : {}),
@@ -81,12 +86,19 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
         Array.isArray(lobby.members) &&
         lobby.members.length > 0
     );
+    const requiredModsFromPack = lobby.modPack
+      ? lobby.modPack.modPackMods.filter((mod) => !mod.isOptional).length
+      : 0;
+    const legacyModCount =
+      (lobby.workshopCollectionUrl ? 1 : 0) + lobby.workshopItemUrls.length;
+    const modCount = requiredModsFromPack || legacyModCount;
     return {
       ...lobby,
       slotsOpen: Math.max(0, lobby.slotsTotal - lobby._count.members),
       mapImageUrl: imageUrls.get(lobby.id) ?? null,
       isHosting,
       isMember,
+      modCount,
     };
   });
 
@@ -242,6 +254,11 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
                   {lobby.isModded && (
                     <span className="rounded-sm bg-white/10 px-3 py-1 font-semibold text-white">
                       Modded
+                    </span>
+                  )}
+                  {lobby.modCount > 0 && (
+                    <span className="rounded-sm border border-white/30 bg-white/10 px-3 py-1 font-semibold text-white">
+                      Get Ready ({lobby.modCount} mods)
                     </span>
                   )}
                   {lobby.voice === "MIC_REQUIRED" && (

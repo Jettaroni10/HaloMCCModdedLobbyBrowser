@@ -72,6 +72,7 @@ export async function POST(
 
     if (lobby.isModded) {
       const hasMods =
+        Boolean(lobby.modPackId) ||
         Boolean(lobby.workshopCollectionUrl) ||
         lobby.workshopItemUrls.length > 0;
       if (hasMods && !confirmedSubscribed) {

@@ -139,6 +139,27 @@ export async function PATCH(
   const modNotes = normalizeText(body.modNotes, LIMITS.modNotes);
   if (modNotes) data.modNotes = modNotes;
 
+  const modPackId =
+    typeof body.modPackId === "string" ? body.modPackId.trim() : "";
+  if (modPackId) {
+    const pack = await prisma.modPack.findFirst({
+      where: {
+        id: modPackId,
+        OR: [{ isPublic: true }, { ownerUserId: user.id }],
+      },
+      select: { id: true },
+    });
+    if (!pack) {
+      return NextResponse.json(
+        { error: "Mod pack not found." },
+        { status: 404 }
+      );
+    }
+    data.modPackId = pack.id;
+  } else if (body.modPackId === "") {
+    data.modPackId = null;
+  }
+
   if (Object.keys(data).length === 0) {
     return NextResponse.json(
       { error: "No valid updates provided." },

@@ -112,6 +112,8 @@ export async function POST(request: Request) {
     .map((url) => normalizeText(url, LIMITS.workshopUrl))
     .filter(Boolean);
   const modNotes = normalizeText(body.modNotes, LIMITS.modNotes);
+  const modPackId =
+    typeof body.modPackId === "string" ? body.modPackId.trim() : "";
 
   if (!title || !mode || !map || !rulesNote) {
     return NextResponse.json(
@@ -125,9 +127,29 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
-  if (!workshopCollectionUrl) {
+  let resolvedPackId: string | null = null;
+  if (modPackId) {
+    const pack = await prisma.modPack.findFirst({
+      where: {
+        id: modPackId,
+        OR: [{ isPublic: true }, { ownerUserId: user.id }],
+      },
+      select: { id: true },
+    });
+    if (!pack) {
+      return NextResponse.json(
+        { error: "Mod pack not found." },
+        { status: 404 }
+      );
+    }
+    resolvedPackId = pack.id;
+  }
+
+  const hasLegacyMods =
+    Boolean(workshopCollectionUrl) || workshopItemUrls.length > 0;
+  if (!resolvedPackId && !hasLegacyMods) {
     return NextResponse.json(
-      { error: "Workshop collection URL is required." },
+      { error: "Select a mod pack or provide workshop links." },
       { status: 400 }
     );
   }
@@ -150,9 +172,10 @@ export async function POST(request: Request) {
         friendsOnly,
         slotsTotal,
         isModded,
-        workshopCollectionUrl,
+        workshopCollectionUrl: workshopCollectionUrl || null,
         workshopItemUrls,
         modNotes: modNotes || null,
+        modPackId: resolvedPackId,
         lastHeartbeatAt: now,
         expiresAt,
       },

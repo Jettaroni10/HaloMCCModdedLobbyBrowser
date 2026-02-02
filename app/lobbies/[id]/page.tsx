@@ -32,6 +32,14 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
     where: { id: params.id },
     include: {
       host: { select: { gamertag: true, nametagColor: true, srLevel: true } },
+      modPack: {
+        include: {
+          modPackMods: {
+            orderBy: { sortOrder: "asc" },
+            include: { mod: true },
+          },
+        },
+      },
     },
   });
 
@@ -135,6 +143,22 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
 
   const slotsTotal = lobby.slotsTotal ?? 16;
   const slotsOpen = Math.max(0, slotsTotal - rosterCount);
+  const modPack = lobby.modPack
+    ? {
+        id: lobby.modPack.id,
+        name: lobby.modPack.name,
+        description: lobby.modPack.description,
+        mods: lobby.modPack.modPackMods.map((entry) => ({
+          id: entry.mod.id,
+          name: entry.mod.name,
+          workshopUrl: entry.mod.workshopUrl,
+          isOptional: entry.isOptional,
+        })),
+      }
+    : null;
+  const requiredModCount = modPack
+    ? modPack.mods.filter((mod) => !mod.isOptional).length
+    : (lobby.workshopCollectionUrl ? 1 : 0) + lobby.workshopItemUrls.length;
   const initialMessages =
     conversation?.messages.map((message) => ({
       id: message.id,
@@ -187,6 +211,11 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
                     Modded lobby
                   </span>
                 )}
+                {requiredModCount > 0 && (
+                  <span className="rounded-sm border border-white/30 bg-white/10 px-4 py-1 text-xs font-semibold text-white">
+                    Get Ready ({requiredModCount} mods)
+                  </span>
+                )}
               </div>
               <p className="mt-4 text-sm text-white/70">
                 {lobby.mode} · {lobby.map}
@@ -223,6 +252,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
                   workshopCollectionUrl={lobby.workshopCollectionUrl}
                   workshopItemUrls={lobby.workshopItemUrls}
                   modNotes={lobby.modNotes}
+                  modPack={modPack}
                   rulesNote={lobby.rulesNote}
                   tags={lobby.tags}
                   userGamertag={user?.gamertag ?? null}

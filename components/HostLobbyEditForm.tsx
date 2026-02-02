@@ -18,6 +18,7 @@ type HostLobbyEditFormProps = {
     rulesNote: string;
     slotsTotal: number | null;
     friendsOnly: boolean;
+    modPackId?: string | null;
     workshopCollectionUrl: string;
     workshopItemUrls: string[];
     modNotes: string | null;

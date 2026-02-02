@@ -124,6 +124,7 @@ model User {
   friendshipsB           Friendship[]    @relation("FriendshipB")
   conversationParticipants ConversationParticipant[]
   sentMessages             Message[]
+  modPacks                 ModPack[]
 }
 
 model Lobby {
@@ -145,10 +146,11 @@ model Lobby {
   slotsTotal             Int          @default(16)
   slotsOpen              Int?
   isModded               Boolean      @default(true)
-  workshopCollectionUrl  String
+  workshopCollectionUrl  String?
   workshopItemUrls       String[]     @default([])
   requiresEacOff         Boolean      @default(true)
   modNotes               String?
+  modPackId              String?
   isActive               Boolean      @default(true)
   lastHeartbeatAt        DateTime
   expiresAt              DateTime
@@ -158,8 +160,43 @@ model Lobby {
   joinRequests           JoinRequest[]
   members                LobbyMember[]
   conversations          Conversation[]
+  modPack                ModPack?     @relation(fields: [modPackId], references: [id], onDelete: SetNull)
 
   @@index([isActive, expiresAt, region, game, platform], map: "lobbies_browse_idx")
+}
+
+model Mod {
+  id           String       @id @default(uuid())
+  name         String
+  workshopUrl  String       @unique
+  workshopId   String?
+  createdAt    DateTime     @default(now())
+  modPackMods  ModPackMod[]
+}
+
+model ModPack {
+  id           String       @id @default(uuid())
+  name         String
+  description  String?
+  ownerUserId  String?
+  isPublic     Boolean      @default(false)
+  createdAt    DateTime     @default(now())
+  owner        User?        @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
+  modPackMods  ModPackMod[]
+  lobbies      Lobby[]
+}
+
+model ModPackMod {
+  id         String   @id @default(uuid())
+  packId     String
+  modId      String
+  sortOrder  Int
+  isOptional Boolean  @default(false)
+  pack       ModPack  @relation(fields: [packId], references: [id], onDelete: Cascade)
+  mod        Mod      @relation(fields: [modId], references: [id], onDelete: Cascade)
+
+  @@unique([packId, modId], map: "mod_pack_mod_unique")
+  @@index([packId, sortOrder], map: "mod_pack_mod_sort_idx")
 }
 
 model LobbyMember {

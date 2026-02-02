@@ -1,12 +1,27 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+type ModEntry = {
+  id: string;
+  name: string;
+  workshopUrl: string;
+  isOptional?: boolean;
+};
+
+type ModPackSummary = {
+  id: string;
+  name: string;
+  description?: string | null;
+  mods: ModEntry[];
+};
 
 type LobbyRequestFormProps = {
   lobbyId: string;
   workshopCollectionUrl: string | null;
   workshopItemUrls: string[];
   modNotes: string | null;
+  modPack?: ModPackSummary | null;
   rulesNote: string;
   tags: string[];
   userGamertag: string | null;
@@ -18,13 +33,16 @@ export default function LobbyRequestForm({
   workshopCollectionUrl,
   workshopItemUrls,
   modNotes,
+  modPack,
   rulesNote,
   tags,
   userGamertag,
   isSignedIn,
 }: LobbyRequestFormProps) {
   const [note, setNote] = useState("");
-  const [confirmedSubscribed, setConfirmedSubscribed] = useState(false);
+  const [subscribedMods, setSubscribedMods] = useState<Record<string, boolean>>(
+    {}
+  );
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
@@ -40,7 +58,42 @@ export default function LobbyRequestForm({
     [userGamertag]
   );
 
-  const readinessOk = confirmedSubscribed;
+  const mods = useMemo<ModEntry[]>(() => {
+    if (modPack?.mods && modPack.mods.length > 0) {
+      return modPack.mods;
+    }
+    const entries: ModEntry[] = [];
+    if (workshopCollectionUrl) {
+      entries.push({
+        id: `collection:${workshopCollectionUrl}`,
+        name: "Workshop Collection",
+        workshopUrl: workshopCollectionUrl,
+        isOptional: false,
+      });
+    }
+    workshopItemUrls.forEach((url, index) => {
+      entries.push({
+        id: `item:${url}`,
+        name: `Workshop item ${index + 1}`,
+        workshopUrl: url,
+        isOptional: false,
+      });
+    });
+    return entries;
+  }, [modPack, workshopCollectionUrl, workshopItemUrls]);
+
+  const requiredModIds = useMemo(
+    () => mods.filter((mod) => !mod.isOptional).map((mod) => mod.id),
+    [mods]
+  );
+
+  useEffect(() => {
+    setSubscribedMods({});
+  }, [modPack?.id, workshopCollectionUrl, workshopItemUrls.join("|")]);
+
+  const readinessOk =
+    requiredModIds.length === 0 ||
+    requiredModIds.every((id) => subscribedMods[id]);
 
   async function submitRequest(options?: {
     confirmCancelPending?: boolean;
@@ -59,7 +112,7 @@ export default function LobbyRequestForm({
           requesterPlatform: "STEAM",
           requesterHandleText: resolvedGamertag,
           note,
-          confirmedSubscribed,
+          confirmedSubscribed: readinessOk,
           confirmCancelPending: options?.confirmCancelPending ?? false,
           confirmLeaveOther: options?.confirmLeaveOther ?? false,
         }),
@@ -157,39 +210,75 @@ export default function LobbyRequestForm({
           </div>
         )}
 
-        <div className="mt-6 rounded-sm border border-ink/10 bg-mist p-4 text-sm text-ink/70">
-          <h3 className="text-sm font-semibold text-ink">Required Mods</h3>
-          {workshopCollectionUrl && (
-            <a
-              href={workshopCollectionUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-3 inline-flex items-center justify-center rounded-sm bg-ink px-4 py-2 text-xs font-semibold text-sand hover:bg-ink/90"
-            >
-              Open Workshop Collection
-            </a>
-          )}
-          {workshopItemUrls.length > 0 && (
-            <ul className="mt-3 space-y-2">
-              {workshopItemUrls.map((link) => (
-                <li key={link}>
+          <div className="mt-6 rounded-sm border border-ink/10 bg-mist p-4 text-sm text-ink/70">
+          <h3 className="text-sm font-semibold text-ink">Get Ready</h3>
+          <p className="mt-1 text-xs text-ink/60">
+            {modPack?.name
+              ? `${modPack.name} · ${requiredModIds.length} required mods`
+              : `${requiredModIds.length} required mods`}
+          </p>
+          {mods.length > 0 ? (
+            <div className="mt-3 space-y-2">
+              {mods.map((mod) => (
+                <div
+                  key={mod.id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-sm border border-ink/10 bg-sand px-3 py-2"
+                >
+                  <label className="flex items-start gap-2 text-xs text-ink">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(subscribedMods[mod.id])}
+                      onChange={(event) =>
+                        setSubscribedMods((prev) => ({
+                          ...prev,
+                          [mod.id]: event.target.checked,
+                        }))
+                      }
+                      className="mt-0.5 h-4 w-4 rounded border-ink/20"
+                    />
+                    <span className="leading-5">
+                      <span className="block text-sm font-semibold text-ink">
+                        {mod.name}
+                      </span>
+                      {mod.isOptional && (
+                        <span className="text-[11px] text-ink/50">
+                          Optional
+                        </span>
+                      )}
+                    </span>
+                  </label>
                   <a
-                    href={link}
+                    href={mod.workshopUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-ink underline decoration-ink/30 underline-offset-4 hover:text-ink/80"
+                    className="inline-flex items-center justify-center rounded-sm bg-ink px-3 py-1 text-xs font-semibold text-sand hover:bg-ink/90"
                   >
-                    {link}
+                    Subscribe
                   </a>
-                </li>
+                </div>
               ))}
-            </ul>
+            </div>
+          ) : (
+            <p className="mt-3 text-xs text-ink/60">
+              No mods listed for this lobby.
+            </p>
           )}
           {modNotes && (
-            <p className="mt-3 rounded-sm border border-ink/10 bg-sand px-3 py-2 text-xs text-ink/70">
+            <p className="mt-3 rounded-sm border border-ink/10 bg-mist px-3 py-2 text-xs text-ink/70">
               {modNotes}
             </p>
           )}
+          <button
+            type="button"
+            onClick={() =>
+              navigator.clipboard.writeText(
+                "Open Halo MCC and enable the required mods from the Steam Workshop list."
+              )
+            }
+            className="mt-3 text-xs font-semibold text-ink underline decoration-ink/40 underline-offset-4"
+          >
+            Copy launch instructions
+          </button>
         </div>
       </div>
 
@@ -277,21 +366,6 @@ export default function LobbyRequestForm({
         {info && (
           <p className="mt-3 text-xs font-semibold text-ink/70">{info}</p>
         )}
-        <div className="mt-4 rounded-sm border border-ink/10 bg-mist px-4 py-3 text-xs text-ink/70">
-          <p className="text-sm font-semibold text-ink">
-            Readiness checklist
-          </p>
-          <label className="mt-3 flex items-start gap-2 text-sm text-ink">
-            <input
-              type="checkbox"
-              checked={confirmedSubscribed}
-              onChange={(event) => setConfirmedSubscribed(event.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-ink/20"
-            />
-            I&apos;ve subscribed to required mods
-          </label>
-        </div>
-
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <label className="block text-sm font-semibold text-ink">
             Gamertag

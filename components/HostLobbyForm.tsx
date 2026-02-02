@@ -190,89 +190,22 @@ export default function HostLobbyForm({
 
   async function uploadMapImage(lobbyId: string, file: File) {
     const prepared = await downscaleImageFile(file);
-    const ext =
-      prepared.name.split(".").pop()?.toLowerCase() ||
-      prepared.type.split("/")[1] ||
-      "webp";
-
-    const uploadUrlResponse = await fetch(
-      `/api/lobbies/${lobbyId}/map-image/upload-url`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contentType: prepared.type,
-          size: prepared.size,
-          ext,
-        }),
-      }
-    );
-    if (!uploadUrlResponse.ok) {
-      const payload = (await uploadUrlResponse.json()) as { error?: string };
-      throw new Error(payload.error ?? "Upload failed.");
-    }
-    const uploadPayload = (await uploadUrlResponse.json()) as {
-      uploadUrl: string;
-      objectPath: string;
-    };
-
-    const bypassSigned =
-      typeof window !== "undefined" && window.location.hostname === "localhost";
-    let uploadedViaSigned = false;
-    if (!bypassSigned) {
-      try {
-        const uploadResult = await fetch(uploadPayload.uploadUrl, {
-          method: "PUT",
-          headers: { "Content-Type": prepared.type },
-          body: prepared,
-        });
-        uploadedViaSigned = uploadResult.ok;
-      } catch {
-        uploadedViaSigned = false;
-      }
-    }
-
-    if (!uploadedViaSigned) {
-      const formData = new FormData();
-      formData.append("file", prepared, prepared.name);
-      const fallbackResponse = await fetch(
-        `/api/lobbies/${lobbyId}/map-image/upload`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
-      if (!fallbackResponse.ok) {
-        const payload = (await fallbackResponse.json().catch(() => null)) as
-          | { error?: string }
-          | null;
-        throw new Error(payload?.error ?? "Upload failed.");
-      }
-      const payload = (await fallbackResponse.json().catch(() => null)) as
-        | { url?: string | null }
+    const formData = new FormData();
+    formData.append("file", prepared, prepared.name);
+    const response = await fetch(`/api/lobbies/${lobbyId}/map-image/upload`, {
+      method: "POST",
+      body: formData,
+    });
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string }
         | null;
-      setMapPreviewUrl(payload?.url ?? null);
-      return;
+      throw new Error(payload?.error ?? "Upload failed.");
     }
-
-    const commitResponse = await fetch(
-      `/api/lobbies/${lobbyId}/map-image/commit`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ objectPath: uploadPayload.objectPath }),
-      }
-    );
-    if (!commitResponse.ok) {
-      const payload = (await commitResponse.json()) as { error?: string };
-      throw new Error(payload.error ?? "Upload failed.");
-    }
-
-    const refresh = await fetch(`/api/lobbies/${lobbyId}/map-image`);
-    if (refresh.ok) {
-      const payload = (await refresh.json()) as { url?: string | null };
-      setMapPreviewUrl(payload.url ?? null);
-    }
+    const payload = (await response.json().catch(() => null)) as
+      | { url?: string | null }
+      | null;
+    setMapPreviewUrl(payload?.url ?? null);
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {

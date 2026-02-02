@@ -12,11 +12,6 @@ type SpartanImageUploaderProps = {
   initialUrl?: string | null;
 };
 
-function getFileExt(file: File) {
-  const nameParts = file.name.toLowerCase().split(".");
-  return nameParts.length > 1 ? nameParts[nameParts.length - 1] : "";
-}
-
 export default function SpartanImageUploader({
   gamertag,
   initialUrl,
@@ -56,87 +51,23 @@ export default function SpartanImageUploader({
     setBusy(true);
     try {
       const prepared = await downscaleImageFile(file);
-      const ext = getFileExt(prepared) || prepared.type.split("/")[1] || "webp";
-      const uploadUrlResponse = await fetch(
-        "/api/users/me/spartan-image/upload-url",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contentType: prepared.type,
-            size: prepared.size,
-            ext,
-          }),
-        }
-      );
-      if (!uploadUrlResponse.ok) {
-        const payload = (await uploadUrlResponse.json()) as { error?: string };
-        setError(payload.error ?? "Upload failed.");
-        return;
-      }
-      const uploadPayload = (await uploadUrlResponse.json()) as {
-        uploadUrl: string;
-        objectPath: string;
-      };
-
-      const bypassSigned =
-        typeof window !== "undefined" && window.location.hostname === "localhost";
-      let uploadedViaSigned = false;
-      if (!bypassSigned) {
-        try {
-          const uploadResult = await fetch(uploadPayload.uploadUrl, {
-            method: "PUT",
-            headers: { "Content-Type": prepared.type },
-            body: prepared,
-          });
-          uploadedViaSigned = uploadResult.ok;
-        } catch {
-          uploadedViaSigned = false;
-        }
-      }
-
-      if (!uploadedViaSigned) {
-        const formData = new FormData();
-        formData.append("file", prepared, prepared.name);
-        const fallbackResponse = await fetch(
-          "/api/users/me/spartan-image/upload",
-          {
-            method: "POST",
-            body: formData,
-          }
-        );
-        if (!fallbackResponse.ok) {
-          const payload = (await fallbackResponse.json().catch(() => null)) as
-            | { error?: string }
-            | null;
-          setError(payload?.error ?? "Upload failed. Check storage settings.");
-          return;
-        }
-        const payload = (await fallbackResponse.json().catch(() => null)) as
-          | { url?: string | null }
+      const formData = new FormData();
+      formData.append("file", prepared, prepared.name);
+      const response = await fetch("/api/users/me/spartan-image/upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as
+          | { error?: string }
           | null;
-        setCurrentUrl(payload?.url ?? null);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
+        setError(payload?.error ?? "Upload failed.");
         return;
       }
-
-      const commitResponse = await fetch(
-        "/api/users/me/spartan-image/commit",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ objectPath: uploadPayload.objectPath }),
-        }
-      );
-      if (!commitResponse.ok) {
-        const payload = (await commitResponse.json()) as { error?: string };
-        setError(payload.error ?? "Upload failed.");
-        return;
-      }
-
-      await refreshUrl();
+      const payload = (await response.json().catch(() => null)) as
+        | { url?: string | null }
+        | null;
+      setCurrentUrl(payload?.url ?? null);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }

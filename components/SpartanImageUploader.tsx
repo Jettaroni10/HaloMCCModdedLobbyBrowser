@@ -8,12 +8,10 @@ const MAX_BYTES = 5 * 1024 * 1024;
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 type SpartanImageUploaderProps = {
-  gamertag: string;
   initialUrl?: string | null;
 };
 
 export default function SpartanImageUploader({
-  gamertag,
   initialUrl,
 }: SpartanImageUploaderProps) {
   const [currentUrl, setCurrentUrl] = useState<string | null>(

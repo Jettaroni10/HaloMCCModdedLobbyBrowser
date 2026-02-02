@@ -74,10 +74,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
 
       <section className="mt-8 grid gap-6 lg:grid-cols-[320px_1fr]">
         <div className="space-y-6">
-          <SpartanImageUploader
-            gamertag={profile?.gamertag ?? user.gamertag ?? ""}
-            initialUrl={spartanImageUrl}
-          />
+          <SpartanImageUploader initialUrl={spartanImageUrl} />
 
           <div className="rounded-md border border-ink/10 bg-sand/80 p-4 backdrop-blur">
             <p className="text-xs uppercase tracking-[0.3em] text-ink/50">

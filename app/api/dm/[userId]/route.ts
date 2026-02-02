@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { addXp, countXpEvents } from "@/lib/xp";
 import { publishDmEvent } from "@/lib/realtime/ablyServer";
+import { filterProfanity, isOnlyProfanity } from "@/lib/profanity";
 
 const MESSAGE_LIMIT = 500;
 
@@ -130,6 +131,13 @@ export async function POST(
       { status: 400 }
     );
   }
+  const filteredBody = filterProfanity(messageBody);
+  if (isOnlyProfanity(messageBody, filteredBody)) {
+    return NextResponse.json(
+      { error: "Message contains only blocked words." },
+      { status: 400 }
+    );
+  }
 
   const conversation = await ensureDmConversation(user.id, targetId);
   await prisma.conversationParticipant.createMany({
@@ -149,7 +157,7 @@ export async function POST(
     data: {
       conversationId: conversation.id,
       senderUserId: user.id,
-      body: messageBody,
+      body: filteredBody,
     },
   });
 
@@ -170,7 +178,7 @@ export async function POST(
     payload: messagePayload,
   });
 
-  if (messageBody.length >= 3 && lastMessage?.body !== messageBody) {
+  if (filteredBody.length >= 3 && lastMessage?.body !== filteredBody) {
     const since = new Date(Date.now() - 10 * 60 * 1000);
     const recentCount = await countXpEvents(user.id, "MESSAGE_SENT", since);
     if (recentCount < 20) {

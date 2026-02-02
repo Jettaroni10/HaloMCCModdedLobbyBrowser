@@ -8,6 +8,7 @@ import {
   validateLobbyImageMeta,
 } from "@/lib/lobby-images";
 import { getBucket } from "@/lib/firebaseAdmin";
+import { checkImageSafe } from "@/lib/vision";
 
 export const runtime = "nodejs";
 
@@ -63,6 +64,23 @@ export async function POST(
     contentType: file.type,
     resumable: false,
   });
+
+  try {
+    const review = await checkImageSafe(objectPath);
+    if (!review.ok) {
+      await deleteLobbyImage(objectPath);
+      return NextResponse.json(
+        { error: "Image rejected by content policy." },
+        { status: 400 }
+      );
+    }
+  } catch {
+    await deleteLobbyImage(objectPath);
+    return NextResponse.json(
+      { error: "Image moderation failed." },
+      { status: 500 }
+    );
+  }
 
   if (lobby.mapImagePath) {
     await deleteLobbyImage(lobby.mapImagePath);

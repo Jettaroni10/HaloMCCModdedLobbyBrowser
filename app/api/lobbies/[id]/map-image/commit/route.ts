@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { deleteLobbyImage } from "@/lib/lobby-images";
+import { checkImageSafe } from "@/lib/vision";
 
 export const runtime = "nodejs";
 
@@ -42,6 +43,23 @@ export async function POST(
   }
 
   const previousPath = lobby.mapImagePath;
+  try {
+    const review = await checkImageSafe(objectPath);
+    if (!review.ok) {
+      await deleteLobbyImage(objectPath);
+      return NextResponse.json(
+        { error: "Image rejected by content policy." },
+        { status: 400 }
+      );
+    }
+  } catch {
+    await deleteLobbyImage(objectPath);
+    return NextResponse.json(
+      { error: "Image moderation failed." },
+      { status: 500 }
+    );
+  }
+
   await prisma.lobby.update({
     where: { id: lobby.id },
     data: { mapImagePath: objectPath },

@@ -318,6 +318,7 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
                 <GamertagLink
                   gamertag={lobby.host.gamertag}
                   className="font-semibold"
+                  asSpan
                 />
               </div>
               <div className="mt-3 flex items-center justify-between text-xs text-white/70">

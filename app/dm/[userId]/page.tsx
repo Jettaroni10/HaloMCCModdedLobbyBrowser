@@ -15,7 +15,7 @@ export default async function DmPage({
   const user = await requireAuth();
   const target = await prisma.user.findUnique({
     where: { id: params.userId },
-    select: { id: true, gamertag: true, nametagColor: true },
+    select: { id: true, gamertag: true, nametagColor: true, srLevel: true },
   });
   if (!target) {
     notFound();
@@ -41,7 +41,9 @@ export default async function DmPage({
           orderBy: { createdAt: "asc" },
           take: 50,
           include: {
-            sender: { select: { gamertag: true, nametagColor: true } },
+            sender: {
+              select: { gamertag: true, nametagColor: true, srLevel: true },
+            },
           },
         },
       },
@@ -58,7 +60,9 @@ export default async function DmPage({
           orderBy: { createdAt: "asc" },
           take: 50,
           include: {
-            sender: { select: { gamertag: true, nametagColor: true } },
+            sender: {
+              select: { gamertag: true, nametagColor: true, srLevel: true },
+            },
           },
         },
       },
@@ -70,6 +74,7 @@ export default async function DmPage({
     senderUserId: message.senderUserId,
     senderGamertag: message.sender.gamertag,
     senderNametagColor: message.sender.nametagColor,
+    senderSrLevel: message.sender.srLevel ?? 1,
     body: message.body,
     createdAt: message.createdAt.toISOString(),
   }));
@@ -81,9 +86,11 @@ export default async function DmPage({
         conversationId={conversation.id}
         viewerId={user.id}
         viewerGamertag={user.gamertag}
+        viewerSrLevel={user.srLevel ?? 1}
         initialMessages={initialMessages}
         targetGamertag={target.gamertag}
         targetNametagColor={target.nametagColor}
+        targetSrLevel={target.srLevel ?? 1}
       />
     </div>
   );

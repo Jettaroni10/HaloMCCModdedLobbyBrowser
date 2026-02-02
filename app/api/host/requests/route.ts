@@ -39,6 +39,7 @@ export async function GET() {
           id: true,
           gamertag: true,
           nametagColor: true,
+          srLevel: true,
         },
       },
     },

@@ -10,6 +10,7 @@ import ReportForm from "@/components/ReportForm";
 import HostLobbyNotifications from "@/components/HostLobbyNotifications";
 import LobbyChat from "@/components/LobbyChat";
 import LobbyBackground from "@/components/LobbyBackground";
+import Nametag from "@/components/user/Nametag";
 
 type LobbyPageProps = {
   params: { id: string };
@@ -30,7 +31,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
   const lobby = await prisma.lobby.findUnique({
     where: { id: params.id },
     include: {
-      host: { select: { gamertag: true, nametagColor: true } },
+      host: { select: { gamertag: true, nametagColor: true, srLevel: true } },
     },
   });
 
@@ -109,7 +110,9 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
             orderBy: { createdAt: "asc" },
             take: 50,
             include: {
-              sender: { select: { gamertag: true, nametagColor: true } },
+              sender: {
+                select: { gamertag: true, nametagColor: true, srLevel: true },
+              },
             },
           },
         },
@@ -138,6 +141,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
       senderUserId: message.senderUserId,
       senderGamertag: message.sender.gamertag,
       senderNametagColor: message.sender.nametagColor,
+      senderSrLevel: message.sender.srLevel ?? 1,
       body: message.body,
       createdAt: message.createdAt.toISOString(),
     })) ?? [];
@@ -167,9 +171,15 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
                   <h1 className="mt-2 text-4xl font-semibold">
                     {lobby.title}
                   </h1>
-                  <p className="mt-2 text-sm text-white/70">
-                    Hosted by <span>{lobby.host.gamertag}</span>
-                  </p>
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-white/70">
+                    <span>Hosted by</span>
+                    <Nametag
+                      gamertag={lobby.host.gamertag}
+                      rank={lobby.host.srLevel ?? 1}
+                      nametagColor={lobby.host.nametagColor}
+                      className="bg-black/30"
+                    />
+                  </div>
                 </div>
                 {lobby.isModded && (
                   <span className="rounded-sm bg-white/10 px-4 py-1 text-xs font-semibold text-white">
@@ -226,6 +236,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
                 viewerId={user.id}
                 viewerGamertag={user.gamertag}
                 viewerNametagColor={user.nametagColor}
+                viewerSrLevel={user.srLevel ?? 1}
                 initialMessages={initialMessages}
                 className="border-white/10 bg-gradient-to-b from-black/75 via-black/55 to-black/30 text-white backdrop-blur-sm"
               />

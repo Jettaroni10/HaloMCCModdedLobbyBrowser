@@ -8,6 +8,7 @@ type LobbyMessageCreatedPayload = {
     senderUserId: string;
     senderGamertag: string;
     senderNametagColor?: string | null;
+    senderSrLevel?: number | null;
     body: string;
     createdAt: string;
   };
@@ -25,6 +26,7 @@ type LobbyRequestCreatedPayload = {
     requesterHandleText: string;
     requesterGamertag: string;
     requesterNametagColor?: string | null;
+    requesterSrLevel?: number | null;
     createdAt: string;
   };
 };

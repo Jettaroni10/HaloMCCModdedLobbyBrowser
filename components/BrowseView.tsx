@@ -5,6 +5,7 @@ import { formatMinutesAgo } from "@/lib/time";
 import { parseEnum, parseStringArray } from "@/lib/validation";
 import { Games, Regions, Vibes, Voices } from "@/lib/types";
 import LobbyCardBackground from "@/components/LobbyCardBackground";
+import SocialRankBadge from "@/components/rank/SocialRankBadge";
 import { getSignedReadUrl } from "@/lib/lobby-images";
 import { getCurrentUser } from "@/lib/auth";
 
@@ -44,7 +45,7 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
         },
         orderBy: { lastHeartbeatAt: "desc" },
         include: {
-          host: { select: { gamertag: true } },
+          host: { select: { gamertag: true, srLevel: true } },
           _count: { select: { members: true } },
           ...(userId
             ? { members: { where: { userId }, select: { userId: true } } }
@@ -259,6 +260,13 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
                     </span>
                   </>
                 )}
+              </div>
+              <div className="mt-3 flex items-center gap-2 text-xs text-white/70">
+                <span className="uppercase tracking-[0.2em] text-white/50">
+                  Host
+                </span>
+                <SocialRankBadge rank={lobby.host.srLevel ?? 1} size={16} />
+                <span className="font-semibold">{lobby.host.gamertag}</span>
               </div>
               <div className="mt-3 flex items-center justify-between text-xs text-white/70">
                 <span>{formatMinutesAgo(lobby.lastHeartbeatAt, now)}</span>

@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { resolveNametagColor } from "@/lib/reach-colors";
+import SocialRankBadge from "@/components/rank/SocialRankBadge";
+import { rankToLabel } from "@/lib/ranks";
 import { useDmChatRealtime } from "./useDmChatRealtime";
 
 type ChatMessage = {
@@ -10,6 +12,7 @@ type ChatMessage = {
   senderUserId: string;
   senderGamertag: string;
   senderNametagColor?: string | null;
+  senderSrLevel?: number | null;
   body: string;
   createdAt: string;
   status?: "sending" | "failed" | "sent";
@@ -20,9 +23,11 @@ type DmChatProps = {
   conversationId: string;
   viewerId: string;
   viewerGamertag: string;
+  viewerSrLevel?: number | null;
   initialMessages: ChatMessage[];
   targetGamertag: string;
   targetNametagColor?: string | null;
+  targetSrLevel?: number | null;
 };
 
 export default function DmChat({
@@ -30,9 +35,11 @@ export default function DmChat({
   conversationId,
   viewerId,
   viewerGamertag,
+  viewerSrLevel,
   initialMessages,
   targetGamertag,
   targetNametagColor,
+  targetSrLevel,
 }: DmChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [ui, setUi] = useState({ body: "", error: "", sending: false });
@@ -165,6 +172,7 @@ export default function DmChat({
       conversationId,
       senderUserId: viewerId,
       senderGamertag: viewerGamertag,
+      senderSrLevel: viewerSrLevel ?? 1,
       body: trimmed,
       createdAt: new Date().toISOString(),
       status: "sending",
@@ -193,6 +201,7 @@ export default function DmChat({
           senderUserId: payload.senderUserId,
           senderGamertag: payload.senderGamertag,
           senderNametagColor: payload.senderNametagColor ?? null,
+          senderSrLevel: payload.senderSrLevel ?? 1,
           body: payload.body,
           createdAt: payload.createdAt,
           status: "sent",
@@ -255,8 +264,14 @@ export default function DmChat({
     <section className="rounded-md border border-ink/10 bg-sand p-6">
       <h2 className="text-lg font-semibold text-ink">
         Direct messages ·{" "}
-        <span style={{ color: resolveNametagColor(targetNametagColor) }}>
-          {targetGamertag}
+        <span className="inline-flex items-center gap-2">
+          <SocialRankBadge rank={targetSrLevel} size={16} />
+          <span style={{ color: resolveNametagColor(targetNametagColor) }}>
+            {targetGamertag}
+          </span>
+          <span className="text-[10px] text-ink/60">
+            {rankToLabel(targetSrLevel)}
+          </span>
         </span>
       </h2>
       <div
@@ -281,14 +296,20 @@ export default function DmChat({
               }`}
             >
               <div className="flex items-center justify-between text-xs text-ink/60">
-                <span
-                  className="font-semibold"
-                  style={{
-                    color: resolveNametagColor(message.senderNametagColor),
-                  }}
-                >
-                  {message.senderGamertag}
-                </span>
+                <div className="flex items-center gap-2">
+                  <SocialRankBadge rank={message.senderSrLevel} size={16} />
+                  <span
+                    className="font-semibold"
+                    style={{
+                      color: resolveNametagColor(message.senderNametagColor),
+                    }}
+                  >
+                    {message.senderGamertag}
+                  </span>
+                  <span className="text-[10px] text-ink/60">
+                    {rankToLabel(message.senderSrLevel)}
+                  </span>
+                </div>
                 <span suppressHydrationWarning>{time}</span>
               </div>
               <div className="mt-1 flex items-start justify-between gap-3 text-sm text-ink/80">

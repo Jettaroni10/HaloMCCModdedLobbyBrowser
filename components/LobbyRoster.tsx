@@ -1,7 +1,7 @@
 "use client";
 
 import RosterFriendButton from "./RosterFriendButton";
-import { nameplateTextColor, resolveNametagColor } from "@/lib/reach-colors";
+import Nametag from "@/components/user/Nametag";
 
 type LobbyRosterMember = {
   slotNumber: number;
@@ -57,42 +57,35 @@ export default function LobbyRoster({
           const member = memberBySlot.get(slotNumber);
           if (!member) {
             return (
-            <div
-              key={`slot-${slotNumber}`}
-              className="flex h-10 items-center justify-between overflow-hidden rounded-sm border border-white/10 px-3"
-              style={{
-                backgroundColor: "rgba(0,0,0,0.35)",
-                color: "rgba(255,255,255,0.45)",
-              }}
-            >
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-7 w-7 items-center justify-center rounded-sm bg-black/70 text-[11px] font-semibold text-white">
-                  {slotNumber}
+              <div
+                key={`slot-${slotNumber}`}
+                className="flex h-10 items-center gap-3"
+              >
+                <div className="w-8 text-center text-xs font-semibold text-white/45 tabular-nums">
+                  #{slotNumber}
                 </div>
-                <span className="truncate text-sm font-semibold">Empty</span>
+                <div className="flex h-10 min-w-0 flex-1 items-center rounded-sm border border-white/10 px-3 text-sm font-semibold text-white/45">
+                  Empty
+                </div>
               </div>
-            </div>
-          );
-        }
+            );
+          }
 
           return (
             <div
               key={`slot-${slotNumber}`}
-              className="flex h-10 items-center justify-between overflow-hidden rounded-sm border border-white/10 px-3"
-              style={{
-                backgroundColor: resolveNametagColor(member.nametagColor),
-                color: nameplateTextColor(member.nametagColor),
-              }}
+              className="flex h-10 items-center gap-3"
             >
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-7 w-7 items-center justify-center rounded-sm bg-black/70 text-[11px] font-semibold text-white">
-                  {slotNumber}
-                </div>
-                <span className="truncate text-sm font-semibold">
-                  {member.gamertag}
-                </span>
+              <div className="w-8 text-center text-xs font-semibold text-white/70 tabular-nums">
+                #{slotNumber}
               </div>
-              <div className="flex shrink-0 items-center gap-3">
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <Nametag
+                  gamertag={member.gamertag}
+                  rank={member.srLevel}
+                  nametagColor={member.nametagColor}
+                  className="h-10 flex-1"
+                />
                 {viewerUserId && member.userId !== viewerUserId && (
                   <RosterFriendButton
                     targetUserId={member.userId}
@@ -105,9 +98,6 @@ export default function LobbyRoster({
                     }
                   />
                 )}
-                <div className="rounded-sm border border-white/20 bg-black/60 px-2 py-1 text-[10px] font-semibold text-white">
-                  SR{member.srLevel}
-                </div>
               </div>
             </div>
           );

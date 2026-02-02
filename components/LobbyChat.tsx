@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { resolveNametagColor } from "@/lib/reach-colors";
+import SocialRankBadge from "@/components/rank/SocialRankBadge";
+import { rankToLabel } from "@/lib/ranks";
 import { useLobbyChatRealtime } from "./useLobbyChatRealtime";
 
 type ChatMessage = {
@@ -9,6 +11,7 @@ type ChatMessage = {
   senderUserId: string;
   senderGamertag: string;
   senderNametagColor?: string | null;
+  senderSrLevel?: number | null;
   body: string;
   createdAt: string;
   status?: "sending" | "failed" | "sent";
@@ -19,6 +22,7 @@ type LobbyChatProps = {
   viewerId: string;
   viewerGamertag: string;
   viewerNametagColor?: string | null;
+  viewerSrLevel?: number | null;
   initialMessages: ChatMessage[];
   className?: string;
 };
@@ -28,6 +32,7 @@ export default function LobbyChat({
   viewerId,
   viewerGamertag,
   viewerNametagColor,
+  viewerSrLevel,
   initialMessages,
   className,
 }: LobbyChatProps) {
@@ -162,6 +167,7 @@ export default function LobbyChat({
       senderUserId: viewerId,
       senderGamertag: viewerGamertag,
       senderNametagColor: viewerNametagColor,
+      senderSrLevel: viewerSrLevel ?? 1,
       body: trimmed,
       createdAt: new Date().toISOString(),
       status: "sending",
@@ -189,6 +195,7 @@ export default function LobbyChat({
           senderUserId: payload.message.senderUserId,
           senderGamertag: payload.message.senderGamertag,
           senderNametagColor: payload.message.senderNametagColor ?? null,
+          senderSrLevel: payload.message.senderSrLevel ?? 1,
           body: payload.message.body,
           createdAt: payload.message.createdAt,
           status: "sent",
@@ -275,14 +282,20 @@ export default function LobbyChat({
               }`}
             >
               <div className="flex min-w-0 items-center justify-between gap-2 text-xs text-white/60">
-                <span
-                  className="max-w-[70%] truncate font-semibold"
-                  style={{
-                    color: resolveNametagColor(message.senderNametagColor),
-                  }}
-                >
-                  {message.senderGamertag}
-                </span>
+                <div className="flex min-w-0 items-center gap-2">
+                  <SocialRankBadge rank={message.senderSrLevel} size={16} />
+                  <span
+                    className="max-w-[70%] truncate font-semibold"
+                    style={{
+                      color: resolveNametagColor(message.senderNametagColor),
+                    }}
+                  >
+                    {message.senderGamertag}
+                  </span>
+                  <span className="text-[10px] text-white/60">
+                    {rankToLabel(message.senderSrLevel)}
+                  </span>
+                </div>
                 <span suppressHydrationWarning>{time}</span>
               </div>
               <div className="mt-1 flex items-start justify-between gap-3 text-sm text-white/80">

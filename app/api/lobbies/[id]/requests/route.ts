@@ -285,6 +285,7 @@ export async function POST(
       hostUserId: lobby.hostUserId,
       requesterGamertag: user.gamertag,
       requesterNametagColor: user.nametagColor,
+      requesterSrLevel: user.srLevel ?? 1,
       request: {
         id: joinRequest.id,
         requesterUserId: joinRequest.requesterUserId,
@@ -309,6 +310,7 @@ export async function POST(
         requesterHandleText: joinRequest.requesterHandleText,
         requesterGamertag: user.gamertag,
         requesterNametagColor: user.nametagColor,
+        requesterSrLevel: user.srLevel ?? 1,
         createdAt: joinRequest.createdAt.toISOString(),
       },
     });

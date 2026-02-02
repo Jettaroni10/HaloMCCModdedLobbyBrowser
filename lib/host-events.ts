@@ -5,6 +5,7 @@ type RequestCreatedPayload = {
   hostUserId: string;
   requesterGamertag: string;
   requesterNametagColor?: string | null;
+  requesterSrLevel?: number | null;
   request: {
     id: string;
     requesterUserId: string;

@@ -9,6 +9,7 @@ export type HostRequestCreatedEvent = {
   requesterHandleText: string;
   requesterGamertag?: string | null;
   requesterNametagColor?: string | null;
+  requesterSrLevel?: number | null;
   note?: string | null;
   confirmedSubscribed?: boolean;
   status?: "PENDING" | "ACCEPTED" | "DECLINED";
@@ -40,6 +41,7 @@ type HostRequestCreatedEnvelope = {
   hostUserId: string;
   requesterGamertag: string;
   requesterNametagColor?: string | null;
+  requesterSrLevel?: number | null;
   request: {
     id: string;
     requesterUserId: string;
@@ -152,6 +154,7 @@ function normalizeRequestPayload(
     request?: HostRequestCreatedEnvelope["request"];
     requesterGamertag?: string;
     requesterNametagColor?: string | null;
+    requesterSrLevel?: number | null;
   };
 
   if (data.request && typeof data.request.id === "string") {
@@ -161,6 +164,7 @@ function normalizeRequestPayload(
       requesterHandleText: data.request.requesterHandleText,
       requesterGamertag: data.requesterGamertag,
       requesterNametagColor: data.requesterNametagColor ?? null,
+      requesterSrLevel: data.requesterSrLevel ?? null,
       note: data.request.note ?? null,
       confirmedSubscribed: data.request.confirmedSubscribed,
       status: data.request.status,

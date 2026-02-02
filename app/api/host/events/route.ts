@@ -44,6 +44,7 @@ export async function GET() {
           lobbyId: payload.request.lobby.id,
           requesterGamertag: payload.requesterGamertag,
           requesterNametagColor: payload.requesterNametagColor ?? null,
+          requesterSrLevel: payload.requesterSrLevel ?? null,
           requesterHandleText: payload.request.requesterHandleText,
         };
         send("request_created", requestData);

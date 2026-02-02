@@ -9,6 +9,7 @@ type MessagePayload = {
   senderUserId: string;
   senderGamertag: string;
   senderNametagColor?: string | null;
+  senderSrLevel?: number | null;
   body: string;
   createdAt: string;
 };

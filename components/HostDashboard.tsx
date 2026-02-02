@@ -7,7 +7,7 @@ import {
   type HostRequestCreatedEvent,
   type HostLobbyExpiredEvent,
 } from "./useHostEvents";
-import { resolveNametagColor } from "@/lib/reach-colors";
+import Nametag from "@/components/user/Nametag";
 
 type LobbySummary = {
   id: string;
@@ -31,6 +31,7 @@ type JoinRequestSummary = {
   requesterUserId: string;
   requesterHandleText: string;
   requesterNametagColor?: string | null;
+  requesterSrLevel?: number | null;
   note: string | null;
   confirmedSubscribed: boolean;
   status: "PENDING" | "ACCEPTED" | "DECLINED";
@@ -107,6 +108,7 @@ export default function HostDashboard({
           requesterUserId: payload.requesterUserId,
           requesterHandleText: payload.requesterHandleText,
           requesterNametagColor: payload.requesterNametagColor ?? null,
+          requesterSrLevel: payload.requesterSrLevel ?? null,
           note: payload.note ?? null,
           confirmedSubscribed: payload.confirmedSubscribed ?? false,
           status: payload.status ?? "PENDING",
@@ -366,17 +368,12 @@ export default function HostDashboard({
             >
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="font-semibold text-ink">
-                    <span
-                      style={{
-                        color: resolveNametagColor(
-                          request.requesterNametagColor
-                        ),
-                      }}
-                    >
-                      {request.requesterHandleText}
-                    </span>
-                  </p>
+                  <Nametag
+                    gamertag={request.requesterHandleText}
+                    rank={request.requesterSrLevel ?? 1}
+                    nametagColor={request.requesterNametagColor}
+                    className="bg-mist"
+                  />
                   <p className="text-xs text-ink/60">
                     Lobby: {request.lobby.title}
                   </p>

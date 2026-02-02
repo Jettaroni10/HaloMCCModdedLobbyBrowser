@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { SessionUser } from "@/lib/auth";
 import HostNavLink from "@/components/HostNavLink";
+import SocialRankBadge from "@/components/rank/SocialRankBadge";
 
 type SiteHeaderProps = {
   user: SessionUser | null;
@@ -46,9 +47,12 @@ export default function SiteHeader({ user, isAdmin }: SiteHeaderProps) {
             <>
               <Link href="/settings/profile" className="hover:text-ink/80">
                 <span>{user.gamertag || "Profile"}</span>
-                <span className="ml-2 rounded-sm border border-ink/20 px-2 py-0.5 text-[10px] font-semibold text-ink/70">
-                  SR{user.srLevel ?? 1}
-                </span>
+                <SocialRankBadge
+                  rank={user.srLevel ?? 1}
+                  size={16}
+                  showLabel={true}
+                  className="ml-3 text-ink/70"
+                />
               </Link>
               <form action="/api/auth/logout" method="post">
                 <button

@@ -5,6 +5,8 @@ import {
   nameplateTextColor,
   resolveNametagColor,
 } from "@/lib/reach-colors";
+import SocialRankBadge from "@/components/rank/SocialRankBadge";
+import { rankToLabel } from "@/lib/ranks";
 
 type ProfilePageProps = {
   searchParams?: Record<string, string | string[] | undefined>;
@@ -44,9 +46,12 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
               <p className="text-xs uppercase tracking-[0.3em] text-ink/50">
                 Social rank
               </p>
-              <p className="mt-1 text-lg font-semibold text-ink">
-                SR{srLevel}
-              </p>
+              <div className="mt-2 flex items-center gap-3">
+                <SocialRankBadge rank={srLevel} size={32} showLabel={false} />
+                <p className="text-lg font-semibold text-ink">
+                  Social Rank: {rankToLabel(srLevel)}
+                </p>
+              </div>
             </div>
             <div className="text-xs text-ink/60">
               {xpThisLevel}/{xpNeeded} XP · {xpToNext} to next SR

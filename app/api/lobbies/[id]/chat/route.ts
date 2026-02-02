@@ -55,7 +55,7 @@ export async function GET(
     orderBy: { createdAt: "asc" },
     take: 50,
     include: {
-      sender: { select: { gamertag: true, nametagColor: true } },
+      sender: { select: { gamertag: true, nametagColor: true, srLevel: true } },
     },
   });
 
@@ -66,6 +66,7 @@ export async function GET(
       senderUserId: message.senderUserId,
       senderGamertag: message.sender.gamertag,
       senderNametagColor: message.sender.nametagColor,
+      senderSrLevel: message.sender.srLevel ?? 1,
       body: message.body,
       createdAt: message.createdAt.toISOString(),
     }))
@@ -138,6 +139,7 @@ export async function POST(
       senderUserId: created.senderUserId,
       senderGamertag: user.gamertag,
       senderNametagColor: user.nametagColor,
+      senderSrLevel: user.srLevel ?? 1,
       body: created.body,
       createdAt: created.createdAt.toISOString(),
     };

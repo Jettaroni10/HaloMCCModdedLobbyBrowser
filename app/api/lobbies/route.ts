@@ -226,7 +226,7 @@ export async function GET(request: Request) {
     },
     orderBy: { lastHeartbeatAt: "desc" },
     include: {
-      host: { select: { gamertag: true } },
+      host: { select: { gamertag: true, srLevel: true } },
       _count: { select: { members: true } },
     },
   });

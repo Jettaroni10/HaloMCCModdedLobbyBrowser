@@ -18,7 +18,7 @@ export default async function HostPage() {
       orderBy: { createdAt: "desc" },
       include: {
         lobby: { select: { id: true, title: true, isModded: true } },
-        requester: { select: { nametagColor: true } },
+        requester: { select: { nametagColor: true, srLevel: true } },
       },
     }),
   ]);
@@ -41,6 +41,7 @@ export default async function HostPage() {
     createdAt: request.createdAt.toISOString(),
     decidedAt: request.decidedAt ? request.decidedAt.toISOString() : null,
     requesterNametagColor: request.requester?.nametagColor ?? null,
+    requesterSrLevel: request.requester?.srLevel ?? null,
   }));
 
   return (

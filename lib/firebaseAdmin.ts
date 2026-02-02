@@ -7,8 +7,17 @@ type FirebaseServiceAccount = {
 };
 
 function normalizeBucketName(value: string) {
-  const trimmed = value.trim();
+  let trimmed = value.trim();
   if (!trimmed) return "";
+  if (trimmed.startsWith("gs://")) {
+    trimmed = trimmed.replace("gs://", "");
+  }
+  if (trimmed.startsWith("https://storage.googleapis.com/")) {
+    trimmed = trimmed.replace("https://storage.googleapis.com/", "");
+  }
+  if (trimmed.includes("/")) {
+    trimmed = trimmed.split("/")[0];
+  }
   if (trimmed.endsWith(".firebasestorage.app")) {
     return trimmed.replace(".firebasestorage.app", ".appspot.com");
   }

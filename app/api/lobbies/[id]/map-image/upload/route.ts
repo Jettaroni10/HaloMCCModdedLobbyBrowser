@@ -8,7 +8,7 @@ import {
   getSignedReadUrl,
   validateLobbyImageMeta,
 } from "@/lib/lobby-images";
-import { getBucket } from "@/lib/firebaseAdmin";
+import { getBucket, getBucketName } from "@/lib/firebaseAdmin";
 import { checkImageBufferSafe } from "@/lib/vision";
 
 export const runtime = "nodejs";
@@ -34,6 +34,13 @@ export async function POST(
       process.env.FIREBASE_PRIVATE_KEY
   );
   const hasModerationKey = hasServiceAccountJson || hasServiceAccountParts;
+  const bucketName = (() => {
+    try {
+      return getBucketName();
+    } catch {
+      return "";
+    }
+  })();
 
   const fail = (status: number, error: string, detail?: string) => {
     console.error("MAP_IMAGE_UPLOAD_FAIL", {
@@ -124,6 +131,7 @@ export async function POST(
     console.info("MAP_IMAGE_UPLOAD_ENV_OK", {
       requestId,
       lobbyId: lobby.id,
+      bucketName,
       hasStorageBucket,
       hasModerationKey,
       hasServiceAccountJson,
@@ -162,11 +170,26 @@ export async function POST(
       lobbyId: lobby.id,
       objectPath,
     });
-    const bucket = getBucket();
-    await bucket.file(objectPath).save(buffer, {
-      contentType: file.type,
-      resumable: false,
-    });
+    try {
+      const bucket = getBucket();
+      await bucket.file(objectPath).save(buffer, {
+        contentType: file.type,
+        resumable: false,
+      });
+    } catch (error) {
+      stage = "UPLOAD_FAIL";
+      const detail = error instanceof Error ? error.message : String(error);
+      console.error("MAP_IMAGE_UPLOAD_UPLOAD_FAIL", {
+        requestId,
+        lobbyId: lobby.id,
+        objectPath,
+        error: detail,
+      });
+      if (detail.includes("does not exist")) {
+        return fail(503, "Storage unavailable. Please try again.", detail);
+      }
+      return fail(500, "Upload failed. Please try again.", detail);
+    }
     stage = "UPLOAD_OK";
     console.info("MAP_IMAGE_UPLOAD_UPLOAD_OK", {
       requestId,

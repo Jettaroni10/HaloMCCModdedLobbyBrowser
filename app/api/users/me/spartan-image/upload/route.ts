@@ -7,7 +7,7 @@ import {
   deleteUserImage,
   getSignedUserReadUrl,
 } from "@/lib/user-images";
-import { getBucket } from "@/lib/firebaseAdmin";
+import { getBucket, getBucketName } from "@/lib/firebaseAdmin";
 import { validateLobbyImageMeta } from "@/lib/lobby-images";
 import { checkImageBufferSafe } from "@/lib/vision";
 
@@ -31,6 +31,13 @@ export async function POST(request: Request) {
       process.env.FIREBASE_PRIVATE_KEY
   );
   const hasModerationKey = hasServiceAccountJson || hasServiceAccountParts;
+  const bucketName = (() => {
+    try {
+      return getBucketName();
+    } catch {
+      return "";
+    }
+  })();
 
   const fail = (status: number, error: string, detail?: string) => {
     console.error("SPARTAN_IMAGE_UPLOAD_FAIL", {
@@ -107,6 +114,7 @@ export async function POST(request: Request) {
     stage = "ENV_OK";
     console.info("SPARTAN_IMAGE_UPLOAD_ENV_OK", {
       requestId,
+      bucketName,
       hasStorageBucket,
       hasModerationKey,
       hasServiceAccountJson,
@@ -144,11 +152,26 @@ export async function POST(request: Request) {
       userId: user.id,
       objectPath,
     });
-    const bucket = getBucket();
-    await bucket.file(objectPath).save(buffer, {
-      contentType: file.type,
-      resumable: false,
-    });
+    try {
+      const bucket = getBucket();
+      await bucket.file(objectPath).save(buffer, {
+        contentType: file.type,
+        resumable: false,
+      });
+    } catch (error) {
+      stage = "UPLOAD_FAIL";
+      const detail = error instanceof Error ? error.message : String(error);
+      console.error("SPARTAN_IMAGE_UPLOAD_UPLOAD_FAIL", {
+        requestId,
+        userId: user.id,
+        objectPath,
+        error: detail,
+      });
+      if (detail.includes("does not exist")) {
+        return fail(503, "Storage unavailable. Please try again.", detail);
+      }
+      return fail(500, "Upload failed. Please try again.", detail);
+    }
     stage = "UPLOAD_OK";
     console.info("SPARTAN_IMAGE_UPLOAD_UPLOAD_OK", {
       requestId,

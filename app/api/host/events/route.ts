@@ -31,6 +31,7 @@ export async function GET() {
         hostUserId: string;
         requesterGamertag: string;
         requesterNametagColor?: string | null;
+        requesterSrLevel?: number | null;
         request: {
           id: string;
           requesterHandleText: string;

@@ -115,7 +115,10 @@ export async function checkImageSafe(objectPath: string) {
 
   const gcsUri = `gs://${bucketName}/${objectPath}`;
   const client = getVisionClient();
-  let annotation: protos.google.cloud.vision.v1.ISafeSearchAnnotation | null;
+  let annotation:
+    | protos.google.cloud.vision.v1.ISafeSearchAnnotation
+    | null
+    | undefined;
   try {
     const [result] = await client.safeSearchDetection(gcsUri);
     annotation = result.safeSearchAnnotation;

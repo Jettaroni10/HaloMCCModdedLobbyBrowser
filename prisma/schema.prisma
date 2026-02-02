@@ -94,6 +94,9 @@ model User {
   handle          String?          @unique
   displayName     String?
   nametagColor    String           @default("#FFFFFF")
+  spartanImagePath String?
+  favoriteGameId  String?
+  favoriteWeaponId String?
   passwordHash    String
   steamName       String?
   needsGamertag   Boolean          @default(false)

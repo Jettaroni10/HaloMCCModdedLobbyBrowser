@@ -5,6 +5,7 @@ import { resolveNametagColor } from "@/lib/reach-colors";
 import SocialRankBadge from "@/components/rank/SocialRankBadge";
 import { rankToLabel } from "@/lib/ranks";
 import { useDmChatRealtime } from "./useDmChatRealtime";
+import GamertagLink from "@/components/GamertagLink";
 
 type ChatMessage = {
   id: string;
@@ -275,9 +276,10 @@ export default function DmChat({
         Direct messages ·{" "}
         <span className="inline-flex items-center gap-2">
           <SocialRankBadge rank={targetSrLevel} size={16} />
-          <span style={{ color: resolveNametagColor(targetNametagColor) }}>
-            {targetGamertag}
-          </span>
+          <GamertagLink
+            gamertag={targetGamertag}
+            style={{ color: resolveNametagColor(targetNametagColor) }}
+          />
           <span className="text-[10px] text-ink/60">
             {rankToLabel(targetSrLevel)}
           </span>
@@ -307,14 +309,13 @@ export default function DmChat({
               <div className="flex items-center justify-between text-xs text-ink/60">
                 <div className="flex items-center gap-2">
                   <SocialRankBadge rank={message.senderSrLevel} size={16} />
-                  <span
+                  <GamertagLink
+                    gamertag={message.senderGamertag}
                     className="font-semibold"
                     style={{
                       color: resolveNametagColor(message.senderNametagColor),
                     }}
-                  >
-                    {message.senderGamertag}
-                  </span>
+                  />
                   <span className="text-[10px] text-ink/60">
                     {rankToLabel(message.senderSrLevel)}
                   </span>

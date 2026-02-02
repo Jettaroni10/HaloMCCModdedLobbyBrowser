@@ -5,6 +5,7 @@ import { formatMinutesAgo } from "@/lib/time";
 import { parseEnum, parseStringArray } from "@/lib/validation";
 import { Games, Regions, Vibes, Voices } from "@/lib/types";
 import LobbyCardBackground from "@/components/LobbyCardBackground";
+import GamertagLink from "@/components/GamertagLink";
 import SocialRankBadge from "@/components/rank/SocialRankBadge";
 import { getSignedReadUrl } from "@/lib/lobby-images";
 import { getCurrentUser } from "@/lib/auth";
@@ -266,7 +267,10 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
                   Host
                 </span>
                 <SocialRankBadge rank={lobby.host.srLevel ?? 1} size={16} />
-                <span className="font-semibold">{lobby.host.gamertag}</span>
+                <GamertagLink
+                  gamertag={lobby.host.gamertag}
+                  className="font-semibold"
+                />
               </div>
               <div className="mt-3 flex items-center justify-between text-xs text-white/70">
                 <span>{formatMinutesAgo(lobby.lastHeartbeatAt, now)}</span>

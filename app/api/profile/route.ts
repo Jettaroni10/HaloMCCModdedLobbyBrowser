@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import { normalizeHandleText } from "@/lib/validation";
 import { isReachColor } from "@/lib/reach-colors";
 import { absoluteUrl } from "@/lib/url";
+import { HALO_GAMES } from "@/data/haloGames";
+import { HALO_WEAPONS } from "@/data/haloWeapons";
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
@@ -33,6 +35,13 @@ export async function POST(request: Request) {
     typeof rawColor === "string" && rawColor.trim().length > 0
       ? rawColor.trim()
       : "";
+  const rawFavoriteGame = body?.favoriteGameId ?? formData?.get("favoriteGameId");
+  const favoriteGameId =
+    typeof rawFavoriteGame === "string" ? rawFavoriteGame.trim() : "";
+  const rawFavoriteWeapon =
+    body?.favoriteWeaponId ?? formData?.get("favoriteWeaponId");
+  const favoriteWeaponId =
+    typeof rawFavoriteWeapon === "string" ? rawFavoriteWeapon.trim() : "";
 
   if (!gamertag) {
     return NextResponse.json(
@@ -49,6 +58,24 @@ export async function POST(request: Request) {
   if (nametagColor && !isReachColor(nametagColor)) {
     return NextResponse.json(
       { error: "Nametag color must be selected from the palette." },
+      { status: 400 }
+    );
+  }
+  if (
+    favoriteGameId &&
+    !HALO_GAMES.some((game) => game.id === favoriteGameId)
+  ) {
+    return NextResponse.json(
+      { error: "Favorite game selection is invalid." },
+      { status: 400 }
+    );
+  }
+  if (
+    favoriteWeaponId &&
+    !HALO_WEAPONS.some((weapon) => weapon.id === favoriteWeaponId)
+  ) {
+    return NextResponse.json(
+      { error: "Favorite weapon selection is invalid." },
       { status: 400 }
     );
   }
@@ -88,6 +115,8 @@ export async function POST(request: Request) {
       email,
       needsGamertag: false,
       ...(nametagColor ? { nametagColor } : {}),
+      favoriteGameId: favoriteGameId || null,
+      favoriteWeaponId: favoriteWeaponId || null,
     },
   });
 

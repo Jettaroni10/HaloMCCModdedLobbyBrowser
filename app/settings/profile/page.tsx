@@ -8,6 +8,11 @@ import {
 } from "@/lib/reach-colors";
 import SocialRankBadge from "@/components/rank/SocialRankBadge";
 import { clampRank } from "@/lib/ranks";
+import { HALO_GAMES } from "@/data/haloGames";
+import { HALO_WEAPONS } from "@/data/haloWeapons";
+import SpartanImageUploader from "@/components/SpartanImageUploader";
+import FavoriteWeaponSelect from "@/components/FavoriteWeaponSelect";
+import { getSignedUserReadUrl } from "@/lib/user-images";
 
 type ProfilePageProps = {
   searchParams?: Record<string, string | string[] | undefined>;
@@ -15,15 +20,41 @@ type ProfilePageProps = {
 
 export default async function ProfilePage({ searchParams }: ProfilePageProps) {
   const user = await requireAuth({ requireGamertag: false });
-  const srLevel = user.srLevel ?? 1;
-  const xpThisLevel = user.xpThisLevel ?? 0;
+  const profile = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: {
+      gamertag: true,
+      email: true,
+      nametagColor: true,
+      srLevel: true,
+      xpThisLevel: true,
+      xpTotal: true,
+      reputationScore: true,
+      favoriteGameId: true,
+      favoriteWeaponId: true,
+      spartanImagePath: true,
+    },
+  });
+  const srLevel = profile?.srLevel ?? user.srLevel ?? 1;
+  const xpThisLevel = profile?.xpThisLevel ?? user.xpThisLevel ?? 0;
   const xpNeeded = xpRequired(srLevel);
   const xpToNext = Math.max(0, xpNeeded - xpThisLevel);
   const progressPercent =
     xpNeeded > 0 ? Math.min(100, Math.round((xpThisLevel / xpNeeded) * 100)) : 0;
-  const selectedColor = resolveNametagColor(user.nametagColor);
+  const selectedColor = resolveNametagColor(
+    profile?.nametagColor ?? user.nametagColor
+  );
   const needsGamertag = Boolean(searchParams?.needsGamertag);
   const rankLabel = `sr${clampRank(srLevel)}`;
+  const favoriteGameName =
+    HALO_GAMES.find((game) => game.id === profile?.favoriteGameId)?.name ??
+    "Not set";
+  const favoriteWeaponName =
+    HALO_WEAPONS.find((weapon) => weapon.id === profile?.favoriteWeaponId)
+      ?.name ?? "Not set";
+  const spartanImageUrl = profile?.spartanImagePath
+    ? await getSignedUserReadUrl(profile.spartanImagePath)
+    : null;
   const [friendCount, hostedCount, messageCount] = await Promise.all([
     prisma.friendship.count({
       where: { OR: [{ userAId: user.id }, { userBId: user.id }] },
@@ -43,16 +74,10 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
 
       <section className="mt-8 grid gap-6 lg:grid-cols-[320px_1fr]">
         <div className="space-y-6">
-          <div className="rounded-md border border-ink/10 bg-sand/80 p-4 backdrop-blur">
-            <div className="aspect-[3/4] w-full overflow-hidden rounded-sm border border-ink/15 bg-gradient-to-b from-mist/60 via-mist/20 to-sand/80">
-              <div className="flex h-full w-full items-center justify-center text-xs font-semibold uppercase tracking-[0.4em] text-ink/50">
-                Spartan portrait
-              </div>
-            </div>
-            <p className="mt-3 text-xs text-ink/60">
-              Portrait uploads coming soon.
-            </p>
-          </div>
+          <SpartanImageUploader
+            gamertag={profile?.gamertag ?? user.gamertag ?? ""}
+            initialUrl={spartanImageUrl}
+          />
 
           <div className="rounded-md border border-ink/10 bg-sand/80 p-4 backdrop-blur">
             <p className="text-xs uppercase tracking-[0.3em] text-ink/50">
@@ -61,11 +86,13 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             <div className="mt-3 space-y-3 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-ink/70">Favorite game</span>
-                <span className="font-semibold text-ink">Not set</span>
+                <span className="font-semibold text-ink">{favoriteGameName}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-ink/70">Favorite weapon</span>
-                <span className="font-semibold text-ink">Not set</span>
+                <span className="font-semibold text-ink">
+                  {favoriteWeaponName}
+                </span>
               </div>
             </div>
           </div>
@@ -79,7 +106,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             <div className="mt-4 flex flex-wrap items-center gap-6">
               <div>
                 <p className="text-3xl font-semibold text-ink">
-                  {user.gamertag || "Set your gamertag"}
+                  {profile?.gamertag ?? user.gamertag ?? "Set your gamertag"}
                 </p>
                 <div className="mt-2 flex items-center gap-3">
                   <SocialRankBadge rank={srLevel} size={56} showLabel={false} />
@@ -103,14 +130,14 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                 </div>
               </div>
             </div>
-            <div className="mt-4 flex flex-wrap gap-2 text-xs text-ink/60">
-              <span className="rounded-sm border border-ink/15 bg-mist px-2 py-1">
-                Favorite game: Not set
-              </span>
-              <span className="rounded-sm border border-ink/15 bg-mist px-2 py-1">
-                Favorite weapon: Not set
-              </span>
-            </div>
+              <div className="mt-4 flex flex-wrap gap-2 text-xs text-ink/60">
+                <span className="rounded-sm border border-ink/15 bg-mist px-2 py-1">
+                  Favorite game: {favoriteGameName}
+                </span>
+                <span className="rounded-sm border border-ink/15 bg-mist px-2 py-1">
+                  Favorite weapon: {favoriteWeaponName}
+                </span>
+              </div>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -185,7 +212,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
           Gamertag
           <input
             name="gamertag"
-            defaultValue={user.gamertag ?? ""}
+            defaultValue={profile?.gamertag ?? user.gamertag ?? ""}
             placeholder="Your gamertag"
             required
             className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
@@ -196,10 +223,34 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
           <input
             name="email"
             type="email"
-            defaultValue={user.email ?? ""}
+            defaultValue={profile?.email ?? user.email ?? ""}
             required
             className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
           />
+        </label>
+        <label className="block text-sm font-semibold text-ink">
+          Favorite game
+          <select
+            name="favoriteGameId"
+            defaultValue={profile?.favoriteGameId ?? ""}
+            className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
+          >
+            <option value="">Not set</option>
+            {HALO_GAMES.map((game) => (
+              <option key={game.id} value={game.id}>
+                {game.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block text-sm font-semibold text-ink">
+          Favorite weapon
+          <div className="mt-2">
+            <FavoriteWeaponSelect
+              name="favoriteWeaponId"
+              defaultValue={profile?.favoriteWeaponId ?? ""}
+            />
+          </div>
         </label>
 
         <div className="rounded-sm border border-ink/10 bg-mist px-4 py-3 text-sm text-ink/70">
@@ -214,7 +265,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                 color: nameplateTextColor(selectedColor),
               }}
             >
-              {user.gamertag}
+              {profile?.gamertag ?? user.gamertag}
             </span>
             <span className="text-[10px] text-ink/60">
               Current nametag color

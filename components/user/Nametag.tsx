@@ -1,6 +1,7 @@
 "use client";
 
 import SocialRankBadge from "@/components/rank/SocialRankBadge";
+import GamertagLink from "@/components/GamertagLink";
 import { clampRank } from "@/lib/ranks";
 import { nameplateTextColor, resolveNametagColor } from "@/lib/reach-colors";
 
@@ -38,9 +39,10 @@ export default function Nametag({
       }
     >
       <SocialRankBadge rank={rankValue} size={iconSize ?? 26} />
-      <span className="min-w-0 flex-1 truncate text-base font-semibold">
-        {gamertag}
-      </span>
+      <GamertagLink
+        gamertag={gamertag}
+        className="min-w-0 flex-1 truncate text-base font-semibold"
+      />
       <span className="rounded-sm bg-black/35 px-2 py-0.5 text-xs font-semibold uppercase tracking-[0.18em] text-white/85">
         {rankLabel}
       </span>

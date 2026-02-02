@@ -5,6 +5,7 @@ import { resolveNametagColor } from "@/lib/reach-colors";
 import SocialRankBadge from "@/components/rank/SocialRankBadge";
 import { rankToLabel } from "@/lib/ranks";
 import { useLobbyChatRealtime } from "./useLobbyChatRealtime";
+import GamertagLink from "@/components/GamertagLink";
 
 type ChatMessage = {
   id: string;
@@ -293,14 +294,13 @@ export default function LobbyChat({
               <div className="flex min-w-0 items-center justify-between gap-2 text-xs text-white/60">
                 <div className="flex min-w-0 items-center gap-2">
                   <SocialRankBadge rank={message.senderSrLevel} size={16} />
-                  <span
+                  <GamertagLink
+                    gamertag={message.senderGamertag}
                     className="max-w-[70%] truncate font-semibold"
                     style={{
                       color: resolveNametagColor(message.senderNametagColor),
                     }}
-                  >
-                    {message.senderGamertag}
-                  </span>
+                  />
                   <span className="text-[10px] text-white/60">
                     {rankToLabel(message.senderSrLevel)}
                   </span>

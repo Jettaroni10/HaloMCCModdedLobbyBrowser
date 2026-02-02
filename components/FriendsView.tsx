@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { resolveNametagColor } from "@/lib/reach-colors";
+import GamertagLink from "@/components/GamertagLink";
 
 type FriendUser = {
   id: string;
@@ -181,14 +182,13 @@ export default function FriendsView({
                 className="flex items-center justify-between rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
               >
                 <div>
-                  <p
+                  <GamertagLink
+                    gamertag={result.gamertag}
                     className="font-semibold"
                     style={{
                       color: resolveNametagColor(result.nametagColor),
                     }}
-                  >
-                    {result.gamertag}
-                  </p>
+                  />
                 </div>
                 <button
                   type="button"
@@ -220,16 +220,15 @@ export default function FriendsView({
                 className="flex items-center justify-between rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
               >
                 <div>
-                  <p
+                  <GamertagLink
+                    gamertag={request.fromUser.gamertag}
                     className="font-semibold"
                     style={{
                       color: resolveNametagColor(
                         request.fromUser.nametagColor
                       ),
                     }}
-                  >
-                    {request.fromUser.gamertag}
-                  </p>
+                  />
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -264,14 +263,13 @@ export default function FriendsView({
                   className="flex items-center justify-between rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
                 >
                 <div>
-                  <p
+                  <GamertagLink
+                    gamertag={request.toUser.gamertag}
                     className="font-semibold"
                     style={{
                       color: resolveNametagColor(request.toUser.nametagColor),
                     }}
-                  >
-                    {request.toUser.gamertag}
-                  </p>
+                  />
                   </div>
                   <span className="text-xs text-ink/60">Pending</span>
                 </div>
@@ -293,14 +291,13 @@ export default function FriendsView({
                 className="flex items-center justify-between rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
               >
                 <div>
-                  <p
+                  <GamertagLink
+                    gamertag={friend.gamertag}
                     className="font-semibold"
                     style={{
                       color: resolveNametagColor(friend.nametagColor),
                     }}
-                  >
-                    {friend.gamertag}
-                  </p>
+                  />
                 </div>
                 <div className="flex items-center gap-2">
                   <a

@@ -1,5 +1,4 @@
-import { ImageAnnotatorClient } from "@google-cloud/vision";
-import type { protos } from "@google-cloud/vision";
+import { ImageAnnotatorClient, protos } from "@google-cloud/vision";
 import { getBucket, getBucketName } from "@/lib/firebaseAdmin";
 
 type ServiceAccount = {

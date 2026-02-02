@@ -8,6 +8,7 @@ import {
   type HostLobbyExpiredEvent,
 } from "./useHostEvents";
 import Nametag from "@/components/user/Nametag";
+import { resolveNametagColor } from "@/lib/reach-colors";
 
 type LobbySummary = {
   id: string;

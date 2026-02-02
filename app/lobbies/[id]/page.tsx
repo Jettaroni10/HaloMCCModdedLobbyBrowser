@@ -177,7 +177,8 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
                       gamertag={lobby.host.gamertag}
                       rank={lobby.host.srLevel ?? 1}
                       nametagColor={lobby.host.nametagColor}
-                      className="bg-mist/60"
+                      iconSize={34}
+                      className="bg-mist/60 py-3"
                     />
                   </div>
                 </div>

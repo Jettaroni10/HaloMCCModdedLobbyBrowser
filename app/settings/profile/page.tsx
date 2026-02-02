@@ -47,10 +47,10 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
               <p className="text-xs uppercase tracking-[0.3em] text-ink/50">
                 Social rank
               </p>
-              <div className="mt-2 flex items-center gap-3">
-                <SocialRankBadge rank={srLevel} size={32} showLabel={false} />
+              <div className="mt-2 flex items-center gap-4">
+                <SocialRankBadge rank={srLevel} size={48} showLabel={false} />
                 <div className="flex items-center gap-3">
-                  <p className="text-lg font-semibold text-ink">
+                  <p className="text-xl font-semibold text-ink">
                     Social Rank
                   </p>
                   <span className="rounded-sm bg-ink/15 px-2 py-0.5 text-xs font-semibold uppercase tracking-[0.18em] text-ink/80">

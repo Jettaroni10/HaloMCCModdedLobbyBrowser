@@ -9,6 +9,7 @@ type NametagProps = {
   rank?: number | null;
   nametagColor?: string | null;
   className?: string;
+  iconSize?: number;
 };
 
 export default function Nametag({
@@ -16,6 +17,7 @@ export default function Nametag({
   rank,
   nametagColor,
   className,
+  iconSize,
 }: NametagProps) {
   const resolvedColor = nametagColor
     ? resolveNametagColor(nametagColor)
@@ -35,7 +37,7 @@ export default function Nametag({
           : undefined
       }
     >
-      <SocialRankBadge rank={rankValue} size={26} />
+      <SocialRankBadge rank={rankValue} size={iconSize ?? 26} />
       <span className="min-w-0 flex-1 truncate text-base font-semibold">
         {gamertag}
       </span>

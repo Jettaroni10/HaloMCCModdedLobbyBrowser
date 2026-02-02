@@ -1,4 +1,5 @@
 import { ImageAnnotatorClient } from "@google-cloud/vision";
+import type { protos } from "@google-cloud/vision";
 import { getBucket, getBucketName } from "@/lib/firebaseAdmin";
 
 type ServiceAccount = {
@@ -17,6 +18,11 @@ const LIKELIHOOD_ORDER = [
 ] as const;
 
 type Likelihood = (typeof LIKELIHOOD_ORDER)[number];
+type VisionLikelihood =
+  | protos.google.cloud.vision.v1.Likelihood
+  | keyof typeof protos.google.cloud.vision.v1.Likelihood
+  | null
+  | undefined;
 
 let visionClient: ImageAnnotatorClient | null = null;
 
@@ -72,6 +78,22 @@ function likelihoodAtLeast(value: Likelihood | undefined, min: Likelihood) {
   return LIKELIHOOD_ORDER.indexOf(value) >= LIKELIHOOD_ORDER.indexOf(min);
 }
 
+function toLikelihoodString(value: VisionLikelihood): Likelihood | undefined {
+  if (value == null) return undefined;
+  if (typeof value === "string") {
+    return LIKELIHOOD_ORDER.includes(value as Likelihood)
+      ? (value as Likelihood)
+      : undefined;
+  }
+  const name =
+    protos.google.cloud.vision.v1.Likelihood[
+      value as protos.google.cloud.vision.v1.Likelihood
+    ];
+  return LIKELIHOOD_ORDER.includes(name as Likelihood)
+    ? (name as Likelihood)
+    : undefined;
+}
+
 export async function checkImageSafe(objectPath: string) {
   let bucketName = "";
   try {
@@ -94,14 +116,7 @@ export async function checkImageSafe(objectPath: string) {
 
   const gcsUri = `gs://${bucketName}/${objectPath}`;
   const client = getVisionClient();
-  let annotation:
-    | {
-        adult?: string | null;
-        racy?: string | null;
-        violence?: string | null;
-      }
-    | null
-    | undefined;
+  let annotation: protos.google.cloud.vision.v1.ISafeSearchAnnotation | null;
   try {
     const [result] = await client.safeSearchDetection(gcsUri);
     annotation = result.safeSearchAnnotation;
@@ -121,9 +136,9 @@ export async function checkImageSafe(objectPath: string) {
     return { ok: true };
   }
 
-  const adult = annotation.adult as Likelihood | undefined;
-  const racy = annotation.racy as Likelihood | undefined;
-  const violence = annotation.violence as Likelihood | undefined;
+  const adult = toLikelihoodString(annotation.adult as VisionLikelihood);
+  const racy = toLikelihoodString(annotation.racy as VisionLikelihood);
+  const violence = toLikelihoodString(annotation.violence as VisionLikelihood);
 
   if (likelihoodAtLeast(adult, "LIKELY")) {
     return { ok: false, reason: "adult" };

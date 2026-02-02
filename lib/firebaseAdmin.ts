@@ -18,9 +18,6 @@ function normalizeBucketName(value: string) {
   if (trimmed.includes("/")) {
     trimmed = trimmed.split("/")[0];
   }
-  if (trimmed.endsWith(".firebasestorage.app")) {
-    return trimmed.replace(".firebasestorage.app", ".appspot.com");
-  }
   return trimmed;
 }
 

@@ -11,10 +11,12 @@ export const HALO_GAMES = [
   { id: "h5", name: "Halo 5: Guardians" },
   { id: "infinite", name: "Halo Infinite" },
   { id: "wars", name: "Halo Wars" },
+  { id: "wars_de", name: "Halo Wars: Definitive Edition" },
   { id: "wars2", name: "Halo Wars 2" },
   { id: "spartan_assault", name: "Halo: Spartan Assault" },
   { id: "spartan_strike", name: "Halo: Spartan Strike" },
   { id: "fireteam_raven", name: "Halo: Fireteam Raven" },
+  { id: "recruit", name: "Halo Recruit" },
 ] as const;
 
 export type HaloGameId = (typeof HALO_GAMES)[number]["id"];

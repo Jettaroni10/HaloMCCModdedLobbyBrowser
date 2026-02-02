@@ -20,6 +20,10 @@ export default function FavoriteWeaponSelect({
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
+  useEffect(() => {
+    setSelectedId(defaultValue ?? "");
+  }, [defaultValue]);
+
   const filtered = useMemo(() => {
     const trimmed = query.trim().toLowerCase();
     if (!trimmed) return HALO_WEAPONS;
@@ -55,7 +59,7 @@ export default function FavoriteWeaponSelect({
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="flex w-full items-center justify-between rounded-sm border border-ink/10 bg-mist px-3 py-2 text-left text-sm text-ink"
+        className="flex w-full items-center justify-between rounded-sm border border-ink/10 bg-mist/80 px-3 py-2 text-left text-sm text-ink shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)]"
       >
         <span className={selectedWeapon ? "text-ink" : "text-ink/60"}>
           {selectedLabel}
@@ -64,14 +68,14 @@ export default function FavoriteWeaponSelect({
       </button>
 
       {open && (
-        <div className="absolute z-20 w-full rounded-sm border border-ink/20 bg-sand p-3 shadow-xl">
+        <div className="absolute z-20 w-full rounded-sm border border-ink/20 bg-sand/95 p-3 shadow-xl backdrop-blur-sm">
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search weapons"
-            className="mb-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm text-ink"
+            className="mb-2 w-full rounded-sm border border-ink/10 bg-mist/80 px-3 py-2 text-sm text-ink"
           />
-          <div className="scrollbar-dark max-h-56 overflow-y-auto rounded-sm border border-ink/10 bg-mist">
+          <div className="scrollbar-dark max-h-56 overflow-y-auto rounded-sm border border-ink/10 bg-mist/80">
             <button
               type="button"
               onClick={() => {

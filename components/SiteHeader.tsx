@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { SessionUser } from "@/lib/auth";
 import HostNavLink from "@/components/HostNavLink";
 import SocialRankBadge from "@/components/rank/SocialRankBadge";
+import { clampRank } from "@/lib/ranks";
 
 type SiteHeaderProps = {
   user: SessionUser | null;
@@ -50,9 +51,12 @@ export default function SiteHeader({ user, isAdmin }: SiteHeaderProps) {
                 <SocialRankBadge
                   rank={user.srLevel ?? 1}
                   size={16}
-                  showLabel={true}
+                  showLabel={false}
                   className="ml-3 text-ink/70"
                 />
+                <span className="ml-2 rounded-sm bg-ink/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-ink/80">
+                  sr{clampRank(user.srLevel)}
+                </span>
               </Link>
               <form action="/api/auth/logout" method="post">
                 <button

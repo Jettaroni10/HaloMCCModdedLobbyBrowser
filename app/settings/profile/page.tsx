@@ -6,7 +6,7 @@ import {
   resolveNametagColor,
 } from "@/lib/reach-colors";
 import SocialRankBadge from "@/components/rank/SocialRankBadge";
-import { rankToLabel } from "@/lib/ranks";
+import { clampRank } from "@/lib/ranks";
 
 type ProfilePageProps = {
   searchParams?: Record<string, string | string[] | undefined>;
@@ -22,6 +22,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
     xpNeeded > 0 ? Math.min(100, Math.round((xpThisLevel / xpNeeded) * 100)) : 0;
   const selectedColor = resolveNametagColor(user.nametagColor);
   const needsGamertag = Boolean(searchParams?.needsGamertag);
+  const rankLabel = `sr${clampRank(srLevel)}`;
 
   return (
     <div className="mx-auto w-full max-w-3xl px-6 py-12">
@@ -48,9 +49,14 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
               </p>
               <div className="mt-2 flex items-center gap-3">
                 <SocialRankBadge rank={srLevel} size={32} showLabel={false} />
-                <p className="text-lg font-semibold text-ink">
-                  Social Rank: {rankToLabel(srLevel)}
-                </p>
+                <div className="flex items-center gap-3">
+                  <p className="text-lg font-semibold text-ink">
+                    Social Rank
+                  </p>
+                  <span className="rounded-sm bg-ink/15 px-2 py-0.5 text-xs font-semibold uppercase tracking-[0.18em] text-ink/80">
+                    {rankLabel}
+                  </span>
+                </div>
               </div>
             </div>
             <div className="text-xs text-ink/60">

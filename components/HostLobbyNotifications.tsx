@@ -33,7 +33,7 @@ export default function HostLobbyNotifications({
           {toasts.map((toast) => (
             <div
               key={toast.id}
-              className="rounded-sm border border-ink/20 bg-sand px-4 py-2 text-sm text-ink shadow-sm"
+              className="rounded-sm border border-ink/20 bg-mist/90 px-4 py-2 text-sm text-ink shadow-sm"
             >
               <div className="flex items-center justify-between gap-3">
                 <span>{toast.message}</span>
@@ -50,7 +50,7 @@ export default function HostLobbyNotifications({
         </div>
       )}
 
-      <div className="rounded-sm border border-ink/15 bg-sand px-4 py-3 text-xs text-ink/70">
+      <div className="rounded-sm border border-ink/15 bg-mist/90 px-4 py-3 text-xs text-ink/70">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-ink">Host alerts</span>

@@ -162,7 +162,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
         <div className="fixed left-4 top-24 z-20 w-[min(92vw,640px)] lg:left-10 lg:top-24">
           <HostLobbyNotifications enabled={isHost} hostUserId={user?.id} />
           <div className="flex flex-col gap-6">
-            <div className="rounded-md border border-white/10 bg-gradient-to-r from-black/70 via-black/40 to-transparent p-7 text-white backdrop-blur-sm">
+            <div className="rounded-md border border-white/10 bg-gradient-to-r from-sand/90 via-mist/70 to-transparent p-7 text-white backdrop-blur-sm">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <p className="text-xs uppercase tracking-[0.4em] text-white/60">
@@ -177,7 +177,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
                       gamertag={lobby.host.gamertag}
                       rank={lobby.host.srLevel ?? 1}
                       nametagColor={lobby.host.nametagColor}
-                      className="bg-black/30"
+                      className="bg-mist/60"
                     />
                   </div>
                 </div>
@@ -238,7 +238,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
                 viewerNametagColor={user.nametagColor}
                 viewerSrLevel={user.srLevel ?? 1}
                 initialMessages={initialMessages}
-                className="border-white/10 bg-gradient-to-b from-black/75 via-black/55 to-black/30 text-white backdrop-blur-sm"
+                className="border-white/10 bg-gradient-to-b from-sand/90 via-mist/80 to-mist/60 text-white backdrop-blur-sm"
               />
             )}
           </div>
@@ -259,7 +259,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
               friendIds={friendIds}
               pendingIds={pendingOutgoingIds}
               slotsTotal={slotsTotal}
-              className="border-white/10 bg-gradient-to-l from-black/60 via-black/35 to-transparent text-white backdrop-blur-sm"
+              className="border-white/10 bg-gradient-to-l from-sand/90 via-mist/70 to-transparent text-white backdrop-blur-sm"
             />
           </div>
         )}

@@ -72,6 +72,17 @@ export default function LobbyChat({
     onMessage: (message) => {
       setMessages((prev) => {
         if (prev.some((item) => item.id === message.id)) return prev;
+        const tempIndex = prev.findIndex(
+          (item) =>
+            item.senderUserId === viewerId &&
+            item.status === "sending" &&
+            item.body === message.body
+        );
+        if (tempIndex >= 0) {
+          const next = [...prev];
+          next[tempIndex] = { ...message, status: "sent" };
+          return next;
+        }
         return [...prev, message];
       });
     },
@@ -201,9 +212,7 @@ export default function LobbyChat({
           status: "sent",
         };
         setMessages((prev) =>
-          prev.map((item) =>
-            item.id === tempId ? resolvedMessage : item
-          )
+          prev.map((item) => (item.id === tempId ? resolvedMessage : item))
         );
       } else {
         await loadMessages();
@@ -255,14 +264,14 @@ export default function LobbyChat({
   };
 
   const baseClass =
-    "rounded-md border border-white/10 bg-black/40 p-6 backdrop-blur-sm";
+    "rounded-md border border-white/10 bg-mist/80 p-6 backdrop-blur-sm";
 
   return (
     <section className={`${baseClass} ${className ?? ""}`}>
       <h2 className="text-lg font-semibold text-white">Lobby chat</h2>
       <div
         ref={listRef}
-        className="scrollbar-dark mt-4 max-h-80 space-y-3 overflow-y-auto rounded-sm border border-white/10 bg-black/30 p-3 text-sm text-white/80"
+        className="scrollbar-dark mt-4 max-h-80 space-y-3 overflow-y-auto rounded-sm border border-white/10 bg-mist/70 p-3 text-sm text-white/80"
       >
         {sortedMessages.length === 0 && (
           <p className="text-xs text-white/60">No messages yet.</p>
@@ -278,7 +287,7 @@ export default function LobbyChat({
             <div
               key={message.id}
               className={`overflow-hidden rounded-sm border border-white/10 px-3 py-2 ${
-                message.senderUserId === viewerId ? "bg-black/30" : "bg-black/20"
+                message.senderUserId === viewerId ? "bg-sand/60" : "bg-mist/60"
               }`}
             >
               <div className="flex min-w-0 items-center justify-between gap-2 text-xs text-white/60">
@@ -331,7 +340,7 @@ export default function LobbyChat({
           value={ui.body}
           onChange={handleInputChange}
           placeholder="Send a message"
-          className="flex-1 rounded-sm border border-white/10 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-white/40"
+          className="flex-1 rounded-sm border border-white/10 bg-mist/70 px-3 py-2 text-sm text-white placeholder:text-white/40"
         />
         <button
           type="submit"

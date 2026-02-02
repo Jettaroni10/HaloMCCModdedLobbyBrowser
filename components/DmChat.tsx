@@ -77,6 +77,17 @@ export default function DmChat({
     onMessage: (message) => {
       setMessages((prev) => {
         if (prev.some((item) => item.id === message.id)) return prev;
+        const tempIndex = prev.findIndex(
+          (item) =>
+            item.senderUserId === viewerId &&
+            item.status === "sending" &&
+            item.body === message.body
+        );
+        if (tempIndex >= 0) {
+          const next = [...prev];
+          next[tempIndex] = { ...message, status: "sent" };
+          return next;
+        }
         return [...prev, message];
       });
     },
@@ -207,9 +218,7 @@ export default function DmChat({
           status: "sent",
         };
         setMessages((prev) =>
-          prev.map((item) =>
-            item.id === tempId ? resolvedMessage : item
-          )
+          prev.map((item) => (item.id === tempId ? resolvedMessage : item))
         );
       } else {
         await loadMessages();

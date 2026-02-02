@@ -44,7 +44,7 @@ export default function LobbyRoster({
 
   return (
     <section
-      className={`rounded-md border border-white/10 bg-black/40 p-6 backdrop-blur-sm ${
+      className={`rounded-md border border-white/10 bg-mist/80 p-6 backdrop-blur-sm ${
         className ?? ""
       }`}
       style={{ height: totalHeight }}
@@ -64,7 +64,7 @@ export default function LobbyRoster({
                 <div className="w-8 text-center text-xs font-semibold text-white/45 tabular-nums">
                   #{slotNumber}
                 </div>
-                <div className="flex h-10 min-w-0 flex-1 items-center rounded-sm border border-white/10 px-3 text-sm font-semibold text-white/45">
+                <div className="flex h-10 min-w-0 flex-1 items-center rounded-sm border border-white/10 bg-sand/60 px-3 text-sm font-semibold text-white/45">
                   Empty
                 </div>
               </div>
@@ -84,7 +84,7 @@ export default function LobbyRoster({
                   gamertag={member.gamertag}
                   rank={member.srLevel}
                   nametagColor={member.nametagColor}
-                  className="h-10 flex-1"
+                  className="h-10 flex-1 bg-sand/60"
                 />
                 {viewerUserId && member.userId !== viewerUserId && (
                   <RosterFriendButton

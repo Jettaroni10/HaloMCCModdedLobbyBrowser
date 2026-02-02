@@ -4,6 +4,7 @@ import HostNavLink from "@/components/HostNavLink";
 import HostNotificationToggle from "@/components/HostNotificationToggle";
 import SocialRankBadge from "@/components/rank/SocialRankBadge";
 import { clampRank } from "@/lib/ranks";
+import SignOutButton from "@/components/auth/SignOutButton";
 
 type SiteHeaderProps = {
   user: SessionUser | null;
@@ -64,14 +65,7 @@ export default function SiteHeader({ user, isAdmin }: SiteHeaderProps) {
                   sr{clampRank(user.srLevel)}
                 </span>
               </Link>
-              <form action="/api/auth/logout" method="post">
-                <button
-                  type="submit"
-                  className="rounded-sm border border-ink/20 px-4 py-1.5 text-ink hover:border-ink/40"
-                >
-                  Sign out
-                </button>
-              </form>
+              <SignOutButton />
             </>
           ) : (
             <>

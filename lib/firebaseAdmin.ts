@@ -59,7 +59,7 @@ function loadServiceAccount(): FirebaseServiceAccount {
   };
 }
 
-function getAdminApp() {
+export function getAdminApp() {
   if (admin.apps.length > 0) {
     return admin.app();
   }
@@ -79,4 +79,8 @@ export function getBucket() {
   const bucketName = getBucketName();
   getAdminApp();
   return admin.storage().bucket(bucketName);
+}
+
+export function getAdminAuth() {
+  return getAdminApp().auth();
 }

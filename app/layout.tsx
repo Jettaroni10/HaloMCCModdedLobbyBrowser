@@ -6,6 +6,7 @@ import SiteFooter from "@/components/SiteFooter";
 import HostNotificationsProvider from "@/components/HostNotificationsProvider";
 import AnalyticsLoader from "@/components/analytics/AnalyticsLoader";
 import AnalyticsTracker from "@/components/analytics/AnalyticsTracker";
+import AuthProvider from "@/components/auth/AuthProvider";
 
 export const metadata: Metadata = {
   title: "Customs on the Ring",
@@ -26,13 +27,15 @@ export default async function RootLayout({
       <body className="antialiased">
         <AnalyticsLoader />
         <AnalyticsTracker />
-        <HostNotificationsProvider hostUserId={user?.id ?? null}>
-          <div className="flex min-h-screen flex-col">
-            <SiteHeader user={user} isAdmin={isAdmin} />
-            <main className="flex-1">{children}</main>
-            <SiteFooter />
-          </div>
-        </HostNotificationsProvider>
+        <AuthProvider>
+          <HostNotificationsProvider hostUserId={user?.id ?? null}>
+            <div className="flex min-h-screen flex-col">
+              <SiteHeader user={user} isAdmin={isAdmin} />
+              <main className="flex-1">{children}</main>
+              <SiteFooter />
+            </div>
+          </HostNotificationsProvider>
+        </AuthProvider>
       </body>
     </html>
   );

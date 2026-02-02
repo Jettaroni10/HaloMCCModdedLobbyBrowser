@@ -89,6 +89,7 @@ enum ConversationType {
 
 model User {
   id              String           @id @default(uuid())
+  firebaseUid     String?          @unique
   email           String           @unique
   gamertag        String           @unique
   handle          String?          @unique

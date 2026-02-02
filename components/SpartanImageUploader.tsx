@@ -79,13 +79,46 @@ export default function SpartanImageUploader({
         objectPath: string;
       };
 
-      const uploadResult = await fetch(uploadPayload.uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": prepared.type },
-        body: prepared,
-      });
-      if (!uploadResult.ok) {
-        setError("Upload failed. Check storage settings.");
+      const bypassSigned =
+        typeof window !== "undefined" && window.location.hostname === "localhost";
+      let uploadedViaSigned = false;
+      if (!bypassSigned) {
+        try {
+          const uploadResult = await fetch(uploadPayload.uploadUrl, {
+            method: "PUT",
+            headers: { "Content-Type": prepared.type },
+            body: prepared,
+          });
+          uploadedViaSigned = uploadResult.ok;
+        } catch {
+          uploadedViaSigned = false;
+        }
+      }
+
+      if (!uploadedViaSigned) {
+        const formData = new FormData();
+        formData.append("file", prepared, prepared.name);
+        const fallbackResponse = await fetch(
+          "/api/users/me/spartan-image/upload",
+          {
+            method: "POST",
+            body: formData,
+          }
+        );
+        if (!fallbackResponse.ok) {
+          const payload = (await fallbackResponse.json().catch(() => null)) as
+            | { error?: string }
+            | null;
+          setError(payload?.error ?? "Upload failed. Check storage settings.");
+          return;
+        }
+        const payload = (await fallbackResponse.json().catch(() => null)) as
+          | { url?: string | null }
+          | null;
+        setCurrentUrl(payload?.url ?? null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
         return;
       }
 

@@ -1,13 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import {
   createBackendSession,
   signInWithEmail,
-  signInWithFacebook,
   signInWithGoogle,
-  signInWithMicrosoft,
 } from "@/lib/firebaseAuth";
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -18,6 +17,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   "auth/popup-blocked": "Popup blocked. Allow popups and try again.",
   "auth/account-exists-with-different-credential":
     "Account exists with another sign-in method.",
+  provider: "Unsupported sign-in provider.",
 };
 
 function resolveFirebaseError(error: unknown) {
@@ -45,6 +45,7 @@ function resolveFirebaseError(error: unknown) {
 }
 
 export default function LoginForm() {
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -52,6 +53,13 @@ export default function LoginForm() {
 
   const handleSession = async (idToken: string) => {
     const result = await createBackendSession(idToken);
+    if (result.needsGamertag) {
+      const nextParam = searchParams?.get("next") || "/browse";
+      window.location.href = `/complete-profile?next=${encodeURIComponent(
+        nextParam
+      )}`;
+      return;
+    }
     window.location.href = result.redirectTo ?? "/browse";
   };
 
@@ -101,22 +109,6 @@ export default function LoginForm() {
           className="w-full rounded-sm border border-ink/20 bg-mist px-4 py-2 text-sm font-semibold text-ink hover:border-ink/40"
         >
           Continue with Google
-        </button>
-        <button
-          type="button"
-          onClick={() => handleProvider(signInWithFacebook)}
-          disabled={loading}
-          className="w-full rounded-sm border border-ink/20 bg-mist px-4 py-2 text-sm font-semibold text-ink hover:border-ink/40"
-        >
-          Continue with Facebook
-        </button>
-        <button
-          type="button"
-          onClick={() => handleProvider(signInWithMicrosoft)}
-          disabled={loading}
-          className="w-full rounded-sm border border-ink/20 bg-mist px-4 py-2 text-sm font-semibold text-ink hover:border-ink/40"
-        >
-          Continue with Microsoft / Xbox
         </button>
       </div>
 

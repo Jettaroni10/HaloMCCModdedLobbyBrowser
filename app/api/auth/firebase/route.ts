@@ -3,7 +3,7 @@ import { randomBytes } from "crypto";
 import { prisma } from "@/lib/db";
 import { createSessionToken, getSessionCookieName } from "@/lib/auth";
 import { hashPassword } from "@/lib/password";
-import { normalizeText } from "@/lib/validation";
+import { isValidGamertag, normalizeText } from "@/lib/validation";
 import { getAdminAuth } from "@/lib/firebaseAdmin";
 
 export const runtime = "nodejs";
@@ -59,6 +59,25 @@ export async function POST(request: Request) {
   }
 
   const requestedGamertag = normalizeText(body.gamertag, 24);
+  const signInProvider =
+    typeof decoded.firebase?.sign_in_provider === "string"
+      ? decoded.firebase.sign_in_provider
+      : "";
+
+  if (
+    signInProvider &&
+    !["password", "google.com"].includes(signInProvider)
+  ) {
+    return jsonError("Unsupported sign-in provider.", 400, "provider");
+  }
+
+  if (requestedGamertag && !isValidGamertag(requestedGamertag)) {
+    return jsonError(
+      "Gamertag must be 3-24 characters and use letters, numbers, spaces, or underscore.",
+      400,
+      "gamertag_invalid"
+    );
+  }
 
   let user = await prisma.user.findFirst({
     where: {
@@ -82,6 +101,13 @@ export async function POST(request: Request) {
   }
 
   if (!user) {
+    if (signInProvider === "password" && !requestedGamertag) {
+      return jsonError(
+        "Gamertag is required for email sign up.",
+        400,
+        "gamertag_required"
+      );
+    }
     let needsGamertag = false;
     let gamertag = requestedGamertag;
     if (!gamertag) {
@@ -146,9 +172,7 @@ export async function POST(request: Request) {
   }
 
   const redirectTo =
-    !user.gamertag || user.needsGamertag
-      ? "/settings/profile?needsGamertag=1"
-      : "/browse";
+    !user.gamertag || user.needsGamertag ? "/complete-profile" : "/browse";
 
   const response = NextResponse.json({
     ok: true,

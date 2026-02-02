@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import {
   createBackendSession,
-  signInWithFacebook,
   signInWithGoogle,
-  signInWithMicrosoft,
   signUpWithEmail,
   signOutFirebase,
 } from "@/lib/firebaseAuth";
@@ -18,6 +17,10 @@ const ERROR_MESSAGES: Record<string, string> = {
   "auth/popup-blocked": "Popup blocked. Allow popups and try again.",
   "auth/account-exists-with-different-credential":
     "Account exists with another sign-in method.",
+  gamertag_required: "Gamertag is required for email sign up.",
+  gamertag_taken: "That gamertag is already in use.",
+  gamertag_invalid:
+    "Gamertag must be 3-24 characters and use letters, numbers, spaces, or underscore.",
 };
 
 function resolveFirebaseError(error: unknown) {
@@ -35,6 +38,7 @@ function resolveFirebaseError(error: unknown) {
 }
 
 export default function SignupForm() {
+  const searchParams = useSearchParams();
   const [gamertag, setGamertag] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -43,6 +47,13 @@ export default function SignupForm() {
 
   const handleSession = async (idToken: string, tag?: string) => {
     const result = await createBackendSession(idToken, tag);
+    if (result.needsGamertag) {
+      const nextParam = searchParams?.get("next") || "/browse";
+      window.location.href = `/complete-profile?next=${encodeURIComponent(
+        nextParam
+      )}`;
+      return;
+    }
     window.location.href = result.redirectTo ?? "/browse";
   };
 
@@ -96,22 +107,6 @@ export default function SignupForm() {
           className="w-full rounded-sm border border-ink/20 bg-mist px-4 py-2 text-sm font-semibold text-ink hover:border-ink/40"
         >
           Continue with Google
-        </button>
-        <button
-          type="button"
-          onClick={() => handleProvider(signInWithFacebook)}
-          disabled={loading}
-          className="w-full rounded-sm border border-ink/20 bg-mist px-4 py-2 text-sm font-semibold text-ink hover:border-ink/40"
-        >
-          Continue with Facebook
-        </button>
-        <button
-          type="button"
-          onClick={() => handleProvider(signInWithMicrosoft)}
-          disabled={loading}
-          className="w-full rounded-sm border border-ink/20 bg-mist px-4 py-2 text-sm font-semibold text-ink hover:border-ink/40"
-        >
-          Continue with Microsoft / Xbox
         </button>
       </div>
 

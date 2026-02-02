@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { normalizeHandleText } from "@/lib/validation";
+import { isValidGamertag, normalizeHandleText } from "@/lib/validation";
 import { isReachColor } from "@/lib/reach-colors";
 import { absoluteUrl } from "@/lib/url";
 import { HALO_GAMES } from "@/data/haloGames";
@@ -46,6 +46,15 @@ export async function POST(request: Request) {
   if (!gamertag) {
     return NextResponse.json(
       { error: "Gamertag is required." },
+      { status: 400 }
+    );
+  }
+  if (!isValidGamertag(gamertag)) {
+    return NextResponse.json(
+      {
+        error:
+          "Gamertag must be 3-24 characters and use letters, numbers, spaces, or underscore.",
+      },
       { status: 400 }
     );
   }

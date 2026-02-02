@@ -1,4 +1,5 @@
 const CONTROL_CHARS = /[\u0000-\u001F\u007F]/g;
+const GAMERTAG_ALLOWED = /^[A-Za-z0-9_ ]+$/;
 
 export function normalizeHandleText(value: unknown, maxLength = 64) {
   if (typeof value !== "string") {
@@ -9,6 +10,14 @@ export function normalizeHandleText(value: unknown, maxLength = 64) {
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, maxLength);
+}
+
+export function isValidGamertag(value: string, minLength = 3, maxLength = 24) {
+  if (!value) return false;
+  if (value.length < minLength || value.length > maxLength) {
+    return false;
+  }
+  return GAMERTAG_ALLOWED.test(value);
 }
 
 export function normalizeText(value: unknown, maxLength: number) {

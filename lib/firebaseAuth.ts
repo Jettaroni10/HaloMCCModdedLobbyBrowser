@@ -2,8 +2,6 @@
 
 import {
   GoogleAuthProvider,
-  FacebookAuthProvider,
-  OAuthProvider,
   browserLocalPersistence,
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
@@ -32,22 +30,6 @@ export async function signInWithGoogle(): Promise<UserCredential> {
   const auth = getAuthOrThrow();
   await ensurePersistence(auth);
   const provider = new GoogleAuthProvider();
-  return signInWithPopup(auth, provider);
-}
-
-export async function signInWithFacebook(): Promise<UserCredential> {
-  const auth = getAuthOrThrow();
-  await ensurePersistence(auth);
-  const provider = new FacebookAuthProvider();
-  provider.addScope("email");
-  return signInWithPopup(auth, provider);
-}
-
-export async function signInWithMicrosoft(): Promise<UserCredential> {
-  const auth = getAuthOrThrow();
-  await ensurePersistence(auth);
-  const provider = new OAuthProvider("microsoft.com");
-  provider.setCustomParameters({ prompt: "select_account" });
   return signInWithPopup(auth, provider);
 }
 

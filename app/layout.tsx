@@ -7,6 +7,7 @@ import HostNotificationsProvider from "@/components/HostNotificationsProvider";
 import AnalyticsLoader from "@/components/analytics/AnalyticsLoader";
 import AnalyticsTracker from "@/components/analytics/AnalyticsTracker";
 import AuthProvider from "@/components/auth/AuthProvider";
+import GamertagGate from "@/components/auth/GamertagGate";
 
 export const metadata: Metadata = {
   title: "Customs on the Ring",
@@ -28,6 +29,7 @@ export default async function RootLayout({
         <AnalyticsLoader />
         <AnalyticsTracker />
         <AuthProvider>
+          <GamertagGate user={user} />
           <HostNotificationsProvider hostUserId={user?.id ?? null}>
             <div className="flex min-h-screen flex-col">
               <SiteHeader user={user} isAdmin={isAdmin} />

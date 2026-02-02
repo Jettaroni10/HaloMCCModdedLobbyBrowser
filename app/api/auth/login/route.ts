@@ -91,9 +91,7 @@ export async function POST(request: Request) {
   }
 
   const redirectPath =
-    !user.gamertag || user.needsGamertag
-      ? "/settings/profile?needsGamertag=1"
-      : "/browse";
+    !user.gamertag || user.needsGamertag ? "/complete-profile" : "/browse";
   const response = NextResponse.redirect(absoluteUrl(request, redirectPath));
   response.cookies.set(getSessionCookieName(), session.token, {
     httpOnly: true,

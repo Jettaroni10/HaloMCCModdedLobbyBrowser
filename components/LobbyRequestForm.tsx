@@ -314,10 +314,10 @@ export default function LobbyRequestForm({
               Set your gamertag in profile settings to request an invite.
             </p>
             <a
-              href="/settings/profile?needsGamertag=1"
+              href="/complete-profile"
               className="mt-3 inline-flex rounded-sm bg-ink px-4 py-2 text-xs font-semibold text-sand"
             >
-              Update profile
+              Set gamertag
             </a>
           </div>
         ) : (

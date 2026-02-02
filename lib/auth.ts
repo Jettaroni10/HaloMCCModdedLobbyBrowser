@@ -137,7 +137,7 @@ export async function requireAuth(options?: { requireGamertag?: boolean }) {
   }
   const requireGamertag = options?.requireGamertag ?? true;
   if (requireGamertag && (!user.gamertag || user.needsGamertag)) {
-    redirect("/settings/profile?needsGamertag=1");
+    redirect("/complete-profile");
   }
   return user;
 }

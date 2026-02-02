@@ -17,17 +17,18 @@ function parseUnread(value: string | null) {
 
 export default function HostNavLink({ hostUserId }: HostNavLinkProps) {
   const [count, setCount] = useState(0);
+  const unreadKey = hostUserId ? `${UNREAD_KEY}:${hostUserId}` : UNREAD_KEY;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    setCount(parseUnread(window.localStorage.getItem(UNREAD_KEY)));
-  }, []);
+    setCount(parseUnread(window.localStorage.getItem(unreadKey)));
+  }, [unreadKey]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     const handleStorage = (event: StorageEvent) => {
-      if (event.key === UNREAD_KEY) {
+      if (event.key === unreadKey) {
         setCount(parseUnread(event.newValue));
       }
     };

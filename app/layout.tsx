@@ -3,6 +3,7 @@ import "./globals.css";
 import { getCurrentUser, isAdminUser } from "@/lib/auth";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
+import HostNotificationsProvider from "@/components/HostNotificationsProvider";
 
 export const metadata: Metadata = {
   title: "Customs on the Ring",
@@ -21,11 +22,13 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        <div className="flex min-h-screen flex-col">
-          <SiteHeader user={user} isAdmin={isAdmin} />
-          <main className="flex-1">{children}</main>
-          <SiteFooter />
-        </div>
+        <HostNotificationsProvider hostUserId={user?.id ?? null}>
+          <div className="flex min-h-screen flex-col">
+            <SiteHeader user={user} isAdmin={isAdmin} />
+            <main className="flex-1">{children}</main>
+            <SiteFooter />
+          </div>
+        </HostNotificationsProvider>
       </body>
     </html>
   );

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { SessionUser } from "@/lib/auth";
 import HostNavLink from "@/components/HostNavLink";
+import HostNotificationToggle from "@/components/HostNotificationToggle";
 import SocialRankBadge from "@/components/rank/SocialRankBadge";
 import { clampRank } from "@/lib/ranks";
 
@@ -35,6 +36,7 @@ export default function SiteHeader({ user, isAdmin }: SiteHeaderProps) {
             Browse
           </Link>
           <HostNavLink hostUserId={user?.id ?? null} />
+          <HostNotificationToggle userId={user?.id ?? null} />
           {user && (
             <Link href="/friends" className="hover:text-ink/80">
               Friends

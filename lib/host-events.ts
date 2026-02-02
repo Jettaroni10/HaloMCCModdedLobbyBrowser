@@ -10,7 +10,6 @@ type RequestCreatedPayload = {
     id: string;
     requesterUserId: string;
     requesterHandleText: string;
-    note: string | null;
     confirmedSubscribed: boolean;
     status: "PENDING";
     createdAt: string;

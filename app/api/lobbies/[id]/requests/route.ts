@@ -1,17 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { normalizeText, parseBoolean } from "@/lib/validation";
+import { parseBoolean } from "@/lib/validation";
 import { isRateLimited, recordRateLimitEvent } from "@/lib/rate-limit";
 import { emitRequestCreated } from "@/lib/host-events";
 import { emitLobbyRequestCreated, emitLobbyRosterUpdated } from "@/lib/lobby-events";
 import { addXp, hasXpEvent } from "@/lib/xp";
 import { logPerf } from "@/lib/perf";
 import { absoluteUrl } from "@/lib/url";
-
-const LIMITS = {
-  note: 200,
-};
 
 async function readBody(request: Request) {
   const contentType = request.headers.get("content-type") ?? "";
@@ -47,7 +43,6 @@ export async function POST(
 
     const body = await readBody(request);
     const requesterHandleText = (user.gamertag ?? "").trim();
-    const note = normalizeText(body.note, LIMITS.note);
     const confirmedSubscribed = parseBoolean(body.confirmedSubscribed) ?? false;
     const confirmCancelPending =
       parseBoolean(body.confirmCancelPending) ?? false;
@@ -265,7 +260,6 @@ export async function POST(
         requesterUserId: user.id,
         requesterPlatform: "STEAM",
         requesterHandleText,
-        note: note || null,
         confirmedSubscribed,
       },
     });
@@ -291,7 +285,6 @@ export async function POST(
         id: joinRequest.id,
         requesterUserId: joinRequest.requesterUserId,
         requesterHandleText: joinRequest.requesterHandleText,
-        note: joinRequest.note,
         confirmedSubscribed: joinRequest.confirmedSubscribed,
         status: "PENDING",
         createdAt: joinRequest.createdAt.toISOString(),

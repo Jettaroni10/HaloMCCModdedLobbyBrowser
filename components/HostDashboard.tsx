@@ -2,11 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import ReportForm from "./ReportForm";
-import {
-  useHostEvents,
-  type HostRequestCreatedEvent,
-  type HostLobbyExpiredEvent,
+import type {
+  HostRequestCreatedEvent,
+  HostLobbyExpiredEvent,
+  HostRequestDecidedEvent,
 } from "./useHostEvents";
+import { useHostNotifications } from "./HostNotificationsProvider";
 import Nametag from "@/components/user/Nametag";
 import { resolveNametagColor } from "@/lib/reach-colors";
 
@@ -33,7 +34,6 @@ type JoinRequestSummary = {
   requesterHandleText: string;
   requesterNametagColor?: string | null;
   requesterSrLevel?: number | null;
-  note: string | null;
   confirmedSubscribed: boolean;
   status: "PENDING" | "ACCEPTED" | "DECLINED";
   lobby: {
@@ -88,18 +88,24 @@ export default function HostDashboard({
   const [allRequests, setAllRequests] = useState<JoinRequestSummary[]>(requests);
   const [tab, setTab] = useState<JoinRequestSummary["status"]>("PENDING");
   const [checklist, setChecklist] = useState<InviteChecklist | null>(null);
-  const {
-    toasts,
-    dismissToast,
-    unreadCount,
-    markViewed,
-    muted,
-    setMuted,
-    soundBlocked,
-    enableSound,
-  } = useHostEvents({
-    hostUserId,
-    onRequestCreated: (payload: HostRequestCreatedEvent) => {
+  const { unreadCount, markViewed } = useHostNotifications();
+
+  const filteredRequests = useMemo(
+    () => allRequests.filter((request) => request.status === tab),
+    [allRequests, tab]
+  );
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hostUserId) return;
+    const handleRequestCreated = (event: Event) => {
+      const payload = (event as CustomEvent).detail as
+        | HostRequestCreatedEvent
+        | undefined;
+      if (!payload) return;
       setAllRequests((prev) => {
         if (prev.some((item) => item.id === payload.id)) {
           return prev;
@@ -110,22 +116,31 @@ export default function HostDashboard({
           requesterHandleText: payload.requesterHandleText,
           requesterNametagColor: payload.requesterNametagColor ?? null,
           requesterSrLevel: payload.requesterSrLevel ?? null,
-          note: payload.note ?? null,
           confirmedSubscribed: payload.confirmedSubscribed ?? false,
           status: payload.status ?? "PENDING",
           lobby: payload.lobby,
         };
         return [normalized, ...prev];
       });
-    },
-    onRequestDecided: (payload) => {
+    };
+
+    const handleRequestDecided = (event: Event) => {
+      const payload = (event as CustomEvent).detail as
+        | HostRequestDecidedEvent
+        | undefined;
+      if (!payload) return;
       setAllRequests((prev) =>
         prev.map((item) =>
           item.id === payload.id ? { ...item, status: payload.status } : item
         )
       );
-    },
-    onLobbyExpired: (payload: HostLobbyExpiredEvent) => {
+    };
+
+    const handleLobbyExpired = (event: Event) => {
+      const payload = (event as CustomEvent).detail as
+        | HostLobbyExpiredEvent
+        | undefined;
+      if (!payload) return;
       setActiveLobbies((prev) =>
         prev.map((item) =>
           item.id === payload.id
@@ -133,17 +148,27 @@ export default function HostDashboard({
             : item
         )
       );
-    },
-  });
+    };
 
-  const filteredRequests = useMemo(
-    () => allRequests.filter((request) => request.status === tab),
-    [allRequests, tab]
-  );
+    window.addEventListener("customs:hostRequestCreated", handleRequestCreated);
+    window.addEventListener("customs:hostRequestDecided", handleRequestDecided);
+    window.addEventListener("customs:hostLobbyExpired", handleLobbyExpired);
 
-  useEffect(() => {
-    setHydrated(true);
-  }, []);
+    return () => {
+      window.removeEventListener(
+        "customs:hostRequestCreated",
+        handleRequestCreated
+      );
+      window.removeEventListener(
+        "customs:hostRequestDecided",
+        handleRequestDecided
+      );
+      window.removeEventListener(
+        "customs:hostLobbyExpired",
+        handleLobbyExpired
+      );
+    };
+  }, [hostUserId]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -226,27 +251,6 @@ export default function HostDashboard({
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-      {toasts.length > 0 && (
-        <div className="fixed right-6 top-6 z-50 space-y-2">
-          {toasts.map((toast) => (
-            <div
-              key={toast.id}
-              className="rounded-sm border border-ink/20 bg-sand px-4 py-2 text-sm text-ink shadow-sm"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <span>{toast.message}</span>
-                <button
-                  type="button"
-                  onClick={() => dismissToast(toast.id)}
-                  className="text-xs font-semibold text-ink/60"
-                >
-                  Dismiss
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
       <section className="rounded-md border border-ink/10 bg-sand p-6">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-ink">My Active Lobbies</h2>
@@ -322,26 +326,6 @@ export default function HostDashboard({
               </span>
             )}
           </div>
-          <div className="flex items-center gap-3 text-xs font-semibold text-ink/60">
-            {soundBlocked && !muted && (
-              <button
-                type="button"
-                onClick={enableSound}
-                className="rounded-sm border border-ink/20 px-2 py-1 text-[10px] font-semibold text-ink/70"
-              >
-                🔔 Enable sounds
-              </button>
-            )}
-            <label className="flex items-center gap-2 text-xs font-semibold text-ink/60">
-              <input
-                type="checkbox"
-                checked={muted}
-                onChange={(event) => setMuted(event.target.checked)}
-                className="h-3.5 w-3.5 rounded border-ink/20"
-              />
-              Mute pings
-            </label>
-          </div>
         </div>
         <div className="mt-3 flex gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-ink/50">
           {(["PENDING", "ACCEPTED", "DECLINED"] as const).map((value) => (
@@ -413,9 +397,6 @@ export default function HostDashboard({
                   isSignedIn={true}
                 />
               </div>
-              {request.note && (
-                <p className="mt-2 text-xs text-ink/70">{request.note}</p>
-              )}
               {request.lobby.isModded && (
                 <div className="mt-3 text-xs text-ink/60">
                   Mods: subscribed {request.confirmedSubscribed ? "yes" : "no"}

@@ -10,7 +10,6 @@ export type HostRequestCreatedEvent = {
   requesterGamertag?: string | null;
   requesterNametagColor?: string | null;
   requesterSrLevel?: number | null;
-  note?: string | null;
   confirmedSubscribed?: boolean;
   status?: "PENDING" | "ACCEPTED" | "DECLINED";
   lobby: {
@@ -46,7 +45,6 @@ type HostRequestCreatedEnvelope = {
     id: string;
     requesterUserId: string;
     requesterHandleText: string;
-    note: string | null;
     confirmedSubscribed: boolean;
     status: "PENDING";
     createdAt: string;
@@ -146,6 +144,11 @@ function acquireSoundLock() {
   return true;
 }
 
+function dispatchHostEvent(name: string, detail: unknown) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(name, { detail }));
+}
+
 function normalizeRequestPayload(
   payload: unknown
 ): HostRequestCreatedEvent | null {
@@ -165,7 +168,6 @@ function normalizeRequestPayload(
       requesterGamertag: data.requesterGamertag,
       requesterNametagColor: data.requesterNametagColor ?? null,
       requesterSrLevel: data.requesterSrLevel ?? null,
-      note: data.request.note ?? null,
       confirmedSubscribed: data.request.confirmedSubscribed,
       status: data.request.status,
       lobby: data.request.lobby,
@@ -218,6 +220,7 @@ function normalizeDecidedPayload(
 
 export function useHostEvents(options: UseHostEventsOptions = {}) {
   const { enabled = true, hostUserId } = options;
+  const unreadKey = hostUserId ? `${UNREAD_KEY}:${hostUserId}` : UNREAD_KEY;
   const [toasts, setToasts] = useState<HostToast[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [muted, setMuted] = useState(true);
@@ -255,11 +258,13 @@ export function useHostEvents(options: UseHostEventsOptions = {}) {
     if (storedMute !== null) {
       setMuted(storedMute === "true");
     }
-    const storedUnread = window.localStorage.getItem(UNREAD_KEY);
+    const storedUnread = window.localStorage.getItem(unreadKey);
     if (storedUnread !== null) {
       setUnreadCount(parseUnread(storedUnread));
+    } else {
+      setUnreadCount(0);
     }
-  }, []);
+  }, [unreadKey]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -268,8 +273,8 @@ export function useHostEvents(options: UseHostEventsOptions = {}) {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    window.localStorage.setItem(UNREAD_KEY, String(unreadCount));
-  }, [unreadCount]);
+    window.localStorage.setItem(unreadKey, String(unreadCount));
+  }, [unreadCount, unreadKey]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -281,7 +286,7 @@ export function useHostEvents(options: UseHostEventsOptions = {}) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const handleStorage = (event: StorageEvent) => {
-      if (event.key === UNREAD_KEY) {
+      if (event.key === unreadKey) {
         setUnreadCount(parseUnread(event.newValue));
       }
       if (event.key === MUTE_KEY && event.newValue !== null) {
@@ -290,7 +295,7 @@ export function useHostEvents(options: UseHostEventsOptions = {}) {
     };
     window.addEventListener("storage", handleStorage);
     return () => window.removeEventListener("storage", handleStorage);
-  }, []);
+  }, [unreadKey]);
 
   function enqueueToast(message: string) {
     const id = makeId();
@@ -340,12 +345,13 @@ export function useHostEvents(options: UseHostEventsOptions = {}) {
   useEffect(() => {
     if (!enabled || !hostUserId) return;
     const client = createHostRealtimeClient();
-    const channel = client.channels.get(`host:${hostUserId}`);
+    const channel = client.channels.get(`user:${hostUserId}:notifications`);
 
     const handleMessage = (message: { name?: string; data?: unknown }) => {
       if (message.name === "request_created") {
         const payload = normalizeRequestPayload(message.data);
         if (!payload) return;
+        dispatchHostEvent("customs:hostRequestCreated", payload);
         onRequestCreatedRef.current?.(payload);
         incrementUnread();
         const name =
@@ -359,6 +365,7 @@ export function useHostEvents(options: UseHostEventsOptions = {}) {
       if (message.name === "lobby_expired") {
         const payload = normalizeExpiredPayload(message.data);
         if (!payload) return;
+        dispatchHostEvent("customs:hostLobbyExpired", payload);
         onLobbyExpiredRef.current?.(payload);
         incrementUnread();
         enqueueToast("Lobby expired");
@@ -368,6 +375,7 @@ export function useHostEvents(options: UseHostEventsOptions = {}) {
       if (message.name === "request_decided") {
         const payload = normalizeDecidedPayload(message.data);
         if (!payload) return;
+        dispatchHostEvent("customs:hostRequestDecided", payload);
         onRequestDecidedRef.current?.(payload);
         decrementUnread();
       }

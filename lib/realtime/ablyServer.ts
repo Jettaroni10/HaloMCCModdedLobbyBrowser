@@ -19,8 +19,8 @@ export async function createRealtimeTokenRequest(params: {
 }) {
   const rest = getRestClient();
   const capability: Record<string, ("publish" | "subscribe")[]> = {
-    // Host channel is subscribe-only for the current user.
-    [`host:${params.clientId}`]: ["subscribe"],
+    // Per-user notifications channel (subscribe-only).
+    [`user:${params.clientId}:notifications`]: ["subscribe"],
   };
 
   if (params.lobbyId) {
@@ -68,7 +68,7 @@ export async function publishHostEvent(params: {
   try {
     const rest = getRestClient();
     await rest.channels
-      .get(`host:${params.hostUserId}`)
+      .get(`user:${params.hostUserId}:notifications`)
       .publish(params.event, params.payload);
   } catch (error) {
     console.error("Ably host publish failed", {

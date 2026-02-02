@@ -39,7 +39,6 @@ export default function LobbyRequestForm({
   userGamertag,
   isSignedIn,
 }: LobbyRequestFormProps) {
-  const [note, setNote] = useState("");
   const [subscribedMods, setSubscribedMods] = useState<Record<string, boolean>>(
     {}
   );
@@ -111,7 +110,6 @@ export default function LobbyRequestForm({
         body: JSON.stringify({
           requesterPlatform: "STEAM",
           requesterHandleText: resolvedGamertag,
-          note,
           confirmedSubscribed: readinessOk,
           confirmCancelPending: options?.confirmCancelPending ?? false,
           confirmLeaveOther: options?.confirmLeaveOther ?? false,
@@ -375,21 +373,6 @@ export default function LobbyRequestForm({
               readOnly
               className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm text-ink/80"
             />
-          </label>
-          <label className="block text-sm font-semibold text-ink">
-            Note (optional)
-            <textarea
-              name="note"
-              value={note}
-              onChange={(event) => setNote(event.target.value.slice(0, 200))}
-              rows={3}
-              maxLength={200}
-              placeholder="Availability, voice chat, or setup notes."
-              className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
-            />
-            <span className="mt-1 block text-xs text-ink/50">
-              {note.length}/200
-            </span>
           </label>
           <p className="text-xs text-ink/60">
             By requesting, you consent to the host contacting you via a

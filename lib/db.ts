@@ -45,8 +45,10 @@ const lobbyFields = Array.isArray(dmmf?.modelMap?.Lobby?.fields)
   ? dmmf?.modelMap?.Lobby?.fields
   : [];
 const hasModPackRelation =
-  lobbyFields.some((field) => field.name === "modPackId") &&
-  lobbyFields.some((field) => field.name === "modPack");
+  lobbyFields.length === 0
+    ? true
+    : lobbyFields.some((field) => field.name === "modPackId") &&
+      lobbyFields.some((field) => field.name === "modPack");
 
 export const modPacksSupported =
   hasModPackRelation &&

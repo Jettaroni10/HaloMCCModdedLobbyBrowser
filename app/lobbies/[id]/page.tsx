@@ -245,7 +245,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
         </div>
 
         {canSeeRoster && (
-          <div className="mt-8 px-10 lg:mt-0 lg:fixed lg:right-10 lg:top-24 lg:w-[960px]">
+          <div className="mt-8 px-10 lg:mt-0 lg:fixed lg:right-10 lg:top-24 lg:w-[650px]">
             <LobbyRosterLive
               lobbyId={lobby.id}
               initialRoster={roster.map((member) => ({

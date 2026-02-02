@@ -8,8 +8,7 @@
     </feMerge>
   </filter>
 </defs>
-<rect x="0" y="0" width="128" height="128" fill="#0b0f14"/>
-<path d="M 64 10 L 94 18 L 108 40 L 100 86 L 64 118 L 28 86 L 20 40 L 34 18 Z" fill="#101824" stroke="#d4af37" stroke-width="3"/>
+<path d="M 64 10 L 94 18 L 108 40 L 100 86 L 64 118 L 28 86 L 20 40 L 34 18 Z" fill="#101824" stroke="#d4af37" stroke-width="3" />
 <path d="M 64 10 L 94 18 L 108 40 L 100 86 L 64 118 L 28 86 L 20 40 L 34 18 Z" fill="none" stroke="#8a6a1f" stroke-width="2" opacity="0.9"/>
 <path d="M64 22 L88 30 L98 46 L92 78 L64 104 L36 78 L30 46 L40 30 Z" fill="#162335" opacity="0.9"/>
 <path d="M16 56 L34 48 L30 64 L34 80 L16 72 Z" fill="#1b2b3f" stroke="#d4af37" stroke-width="2" opacity="0.95"/>

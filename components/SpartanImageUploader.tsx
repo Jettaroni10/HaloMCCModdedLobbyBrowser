@@ -27,16 +27,6 @@ export default function SpartanImageUploader({
     setCurrentUrl(initialUrl ?? null);
   }, [initialUrl]);
 
-  async function refreshUrl() {
-    if (!gamertag) return;
-    const response = await fetch(
-      `/api/users/${encodeURIComponent(gamertag)}/spartan-image`
-    );
-    if (!response.ok) return;
-    const payload = (await response.json()) as { url?: string | null };
-    setCurrentUrl(payload.url ?? null);
-  }
-
   async function handleUpload(file: File) {
     if (!ACCEPTED_TYPES.includes(file.type)) {
       setError("Unsupported image format. Use JPG, PNG, or WebP.");

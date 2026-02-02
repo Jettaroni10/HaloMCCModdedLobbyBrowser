@@ -30,7 +30,7 @@ export default function LobbyRoster({
 }: LobbyRosterProps) {
   const friendSet = new Set(friendIds);
   const pendingSet = new Set(pendingIds);
-  const rowHeight = 40;
+  const rowHeight = 48;
   const rowGap = 8;
   const headerAndPadding = 80;
   const totalHeight =
@@ -59,12 +59,12 @@ export default function LobbyRoster({
             return (
               <div
                 key={`slot-${slotNumber}`}
-                className="flex h-10 items-center gap-3"
+                className="flex h-12 items-center gap-3"
               >
-                <div className="w-8 text-center text-xs font-semibold text-white/45 tabular-nums">
+                <div className="w-10 text-center text-sm font-semibold text-white/45 tabular-nums">
                   #{slotNumber}
                 </div>
-                <div className="flex h-10 min-w-0 flex-1 items-center rounded-sm border border-white/10 bg-sand/60 px-3 text-sm font-semibold text-white/45">
+                <div className="flex h-12 min-w-0 flex-1 items-center rounded-sm border border-white/10 bg-sand/60 px-4 text-sm font-semibold text-white/45">
                   Empty
                 </div>
               </div>
@@ -74,9 +74,9 @@ export default function LobbyRoster({
           return (
             <div
               key={`slot-${slotNumber}`}
-              className="flex h-10 items-center gap-3"
+              className="flex h-12 items-center gap-3"
             >
-              <div className="w-8 text-center text-xs font-semibold text-white/70 tabular-nums">
+              <div className="w-10 text-center text-sm font-semibold text-white/70 tabular-nums">
                 #{slotNumber}
               </div>
               <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -84,7 +84,7 @@ export default function LobbyRoster({
                   gamertag={member.gamertag}
                   rank={member.srLevel}
                   nametagColor={member.nametagColor}
-                  className="h-10 flex-1 bg-sand/60"
+                  className="h-12 flex-1 bg-sand/60"
                 />
                 {viewerUserId && member.userId !== viewerUserId && (
                   <RosterFriendButton

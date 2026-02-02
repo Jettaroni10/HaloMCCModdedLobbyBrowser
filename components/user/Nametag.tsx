@@ -1,7 +1,7 @@
 "use client";
 
 import SocialRankBadge from "@/components/rank/SocialRankBadge";
-import { rankToLabel } from "@/lib/ranks";
+import { clampRank } from "@/lib/ranks";
 import { nameplateTextColor, resolveNametagColor } from "@/lib/reach-colors";
 
 type NametagProps = {
@@ -21,10 +21,12 @@ export default function Nametag({
     ? resolveNametagColor(nametagColor)
     : undefined;
   const textColor = resolvedColor ? nameplateTextColor(resolvedColor) : undefined;
+  const rankValue = clampRank(rank);
+  const rankLabel = `sr${rankValue}`;
 
   return (
     <div
-      className={`flex min-w-0 items-center gap-3 rounded-sm border border-white/10 px-3 py-2 ${
+      className={`flex min-w-0 items-center gap-4 rounded-sm border border-white/10 px-4 py-3 ${
         className ?? ""
       }`}
       style={
@@ -33,12 +35,12 @@ export default function Nametag({
           : undefined
       }
     >
-      <SocialRankBadge rank={rank} size={20} />
-      <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+      <SocialRankBadge rank={rankValue} size={26} />
+      <span className="min-w-0 flex-1 truncate text-base font-semibold">
         {gamertag}
       </span>
-      <span className="text-[10px] font-semibold uppercase tracking-[0.2em]">
-        {rankToLabel(rank)}
+      <span className="rounded-sm bg-black/35 px-2 py-0.5 text-xs font-semibold uppercase tracking-[0.18em] text-white/85">
+        {rankLabel}
       </span>
     </div>
   );

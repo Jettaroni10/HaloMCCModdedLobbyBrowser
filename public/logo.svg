@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Mods module">
+  <g fill="none" stroke="#FFFFFF" opacity="0.5" stroke-linecap="square" stroke-linejoin="miter">
+    <path d="
+      M136 176
+      L376 176
+      L404 204
+      L404 336
+      L376 364
+      L136 364
+      L108 336
+      L108 204
+      Z"
+      stroke-width="20"/>
+    <path d="M136 176 L164 176 M376 176 L348 176
+             M136 364 L164 364 M376 364 L348 364"
+          stroke-width="12"/>
+    <path d="M176 224 H336" stroke-width="16"/>
+    <path d="M176 272 H304" stroke-width="16"/>
+    <path d="M176 320 H256" stroke-width="16"/>
+    <path d="M108 240 H88 M108 304 H88
+             M404 240 H424 M404 304 H424"
+          stroke-width="12"/>
+    <rect x="336" y="300" width="28" height="28" stroke-width="10"/>
+  </g>
+</svg>

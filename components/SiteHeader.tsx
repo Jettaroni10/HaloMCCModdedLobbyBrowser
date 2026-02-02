@@ -14,8 +14,12 @@ export default function SiteHeader({ user, isAdmin }: SiteHeaderProps) {
     <header className="border-b border-ink/10 bg-sand/80 backdrop-blur">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-sm bg-clay text-ink flex items-center justify-center font-semibold">
-            CR
+          <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-clay">
+            <img
+              src="/logo.svg"
+              alt="Customs on the Ring logo"
+              className="h-7 w-7"
+            />
           </div>
           <div>
             <p className="text-sm uppercase tracking-[0.3em] text-ink/50">

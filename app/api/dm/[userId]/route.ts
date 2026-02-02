@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { addXp, countXpEvents } from "@/lib/xp";
 import { publishDmEvent } from "@/lib/realtime/ablyServer";
-import { filterProfanity, isOnlyProfanity } from "@/lib/profanity";
+import { filterProfanity } from "@/lib/profanity";
 
 const MESSAGE_LIMIT = 500;
 
@@ -132,12 +132,6 @@ export async function POST(
     );
   }
   const filteredBody = filterProfanity(messageBody);
-  if (isOnlyProfanity(messageBody, filteredBody)) {
-    return NextResponse.json(
-      { error: "Message contains only blocked words." },
-      { status: 400 }
-    );
-  }
 
   const conversation = await ensureDmConversation(user.id, targetId);
   await prisma.conversationParticipant.createMany({

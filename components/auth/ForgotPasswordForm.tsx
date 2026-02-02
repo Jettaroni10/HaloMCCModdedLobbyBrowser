@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { sendPasswordReset } from "@/lib/firebaseAuth";
+import { isFirebaseConfigured } from "@/lib/firebaseClient";
 
 const ERROR_MESSAGES: Record<string, string> = {
   "auth/invalid-email": "Enter a valid email address.",
@@ -18,13 +19,19 @@ function resolveFirebaseError(error: unknown) {
     typeof (error as { code?: string }).code === "string"
       ? (error as { code: string }).code
       : null;
+  const message =
+    error instanceof Error && error.message
+      ? error.message
+      : null;
   return (
     (code && ERROR_MESSAGES[code]) ||
+    message ||
     "Password reset failed. Please try again."
   );
 }
 
 export default function ForgotPasswordForm() {
+  const firebaseReady = isFirebaseConfigured();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +40,10 @@ export default function ForgotPasswordForm() {
   const handleReset = async (event: React.FormEvent) => {
     event.preventDefault();
     if (loading) return;
+    if (!firebaseReady) {
+      setError("Firebase auth is not configured.");
+      return;
+    }
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -80,7 +91,7 @@ export default function ForgotPasswordForm() {
         </label>
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || !firebaseReady}
           className="w-full rounded-sm bg-ink px-4 py-2 text-sm font-semibold text-sand hover:bg-ink/90"
         >
           {loading ? "Sending..." : "Send reset link"}

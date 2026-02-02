@@ -9,6 +9,7 @@ import {
   signUpWithEmail,
   signOutFirebase,
 } from "@/lib/firebaseAuth";
+import { isFirebaseConfigured } from "@/lib/firebaseClient";
 
 const ERROR_MESSAGES: Record<string, string> = {
   "auth/email-already-in-use": "That email is already in use.",
@@ -31,14 +32,23 @@ function resolveFirebaseError(error: unknown) {
     typeof (error as { code?: string }).code === "string"
       ? (error as { code: string }).code
       : null;
+  const message =
+    error instanceof Error && error.message
+      ? error.message
+      : null;
   if (code === "gamertag_taken") {
     return "That gamertag is already in use.";
   }
-  return (code && ERROR_MESSAGES[code]) || "Sign up failed. Please try again.";
+  return (
+    (code && ERROR_MESSAGES[code]) ||
+    message ||
+    "Sign up failed. Please try again."
+  );
 }
 
 export default function SignupForm() {
   const searchParams = useSearchParams();
+  const firebaseReady = isFirebaseConfigured();
   const [gamertag, setGamertag] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -60,6 +70,10 @@ export default function SignupForm() {
   const handleEmailSignUp = async (event: React.FormEvent) => {
     event.preventDefault();
     if (loading) return;
+    if (!firebaseReady) {
+      setError("Firebase auth is not configured.");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -79,6 +93,10 @@ export default function SignupForm() {
     action: () => Promise<{ user: { getIdToken(): Promise<string> } }>
   ) => {
     if (loading) return;
+    if (!firebaseReady) {
+      setError("Firebase auth is not configured.");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -103,7 +121,7 @@ export default function SignupForm() {
         <button
           type="button"
           onClick={() => handleProvider(signInWithGoogle)}
-          disabled={loading}
+          disabled={loading || !firebaseReady}
           className="w-full rounded-sm border border-ink/20 bg-mist px-4 py-2 text-sm font-semibold text-ink hover:border-ink/40"
         >
           Continue with Google
@@ -155,7 +173,7 @@ export default function SignupForm() {
         </label>
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || !firebaseReady}
           className="w-full rounded-sm bg-ink px-4 py-2 text-sm font-semibold text-sand hover:bg-ink/90"
         >
           {loading ? "Creating account..." : "Create account"}

@@ -8,6 +8,7 @@ import {
   signInWithEmail,
   signInWithGoogle,
 } from "@/lib/firebaseAuth";
+import { isFirebaseConfigured } from "@/lib/firebaseClient";
 
 const ERROR_MESSAGES: Record<string, string> = {
   "auth/invalid-email": "Enter a valid email address.",
@@ -28,6 +29,10 @@ function resolveFirebaseError(error: unknown) {
     typeof (error as { code?: string }).code === "string"
       ? (error as { code: string }).code
       : null;
+  const message =
+    error instanceof Error && error.message
+      ? error.message
+      : null;
   const status =
     typeof error === "object" &&
     error &&
@@ -41,11 +46,16 @@ function resolveFirebaseError(error: unknown) {
   if (code === "account_conflict") {
     return "Account exists with another sign-in method.";
   }
-  return (code && ERROR_MESSAGES[code]) || "Sign in failed. Please try again.";
+  return (
+    (code && ERROR_MESSAGES[code]) ||
+    message ||
+    "Sign in failed. Please try again."
+  );
 }
 
 export default function LoginForm() {
   const searchParams = useSearchParams();
+  const firebaseReady = isFirebaseConfigured();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -66,6 +76,10 @@ export default function LoginForm() {
   const handleEmailSignIn = async (event: React.FormEvent) => {
     event.preventDefault();
     if (loading) return;
+    if (!firebaseReady) {
+      setError("Firebase auth is not configured.");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -79,8 +93,14 @@ export default function LoginForm() {
     }
   };
 
-  const handleProvider = async (action: () => Promise<{ user: { getIdToken(): Promise<string> } }>) => {
+  const handleProvider = async (
+    action: () => Promise<{ user: { getIdToken(): Promise<string> } }>
+  ) => {
     if (loading) return;
+    if (!firebaseReady) {
+      setError("Firebase auth is not configured.");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -105,7 +125,7 @@ export default function LoginForm() {
         <button
           type="button"
           onClick={() => handleProvider(signInWithGoogle)}
-          disabled={loading}
+          disabled={loading || !firebaseReady}
           className="w-full rounded-sm border border-ink/20 bg-mist px-4 py-2 text-sm font-semibold text-ink hover:border-ink/40"
         >
           Continue with Google

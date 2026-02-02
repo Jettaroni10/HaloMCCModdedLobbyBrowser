@@ -23,7 +23,36 @@ export const prisma =
     log: ["error", "warn"],
   });
 
-export const modPacksSupported = Boolean((prisma as typeof prisma & { modPack?: unknown }).modPack);
+const modPackDelegates = prisma as typeof prisma & {
+  mod?: { findFirst?: unknown };
+  modPack?: { findFirst?: unknown };
+  modPackMod?: { findFirst?: unknown };
+};
+
+const dmmf = (prisma as { _dmmf?: { modelMap?: Record<string, unknown> } })
+  ?._dmmf as
+  | {
+      modelMap?: Record<
+        string,
+        {
+          fields?: Array<{ name?: string }>;
+        }
+      >;
+    }
+  | undefined;
+
+const lobbyFields = Array.isArray(dmmf?.modelMap?.Lobby?.fields)
+  ? dmmf?.modelMap?.Lobby?.fields
+  : [];
+const hasModPackRelation =
+  lobbyFields.some((field) => field.name === "modPackId") &&
+  lobbyFields.some((field) => field.name === "modPack");
+
+export const modPacksSupported =
+  hasModPackRelation &&
+  typeof modPackDelegates.mod?.findFirst === "function" &&
+  typeof modPackDelegates.modPack?.findFirst === "function" &&
+  typeof modPackDelegates.modPackMod?.findFirst === "function";
 
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;

@@ -14,6 +14,7 @@ type MapImageUploaderProps = {
 export default function MapImageUploader({ lobbyId }: MapImageUploaderProps) {
   const [currentUrl, setCurrentUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -44,6 +45,7 @@ export default function MapImageUploader({ lobbyId }: MapImageUploaderProps) {
     }
 
     setError(null);
+    setSuccess(null);
     setBusy(true);
     try {
       const prepared = await downscaleImageFile(file);
@@ -64,6 +66,7 @@ export default function MapImageUploader({ lobbyId }: MapImageUploaderProps) {
         | { url?: string | null }
         | null;
       setCurrentUrl(payload?.url ?? null);
+      setSuccess("Image uploaded.");
 
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
@@ -85,6 +88,7 @@ export default function MapImageUploader({ lobbyId }: MapImageUploaderProps) {
         return;
       }
       setCurrentUrl(null);
+      setSuccess("Image removed.");
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -136,6 +140,9 @@ export default function MapImageUploader({ lobbyId }: MapImageUploaderProps) {
           </span>
         )}
         {error && <span className="text-xs text-clay">{error}</span>}
+        {success && !error && (
+          <span className="text-xs text-ink/70">{success}</span>
+        )}
       </div>
     </div>
   );

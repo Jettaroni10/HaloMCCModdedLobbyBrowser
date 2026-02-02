@@ -86,7 +86,7 @@ export default function LobbyRoster({
                   nametagColor={member.nametagColor}
                   className="h-12 flex-1 bg-sand/60"
                 />
-                {viewerUserId && member.userId !== viewerUserId && (
+                {viewerUserId && member.userId !== viewerUserId ? (
                   <RosterFriendButton
                     targetUserId={member.userId}
                     initialState={
@@ -97,6 +97,8 @@ export default function LobbyRoster({
                         : "available"
                     }
                   />
+                ) : (
+                  <div className="h-10 w-10" />
                 )}
               </div>
             </div>

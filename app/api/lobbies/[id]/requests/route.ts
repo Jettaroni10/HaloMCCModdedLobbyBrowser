@@ -72,7 +72,7 @@ export async function POST(
         lobby.workshopItemUrls.length > 0;
       if (hasMods && !confirmedSubscribed) {
         return NextResponse.json(
-          { error: "Please confirm mod subscription before requesting." },
+          { error: "Please confirm mod readiness before requesting." },
           { status: 400 }
         );
       }

@@ -118,7 +118,7 @@ export async function POST(request: Request) {
   }>;
 
   if (normalizedMods.length === 0) {
-    return NextResponse.json({ error: "Valid workshop URLs required." }, { status: 400 });
+    return NextResponse.json({ error: "Valid mod URLs required." }, { status: 400 });
   }
 
   const pack = await prisma.$transaction(async (tx) => {

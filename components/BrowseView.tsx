@@ -109,7 +109,7 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
       : 0;
     const legacyModCount =
       (lobby.workshopCollectionUrl ? 1 : 0) + lobby.workshopItemUrls.length;
-    const modCount = requiredModsFromPack || legacyModCount;
+    const modCount = lobby.isModded ? requiredModsFromPack || legacyModCount : 0;
     return {
       ...lobby,
       slotsOpen: Math.max(0, lobby.slotsTotal - lobby._count.members),
@@ -274,7 +274,7 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
                       Modded
                     </span>
                   )}
-                  {lobby.modCount > 0 && (
+                  {lobby.isModded && lobby.modCount > 0 && (
                     <span className="rounded-sm border border-white/30 bg-white/10 px-3 py-1 font-semibold text-white">
                       Get Ready ({lobby.modCount} mods)
                     </span>

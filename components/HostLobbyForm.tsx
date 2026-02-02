@@ -39,6 +39,7 @@ type HostLobbyFormProps = {
     rulesNote?: string;
     slotsTotal?: number | null;
     friendsOnly?: boolean;
+    isModded?: boolean;
     modPackId?: string | null;
     workshopCollectionUrl?: string;
     workshopItemUrls?: string[];
@@ -70,6 +71,9 @@ export default function HostLobbyForm({
   const [selectedPackId, setSelectedPackId] = useState(
     defaultValues?.modPackId ?? ""
   );
+  const [isModded, setIsModded] = useState(
+    defaultValues?.isModded ?? false
+  );
   const [showPackCreator, setShowPackCreator] = useState(false);
   const [packName, setPackName] = useState("");
   const [packDescription, setPackDescription] = useState("");
@@ -79,12 +83,31 @@ export default function HostLobbyForm({
   ]);
   const [packSaving, setPackSaving] = useState(false);
   const [packError, setPackError] = useState<string | null>(null);
+  const defaultModUrls = useMemo(() => {
+    const urls: string[] = [];
+    if (defaultValues?.workshopCollectionUrl) {
+      urls.push(defaultValues.workshopCollectionUrl);
+    }
+    if (defaultValues?.workshopItemUrls?.length) {
+      urls.push(...defaultValues.workshopItemUrls);
+    }
+    return urls.join("\n");
+  }, [
+    defaultValues?.workshopCollectionUrl,
+    defaultValues?.workshopItemUrls,
+  ]);
 
   useEffect(() => {
     if (defaultValues?.modPackId) {
       setSelectedPackId(defaultValues.modPackId);
     }
   }, [defaultValues?.modPackId]);
+
+  useEffect(() => {
+    if (typeof defaultValues?.isModded === "boolean") {
+      setIsModded(defaultValues.isModded);
+    }
+  }, [defaultValues?.isModded]);
 
   async function loadModPacks() {
     setModPackLoading(true);
@@ -109,13 +132,21 @@ export default function HostLobbyForm({
   }
 
   useEffect(() => {
+    if (!isModded) return;
     void loadModPacks();
-  }, []);
+  }, [isModded]);
 
   const selectedPack = useMemo(
     () => modPacks.find((pack) => pack.id === selectedPackId) ?? null,
     [modPacks, selectedPackId]
   );
+
+  useEffect(() => {
+    if (isModded) return;
+    setSelectedPackId("");
+    setShowPackCreator(false);
+    setPackError(null);
+  }, [isModded]);
 
   function updatePackMod(index: number, update: Partial<ModEntryDraft>) {
     setPackMods((prev) =>
@@ -229,6 +260,11 @@ export default function HostLobbyForm({
       }
     });
     payload.friendsOnly = formData.get("friendsOnly") === "on";
+    payload.isModded = isModded;
+    if (!isModded) {
+      payload.modPackId = "";
+      payload.modUrls = "";
+    }
 
     const response = await fetch(action, {
       method: method.toUpperCase(),
@@ -443,203 +479,209 @@ export default function HostLobbyForm({
         Friends only
       </label>
 
-      <div className="rounded-sm border border-ink/10 bg-mist p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm font-semibold text-ink">Mod pack</p>
-          <button
-            type="button"
-            onClick={() => setShowPackCreator((prev) => !prev)}
-            className="rounded-sm border border-ink/20 px-3 py-1 text-xs font-semibold text-ink"
-          >
-            {showPackCreator ? "Close pack builder" : "Create new pack"}
-          </button>
-        </div>
-        <p className="mt-1 text-xs text-ink/60">
-          Attach a reusable set of required mods. Players will see a simple
-          “Get Ready” checklist.
-        </p>
-        <label className="mt-3 block text-sm font-semibold text-ink">
-          Select pack
-          <select
-            name="modPackId"
-            value={selectedPackId}
-            onChange={(event) => setSelectedPackId(event.target.value)}
-            className="mt-2 w-full rounded-sm border border-ink/10 bg-sand px-3 py-2 text-sm"
-          >
-            <option value="">No pack selected</option>
-            {modPacks.map((pack) => (
-              <option key={pack.id} value={pack.id}>
-                {pack.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        {modPackLoading && (
-          <p className="mt-2 text-xs text-ink/50">Loading mod packs…</p>
-        )}
-        {modPackError && (
-          <p className="mt-2 text-xs font-semibold text-clay">
-            {modPackError}
-          </p>
-        )}
-        {selectedPack && (
-          <div className="mt-3 rounded-sm border border-ink/10 bg-sand px-3 py-2 text-xs text-ink/70">
-            <p className="text-xs font-semibold text-ink">
-              {selectedPack.name}
-            </p>
-            {selectedPack.description && (
-              <p className="mt-1 text-xs text-ink/60">
-                {selectedPack.description}
-              </p>
-            )}
-            <p className="mt-2 text-xs text-ink/60">
-              {selectedPack.mods.filter((mod) => !mod.isOptional).length} required
-              mod{selectedPack.mods.length === 1 ? "" : "s"}
-            </p>
-          </div>
-        )}
+      <label className="flex items-center gap-3 text-sm font-semibold text-ink">
+        <input
+          name="isModded"
+          type="checkbox"
+          checked={isModded}
+          onChange={(event) => setIsModded(event.target.checked)}
+          className="h-4 w-4 rounded border-ink/20"
+        />
+        Mods required
+      </label>
 
-        {showPackCreator && (
-          <div className="mt-4 rounded-sm border border-ink/10 bg-sand p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-ink/50">
-              New mod pack
-            </p>
-            <label className="mt-3 block text-sm font-semibold text-ink">
-              Pack name
-              <input
-                value={packName}
-                onChange={(event) => setPackName(event.target.value)}
-                className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
-                placeholder="e.g. Desert Bus Required Mods"
-              />
-            </label>
-            <label className="mt-3 block text-sm font-semibold text-ink">
-              Description (optional)
-              <input
-                value={packDescription}
-                onChange={(event) => setPackDescription(event.target.value)}
-                className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
-                placeholder="Short note for your pack."
-              />
-            </label>
-            <label className="mt-3 flex items-center gap-2 text-xs font-semibold text-ink/60">
-              <input
-                type="checkbox"
-                checked={packIsPublic}
-                onChange={(event) => setPackIsPublic(event.target.checked)}
-                className="h-3.5 w-3.5 rounded border-ink/20"
-              />
-              Make pack public
-            </label>
-            <div className="mt-4 space-y-3">
-              {packMods.map((mod, index) => (
-                <div
-                  key={`mod-${index}`}
-                  className="grid gap-2 rounded-sm border border-ink/10 bg-mist p-3 md:grid-cols-[1fr_1.4fr_auto]"
-                >
-                  <input
-                    value={mod.name}
-                    onChange={(event) =>
-                      updatePackMod(index, { name: event.target.value })
-                    }
-                    className="rounded-sm border border-ink/10 bg-sand px-3 py-2 text-xs"
-                    placeholder="Mod name (optional)"
-                  />
-                  <input
-                    value={mod.workshopUrl}
-                    onChange={(event) =>
-                      updatePackMod(index, { workshopUrl: event.target.value })
-                    }
-                    className="rounded-sm border border-ink/10 bg-sand px-3 py-2 text-xs"
-                    placeholder="Steam Workshop URL"
-                  />
-                  <div className="flex items-center justify-between gap-2">
-                    <label className="flex items-center gap-2 text-[11px] font-semibold text-ink/60">
-                      <input
-                        type="checkbox"
-                        checked={mod.isOptional}
-                        onChange={(event) =>
-                          updatePackMod(index, { isOptional: event.target.checked })
-                        }
-                        className="h-3 w-3 rounded border-ink/20"
-                      />
-                      Optional
-                    </label>
-                    {packMods.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removePackMod(index)}
-                        className="text-[11px] font-semibold text-clay"
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
+      {isModded && (
+        <>
+          <div className="rounded-sm border border-ink/10 bg-mist p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-semibold text-ink">Mod pack</p>
               <button
                 type="button"
-                onClick={addPackMod}
+                onClick={() => setShowPackCreator((prev) => !prev)}
                 className="rounded-sm border border-ink/20 px-3 py-1 text-xs font-semibold text-ink"
               >
-                Add another mod
+                {showPackCreator ? "Close pack builder" : "Create new pack"}
               </button>
             </div>
-            {packError && (
-              <p className="mt-3 text-xs font-semibold text-clay">{packError}</p>
+            <p className="mt-1 text-xs text-ink/60">
+              Attach a reusable set of required mods. Players will see a simple
+              “Get Ready” checklist.
+            </p>
+            <label className="mt-3 block text-sm font-semibold text-ink">
+              Select pack
+              <select
+                name="modPackId"
+                value={selectedPackId}
+                onChange={(event) => setSelectedPackId(event.target.value)}
+                className="mt-2 w-full rounded-sm border border-ink/10 bg-sand px-3 py-2 text-sm"
+              >
+                <option value="">No pack selected</option>
+                {modPacks.map((pack) => (
+                  <option key={pack.id} value={pack.id}>
+                    {pack.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {modPackLoading && (
+              <p className="mt-2 text-xs text-ink/50">Loading mod packs…</p>
             )}
-            <button
-              type="button"
-              onClick={createModPack}
-              disabled={packSaving}
-              className="mt-4 w-full rounded-sm bg-ink px-4 py-2 text-sm font-semibold text-sand disabled:cursor-not-allowed disabled:bg-ink/60"
-            >
-              {packSaving ? "Saving pack..." : "Save mod pack"}
-            </button>
-          </div>
-        )}
-      </div>
+            {modPackError && (
+              <p className="mt-2 text-xs font-semibold text-clay">
+                {modPackError}
+              </p>
+            )}
+            {selectedPack && (
+              <div className="mt-3 rounded-sm border border-ink/10 bg-sand px-3 py-2 text-xs text-ink/70">
+                <p className="text-xs font-semibold text-ink">
+                  {selectedPack.name}
+                </p>
+                {selectedPack.description && (
+                  <p className="mt-1 text-xs text-ink/60">
+                    {selectedPack.description}
+                  </p>
+                )}
+                <p className="mt-2 text-xs text-ink/60">
+                  {selectedPack.mods.filter((mod) => !mod.isOptional).length} required
+                  mod{selectedPack.mods.length === 1 ? "" : "s"}
+                </p>
+              </div>
+            )}
 
-      <details
-        className="rounded-sm border border-ink/10 bg-mist p-4"
-        open={!selectedPackId}
-      >
-        <summary className="cursor-pointer text-sm font-semibold text-ink">
-          Advanced: one-off workshop links
-        </summary>
-        <p className="mt-2 text-xs text-ink/60">
-          Use this only if you are not selecting a mod pack.
-        </p>
-        <label className="mt-3 block text-sm font-semibold text-ink">
-          Workshop collection URL (optional)
-          <input
-            name="workshopCollectionUrl"
-            defaultValue={defaultValues?.workshopCollectionUrl ?? ""}
-            disabled={Boolean(selectedPackId)}
-            className="mt-2 w-full rounded-sm border border-ink/10 bg-sand px-3 py-2 text-sm disabled:opacity-60"
-          />
-        </label>
-        <label className="mt-4 block text-sm font-semibold text-ink">
-          Workshop item URLs (optional)
-          <textarea
-            name="workshopItemUrls"
-            rows={3}
-            defaultValue={(defaultValues?.workshopItemUrls ?? []).join("\n")}
-            disabled={Boolean(selectedPackId)}
-            className="mt-2 w-full rounded-sm border border-ink/10 bg-sand px-3 py-2 text-sm disabled:opacity-60"
-          />
-        </label>
-        <label className="mt-4 block text-sm font-semibold text-ink">
-          Mod notes
-          <textarea
-            name="modNotes"
-            rows={3}
-            defaultValue={defaultValues?.modNotes ?? ""}
-            disabled={Boolean(selectedPackId)}
-            className="mt-2 w-full rounded-sm border border-ink/10 bg-sand px-3 py-2 text-sm disabled:opacity-60"
-          />
-        </label>
-      </details>
+            {showPackCreator && (
+              <div className="mt-4 rounded-sm border border-ink/10 bg-sand p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-ink/50">
+                  New mod pack
+                </p>
+                <label className="mt-3 block text-sm font-semibold text-ink">
+                  Pack name
+                  <input
+                    value={packName}
+                    onChange={(event) => setPackName(event.target.value)}
+                    className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
+                    placeholder="e.g. Desert Bus Required Mods"
+                  />
+                </label>
+                <label className="mt-3 block text-sm font-semibold text-ink">
+                  Description (optional)
+                  <input
+                    value={packDescription}
+                    onChange={(event) => setPackDescription(event.target.value)}
+                    className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
+                    placeholder="Short note for your pack."
+                  />
+                </label>
+                <label className="mt-3 flex items-center gap-2 text-xs font-semibold text-ink/60">
+                  <input
+                    type="checkbox"
+                    checked={packIsPublic}
+                    onChange={(event) => setPackIsPublic(event.target.checked)}
+                    className="h-3.5 w-3.5 rounded border-ink/20"
+                  />
+                  Make pack public
+                </label>
+                <div className="mt-4 space-y-3">
+                  {packMods.map((mod, index) => (
+                    <div
+                      key={`mod-${index}`}
+                      className="grid gap-2 rounded-sm border border-ink/10 bg-mist p-3 md:grid-cols-[1fr_1.4fr_auto]"
+                    >
+                      <input
+                        value={mod.name}
+                        onChange={(event) =>
+                          updatePackMod(index, { name: event.target.value })
+                        }
+                        className="rounded-sm border border-ink/10 bg-sand px-3 py-2 text-xs"
+                        placeholder="Mod name (optional)"
+                      />
+                      <input
+                        value={mod.workshopUrl}
+                        onChange={(event) =>
+                          updatePackMod(index, { workshopUrl: event.target.value })
+                        }
+                        className="rounded-sm border border-ink/10 bg-sand px-3 py-2 text-xs"
+                        placeholder="Mod URL"
+                      />
+                      <div className="flex items-center justify-between gap-2">
+                        <label className="flex items-center gap-2 text-[11px] font-semibold text-ink/60">
+                          <input
+                            type="checkbox"
+                            checked={mod.isOptional}
+                            onChange={(event) =>
+                              updatePackMod(index, { isOptional: event.target.checked })
+                            }
+                            className="h-3 w-3 rounded border-ink/20"
+                          />
+                          Optional
+                        </label>
+                        {packMods.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removePackMod(index)}
+                            className="text-[11px] font-semibold text-clay"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={addPackMod}
+                    className="rounded-sm border border-ink/20 px-3 py-1 text-xs font-semibold text-ink"
+                  >
+                    Add another mod
+                  </button>
+                </div>
+                {packError && (
+                  <p className="mt-3 text-xs font-semibold text-clay">{packError}</p>
+                )}
+                <button
+                  type="button"
+                  onClick={createModPack}
+                  disabled={packSaving}
+                  className="mt-4 w-full rounded-sm bg-ink px-4 py-2 text-sm font-semibold text-sand disabled:cursor-not-allowed disabled:bg-ink/60"
+                >
+                  {packSaving ? "Saving pack..." : "Save mod pack"}
+                </button>
+              </div>
+            )}
+          </div>
+
+          <details
+            className="rounded-sm border border-ink/10 bg-mist p-4"
+            open={!selectedPackId}
+          >
+            <summary className="cursor-pointer text-sm font-semibold text-ink">
+              Mod URLs
+            </summary>
+            <p className="mt-2 text-xs text-ink/60">
+              Paste links to any mods you want players to install (one per line).
+            </p>
+            <label className="mt-3 block text-sm font-semibold text-ink">
+              Mod URLs
+              <textarea
+                name="modUrls"
+                rows={4}
+                defaultValue={defaultModUrls}
+                disabled={Boolean(selectedPackId)}
+                className="mt-2 w-full rounded-sm border border-ink/10 bg-sand px-3 py-2 text-sm disabled:opacity-60"
+              />
+            </label>
+            <label className="mt-4 block text-sm font-semibold text-ink">
+              Mod notes
+              <textarea
+                name="modNotes"
+                rows={3}
+                defaultValue={defaultValues?.modNotes ?? ""}
+                disabled={Boolean(selectedPackId)}
+                className="mt-2 w-full rounded-sm border border-ink/10 bg-sand px-3 py-2 text-sm disabled:opacity-60"
+              />
+            </label>
+          </details>
+        </>
+      )}
 
       <button
         type="submit"

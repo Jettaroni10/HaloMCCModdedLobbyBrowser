@@ -27,7 +27,7 @@ export default function LegalPage() {
           <ul className="mt-2 list-disc space-y-1 pl-5">
             <li>Opt-in lobby listings published by hosts.</li>
             <li>Invite request tracking and coordination.</li>
-            <li>Metadata for modded lobbies, including Steam Workshop links.</li>
+            <li>Metadata for modded lobbies, including external mod links.</li>
           </ul>
         </section>
 
@@ -46,7 +46,7 @@ export default function LegalPage() {
         <section>
           <h2 className="text-lg font-semibold text-ink">Modded lobbies</h2>
           <p className="mt-2">
-            We do not distribute mods; we only link to Steam Workshop.
+            We do not distribute mods; we only link to external mod sources.
           </p>
         </section>
 

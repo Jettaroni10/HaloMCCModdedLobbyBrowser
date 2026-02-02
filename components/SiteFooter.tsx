@@ -31,7 +31,7 @@ export default function SiteFooter() {
         </div>
         <p>
           Lobbies are opt-in and only include what hosts explicitly publish.
-          Modded support is limited to metadata and Steam Workshop links.
+          Modded support is limited to metadata and external mod links.
         </p>
       </div>
     </footer>

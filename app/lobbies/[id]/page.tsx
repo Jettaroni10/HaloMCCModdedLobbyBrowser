@@ -185,9 +185,11 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
         })),
       }
     : null;
-  const requiredModCount = modPack
-    ? modPack.mods.filter((mod) => !mod.isOptional).length
-    : (lobby.workshopCollectionUrl ? 1 : 0) + lobby.workshopItemUrls.length;
+  const requiredModCount = lobby.isModded
+    ? modPack
+      ? modPack.mods.filter((mod) => !mod.isOptional).length
+      : (lobby.workshopCollectionUrl ? 1 : 0) + lobby.workshopItemUrls.length
+    : 0;
   const initialMessages =
     conversation?.messages.map((message) => ({
       id: message.id,
@@ -282,6 +284,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
                   workshopItemUrls={lobby.workshopItemUrls}
                   modNotes={lobby.modNotes}
                   modPack={modPack}
+                  isModded={lobby.isModded}
                   rulesNote={lobby.rulesNote}
                   tags={lobby.tags}
                   userGamertag={user?.gamertag ?? null}

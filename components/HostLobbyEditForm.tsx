@@ -18,6 +18,7 @@ type HostLobbyEditFormProps = {
     rulesNote: string;
     slotsTotal: number | null;
     friendsOnly: boolean;
+    isModded: boolean;
     modPackId?: string | null;
     workshopCollectionUrl: string;
     workshopItemUrls: string[];
@@ -38,6 +39,7 @@ export default function HostLobbyEditForm({
       formData.entries()
     );
     payload.friendsOnly = formData.get("friendsOnly") === "on";
+    payload.isModded = formData.get("isModded") === "on";
 
     const response = await fetch(`/api/lobbies/${lobbyId}`, {
       method: "PATCH",

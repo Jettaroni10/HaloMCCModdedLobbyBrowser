@@ -120,6 +120,9 @@ export async function PATCH(
   const slotsTotal = clampInt(parseNumber(body.slotsTotal), 2, 32);
   if (slotsTotal !== undefined) data.slotsTotal = slotsTotal;
 
+  const isModded = parseBoolean(body.isModded);
+  if (typeof isModded === "boolean") data.isModded = isModded;
+
   const workshopCollectionUrl = normalizeText(
     body.workshopCollectionUrl,
     LIMITS.workshopUrl
@@ -128,11 +131,14 @@ export async function PATCH(
     data.workshopCollectionUrl = workshopCollectionUrl;
   }
 
-  const workshopItemUrls = parseStringArray(body.workshopItemUrls)
+  const modUrls = [
+    ...parseStringArray(body.modUrls),
+    ...parseStringArray(body.workshopItemUrls),
+  ]
     .map((url) => normalizeText(url, LIMITS.workshopUrl))
     .filter(Boolean);
-  if (workshopItemUrls.length > 0) {
-    data.workshopItemUrls = workshopItemUrls;
+  if (modUrls.length > 0) {
+    data.workshopItemUrls = modUrls;
   }
 
 
@@ -140,7 +146,9 @@ export async function PATCH(
   if (modNotes) data.modNotes = modNotes;
 
   const modPackId =
-    modPacksSupported && typeof body.modPackId === "string"
+    modPacksSupported &&
+    typeof body.modPackId === "string" &&
+    isModded !== false
       ? body.modPackId.trim()
       : "";
   if (modPacksSupported && modPackId) {
@@ -162,6 +170,15 @@ export async function PATCH(
     data.modPackId = null;
   }
 
+  if (isModded === false) {
+    data.workshopCollectionUrl = null;
+    data.workshopItemUrls = [];
+    data.modNotes = null;
+    if (modPacksSupported) {
+      data.modPackId = null;
+    }
+  }
+
   if (Object.keys(data).length === 0) {
     return NextResponse.json(
       { error: "No valid updates provided." },
@@ -174,6 +191,30 @@ export async function PATCH(
   if (nextSlotsTotal !== null && nextSlotsTotal < 1) {
     return NextResponse.json(
       { error: "slotsTotal must be at least 1." },
+      { status: 400 }
+    );
+  }
+
+  const nextIsModded =
+    typeof isModded === "boolean" ? isModded : lobby.isModded;
+  const nextCollectionUrl =
+    (data.workshopCollectionUrl as string | null | undefined) ??
+    lobby.workshopCollectionUrl;
+  const nextItemUrls =
+    (data.workshopItemUrls as string[] | undefined) ?? lobby.workshopItemUrls;
+  const nextModPackId =
+    modPacksSupported
+      ? ((data.modPackId as string | null | undefined) ?? lobby.modPackId)
+      : null;
+
+  if (
+    nextIsModded &&
+    !nextModPackId &&
+    !nextCollectionUrl &&
+    nextItemUrls.length === 0
+  ) {
+    return NextResponse.json(
+      { error: "Provide at least one mod link or select a mod pack." },
       { status: 400 }
     );
   }

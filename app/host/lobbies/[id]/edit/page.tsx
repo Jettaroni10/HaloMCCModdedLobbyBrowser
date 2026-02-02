@@ -48,6 +48,7 @@ export default async function EditLobbyPage({ params, searchParams }: PageProps)
           rulesNote: lobby.rulesNote,
           slotsTotal: lobby.slotsTotal,
           friendsOnly: lobby.friendsOnly,
+          isModded: lobby.isModded,
           modPackId: lobby.modPackId,
           workshopCollectionUrl: lobby.workshopCollectionUrl ?? "",
           workshopItemUrls: lobby.workshopItemUrls,

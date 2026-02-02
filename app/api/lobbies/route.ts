@@ -103,17 +103,20 @@ export async function POST(request: Request) {
   const friendsOnly = parseBoolean(body.friendsOnly) ?? false;
   const slotsTotalInput = clampInt(parseNumber(body.slotsTotal), 2, 32);
   const slotsTotal = slotsTotalInput ?? 16;
-  const isModded = true;
+  const isModded = parseBoolean(body.isModded) ?? false;
   const workshopCollectionUrl = normalizeText(
     body.workshopCollectionUrl,
     LIMITS.workshopUrl
   );
-  const workshopItemUrls = parseStringArray(body.workshopItemUrls)
+  const modUrls = [
+    ...parseStringArray(body.modUrls),
+    ...parseStringArray(body.workshopItemUrls),
+  ]
     .map((url) => normalizeText(url, LIMITS.workshopUrl))
     .filter(Boolean);
   const modNotes = normalizeText(body.modNotes, LIMITS.modNotes);
   const modPackId =
-    modPacksSupported && typeof body.modPackId === "string"
+    isModded && modPacksSupported && typeof body.modPackId === "string"
       ? body.modPackId.trim()
       : "";
 
@@ -147,11 +150,10 @@ export async function POST(request: Request) {
     resolvedPackId = pack.id;
   }
 
-  const hasLegacyMods =
-    Boolean(workshopCollectionUrl) || workshopItemUrls.length > 0;
-  if (!resolvedPackId && !hasLegacyMods) {
+  const hasLegacyMods = Boolean(workshopCollectionUrl) || modUrls.length > 0;
+  if (isModded && !resolvedPackId && !hasLegacyMods) {
     return NextResponse.json(
-      { error: "Select a mod pack or provide workshop links." },
+      { error: "Select a mod pack or provide mod links." },
       { status: 400 }
     );
   }
@@ -174,10 +176,13 @@ export async function POST(request: Request) {
         friendsOnly,
         slotsTotal,
         isModded,
-        workshopCollectionUrl: workshopCollectionUrl || null,
-        workshopItemUrls,
-        modNotes: modNotes || null,
-        ...(modPacksSupported ? { modPackId: resolvedPackId } : {}),
+        workshopCollectionUrl:
+          isModded && workshopCollectionUrl ? workshopCollectionUrl : null,
+        workshopItemUrls: isModded ? modUrls : [],
+        modNotes: isModded ? modNotes || null : null,
+        ...(modPacksSupported
+          ? { modPackId: isModded ? resolvedPackId : null }
+          : {}),
         lastHeartbeatAt: now,
         expiresAt,
       },

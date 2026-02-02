@@ -22,6 +22,7 @@ type LobbyRequestFormProps = {
   workshopItemUrls: string[];
   modNotes: string | null;
   modPack?: ModPackSummary | null;
+  isModded: boolean;
   rulesNote: string;
   tags: string[];
   userGamertag: string | null;
@@ -34,6 +35,7 @@ export default function LobbyRequestForm({
   workshopItemUrls,
   modNotes,
   modPack,
+  isModded,
   rulesNote,
   tags,
   userGamertag,
@@ -58,6 +60,9 @@ export default function LobbyRequestForm({
   );
 
   const mods = useMemo<ModEntry[]>(() => {
+    if (!isModded) {
+      return [];
+    }
     if (modPack?.mods && modPack.mods.length > 0) {
       return modPack.mods;
     }
@@ -65,7 +70,7 @@ export default function LobbyRequestForm({
     if (workshopCollectionUrl) {
       entries.push({
         id: `collection:${workshopCollectionUrl}`,
-        name: "Workshop Collection",
+        name: "Mod link",
         workshopUrl: workshopCollectionUrl,
         isOptional: false,
       });
@@ -73,13 +78,13 @@ export default function LobbyRequestForm({
     workshopItemUrls.forEach((url, index) => {
       entries.push({
         id: `item:${url}`,
-        name: `Workshop item ${index + 1}`,
+        name: `Mod link ${index + 1}`,
         workshopUrl: url,
         isOptional: false,
       });
     });
     return entries;
-  }, [modPack, workshopCollectionUrl, workshopItemUrls]);
+  }, [isModded, modPack, workshopCollectionUrl, workshopItemUrls]);
 
   const requiredModIds = useMemo(
     () => mods.filter((mod) => !mod.isOptional).map((mod) => mod.id),
@@ -88,9 +93,10 @@ export default function LobbyRequestForm({
 
   useEffect(() => {
     setSubscribedMods({});
-  }, [modPack?.id, workshopCollectionUrl, workshopItemUrls.join("|")]);
+  }, [isModded, modPack?.id, workshopCollectionUrl, workshopItemUrls.join("|")]);
 
   const readinessOk =
+    !isModded ||
     requiredModIds.length === 0 ||
     requiredModIds.every((id) => subscribedMods[id]);
 
@@ -184,7 +190,7 @@ export default function LobbyRequestForm({
           Request sent successfully
         </h3>
         <p className="mt-2">
-          Wait for the host to invite you via Steam.
+          Wait for the host to invite you.
         </p>
       </div>
     );
@@ -208,76 +214,78 @@ export default function LobbyRequestForm({
           </div>
         )}
 
+        {isModded && (
           <div className="mt-6 rounded-sm border border-ink/10 bg-mist p-4 text-sm text-ink/70">
-          <h3 className="text-sm font-semibold text-ink">Get Ready</h3>
-          <p className="mt-1 text-xs text-ink/60">
-            {modPack?.name
-              ? `${modPack.name} · ${requiredModIds.length} required mods`
-              : `${requiredModIds.length} required mods`}
-          </p>
-          {mods.length > 0 ? (
-            <div className="mt-3 space-y-2">
-              {mods.map((mod) => (
-                <div
-                  key={mod.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-sm border border-ink/10 bg-sand px-3 py-2"
-                >
-                  <label className="flex items-start gap-2 text-xs text-ink">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(subscribedMods[mod.id])}
-                      onChange={(event) =>
-                        setSubscribedMods((prev) => ({
-                          ...prev,
-                          [mod.id]: event.target.checked,
-                        }))
-                      }
-                      className="mt-0.5 h-4 w-4 rounded border-ink/20"
-                    />
-                    <span className="leading-5">
-                      <span className="block text-sm font-semibold text-ink">
-                        {mod.name}
-                      </span>
-                      {mod.isOptional && (
-                        <span className="text-[11px] text-ink/50">
-                          Optional
-                        </span>
-                      )}
-                    </span>
-                  </label>
-                  <a
-                    href={mod.workshopUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center justify-center rounded-sm bg-ink px-3 py-1 text-xs font-semibold text-sand hover:bg-ink/90"
+            <h3 className="text-sm font-semibold text-ink">Get Ready</h3>
+            <p className="mt-1 text-xs text-ink/60">
+              {modPack?.name
+                ? `${modPack.name} · ${requiredModIds.length} required mods`
+                : `${requiredModIds.length} required mods`}
+            </p>
+            {mods.length > 0 ? (
+              <div className="mt-3 space-y-2">
+                {mods.map((mod) => (
+                  <div
+                    key={mod.id}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-sm border border-ink/10 bg-sand px-3 py-2"
                   >
-                    Subscribe
-                  </a>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="mt-3 text-xs text-ink/60">
-              No mods listed for this lobby.
-            </p>
-          )}
-          {modNotes && (
-            <p className="mt-3 rounded-sm border border-ink/10 bg-mist px-3 py-2 text-xs text-ink/70">
-              {modNotes}
-            </p>
-          )}
-          <button
-            type="button"
-            onClick={() =>
-              navigator.clipboard.writeText(
-                "Open Halo MCC and enable the required mods from the Steam Workshop list."
-              )
-            }
-            className="mt-3 text-xs font-semibold text-ink underline decoration-ink/40 underline-offset-4"
-          >
-            Copy launch instructions
-          </button>
-        </div>
+                    <label className="flex items-start gap-2 text-xs text-ink">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(subscribedMods[mod.id])}
+                        onChange={(event) =>
+                          setSubscribedMods((prev) => ({
+                            ...prev,
+                            [mod.id]: event.target.checked,
+                          }))
+                        }
+                        className="mt-0.5 h-4 w-4 rounded border-ink/20"
+                      />
+                      <span className="leading-5">
+                        <span className="block text-sm font-semibold text-ink">
+                          {mod.name}
+                        </span>
+                        {mod.isOptional && (
+                          <span className="text-[11px] text-ink/50">
+                            Optional
+                          </span>
+                        )}
+                      </span>
+                    </label>
+                    <a
+                      href={mod.workshopUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center justify-center rounded-sm bg-ink px-3 py-1 text-xs font-semibold text-sand hover:bg-ink/90"
+                    >
+                      Open link
+                    </a>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-3 text-xs text-ink/60">
+                No mods listed for this lobby.
+              </p>
+            )}
+            {modNotes && (
+              <p className="mt-3 rounded-sm border border-ink/10 bg-mist px-3 py-2 text-xs text-ink/70">
+                {modNotes}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={() =>
+                navigator.clipboard.writeText(
+                  "Open the mod links and install/enable the required mods before joining."
+                )
+              }
+              className="mt-3 text-xs font-semibold text-ink underline decoration-ink/40 underline-offset-4"
+            >
+              Copy mod instructions
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="rounded-sm border border-ink/10 bg-sand p-6">

@@ -3,7 +3,7 @@ import profanity from "leo-profanity";
 const ALLOWLIST: string[] = [];
 
 if (ALLOWLIST.length > 0) {
-  profanity.removeWords(...ALLOWLIST);
+  profanity.remove(ALLOWLIST);
 }
 
 export function filterProfanity(text: string): string {

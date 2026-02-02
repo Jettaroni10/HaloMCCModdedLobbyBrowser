@@ -23,6 +23,8 @@ export const prisma =
     log: ["error", "warn"],
   });
 
+export const modPacksSupported = Boolean((prisma as typeof prisma & { modPack?: unknown }).modPack);
+
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
   globalForPrisma.pool = pool;

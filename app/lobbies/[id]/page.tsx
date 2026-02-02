@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import { prisma, modPacksSupported } from "@/lib/db";
 import { formatEnum } from "@/lib/format";
 import { getCurrentUser } from "@/lib/auth";
 import { logPerf } from "@/lib/perf";
@@ -44,11 +44,14 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
   }>;
 
   let lobby: LobbyWithPack | null = null;
-  try {
-    lobby = await prisma.lobby.findUnique({
+  const baseInclude = {
+    host: { select: { gamertag: true, nametagColor: true, srLevel: true } },
+  };
+  if (modPacksSupported) {
+    lobby = (await prisma.lobby.findUnique({
       where: { id: params.id },
       include: {
-        host: { select: { gamertag: true, nametagColor: true, srLevel: true } },
+        ...baseInclude,
         modPack: {
           include: {
             modPackMods: {
@@ -58,13 +61,11 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
           },
         },
       },
-    });
-  } catch {
+    })) as LobbyWithPack | null;
+  } else {
     const fallback = await prisma.lobby.findUnique({
       where: { id: params.id },
-      include: {
-        host: { select: { gamertag: true, nametagColor: true, srLevel: true } },
-      },
+      include: baseInclude,
     });
     lobby = fallback
       ? ({ ...fallback, modPack: null } as LobbyWithPack)

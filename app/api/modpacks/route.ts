@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma, modPacksSupported } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { normalizeText } from "@/lib/validation";
 import { normalizeModName, normalizeWorkshopUrl } from "@/lib/mods";
@@ -16,6 +16,12 @@ type ModInput = {
 };
 
 export async function GET() {
+  if (!modPacksSupported) {
+    return NextResponse.json(
+      { error: "Mod packs are unavailable. Run the latest migrations." },
+      { status: 501 }
+    );
+  }
   const user = await getCurrentUser();
   if (user?.isBanned) {
     return NextResponse.json({ error: "Account is banned." }, { status: 403 });
@@ -59,6 +65,12 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  if (!modPacksSupported) {
+    return NextResponse.json(
+      { error: "Mod packs are unavailable. Run the latest migrations." },
+      { status: 501 }
+    );
+  }
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });

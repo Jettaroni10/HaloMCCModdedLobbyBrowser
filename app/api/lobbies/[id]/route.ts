@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma, modPacksSupported } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import {
   clampInt,
@@ -140,8 +140,10 @@ export async function PATCH(
   if (modNotes) data.modNotes = modNotes;
 
   const modPackId =
-    typeof body.modPackId === "string" ? body.modPackId.trim() : "";
-  if (modPackId) {
+    modPacksSupported && typeof body.modPackId === "string"
+      ? body.modPackId.trim()
+      : "";
+  if (modPacksSupported && modPackId) {
     const pack = await prisma.modPack.findFirst({
       where: {
         id: modPackId,
@@ -156,7 +158,7 @@ export async function PATCH(
       );
     }
     data.modPackId = pack.id;
-  } else if (body.modPackId === "") {
+  } else if (modPacksSupported && body.modPackId === "") {
     data.modPackId = null;
   }
 

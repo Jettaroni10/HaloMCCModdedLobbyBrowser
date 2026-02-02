@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma, modPacksSupported } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import {
   clampInt,
@@ -113,7 +113,9 @@ export async function POST(request: Request) {
     .filter(Boolean);
   const modNotes = normalizeText(body.modNotes, LIMITS.modNotes);
   const modPackId =
-    typeof body.modPackId === "string" ? body.modPackId.trim() : "";
+    modPacksSupported && typeof body.modPackId === "string"
+      ? body.modPackId.trim()
+      : "";
 
   if (!title || !mode || !map || !rulesNote) {
     return NextResponse.json(
@@ -128,7 +130,7 @@ export async function POST(request: Request) {
     );
   }
   let resolvedPackId: string | null = null;
-  if (modPackId) {
+  if (modPacksSupported && modPackId) {
     const pack = await prisma.modPack.findFirst({
       where: {
         id: modPackId,
@@ -175,7 +177,7 @@ export async function POST(request: Request) {
         workshopCollectionUrl: workshopCollectionUrl || null,
         workshopItemUrls,
         modNotes: modNotes || null,
-        modPackId: resolvedPackId,
+        ...(modPacksSupported ? { modPackId: resolvedPackId } : {}),
         lastHeartbeatAt: now,
         expiresAt,
       },

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import { prisma, modPacksSupported } from "@/lib/db";
 import { formatEnum } from "@/lib/format";
 import { formatMinutesAgo } from "@/lib/time";
 import { parseEnum, parseStringArray } from "@/lib/validation";
@@ -44,49 +44,36 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
   const vibe = parseEnum(getParam(searchParams.vibe), Vibes);
   const tags = parseStringArray(getParam(searchParams.tags));
 
+  const includeModPacks = modPacksSupported;
   let lobbies: LobbyRow[] = [];
   if (dbReady) {
-    try {
-      lobbies = await prisma.lobby.findMany({
-        where: {
-          isActive: true,
-          expiresAt: { gt: now },
-          ...(game ? { game } : {}),
-          ...(region ? { region } : {}),
-          ...(voice ? { voice } : {}),
-          ...(vibe ? { vibe } : {}),
-          ...(tags.length > 0 ? { tags: { hasSome: tags } } : {}),
-        },
-        orderBy: { lastHeartbeatAt: "desc" },
+    const baseQuery = {
+      where: {
+        isActive: true,
+        expiresAt: { gt: now },
+        ...(game ? { game } : {}),
+        ...(region ? { region } : {}),
+        ...(voice ? { voice } : {}),
+        ...(vibe ? { vibe } : {}),
+        ...(tags.length > 0 ? { tags: { hasSome: tags } } : {}),
+      },
+      orderBy: { lastHeartbeatAt: "desc" as const },
+      include: {
+        host: { select: { gamertag: true, srLevel: true } },
+        _count: { select: { members: true } },
+        members: { where: memberWhere, select: { userId: true } },
+      },
+    };
+    if (includeModPacks) {
+      lobbies = (await prisma.lobby.findMany({
+        ...baseQuery,
         include: {
-          host: { select: { gamertag: true, srLevel: true } },
-          _count: { select: { members: true } },
-          modPack: {
-            select: {
-              modPackMods: { select: { isOptional: true } },
-            },
-          },
-          members: { where: memberWhere, select: { userId: true } },
+          ...baseQuery.include,
+          modPack: { select: { modPackMods: { select: { isOptional: true } } } },
         },
-      });
-    } catch {
-      const fallback = await prisma.lobby.findMany({
-        where: {
-          isActive: true,
-          expiresAt: { gt: now },
-          ...(game ? { game } : {}),
-          ...(region ? { region } : {}),
-          ...(voice ? { voice } : {}),
-          ...(vibe ? { vibe } : {}),
-          ...(tags.length > 0 ? { tags: { hasSome: tags } } : {}),
-        },
-        orderBy: { lastHeartbeatAt: "desc" },
-        include: {
-          host: { select: { gamertag: true, srLevel: true } },
-          _count: { select: { members: true } },
-          members: { where: memberWhere, select: { userId: true } },
-        },
-      });
+      })) as LobbyRow[];
+    } else {
+      const fallback = await prisma.lobby.findMany(baseQuery);
       lobbies = fallback.map((lobby) => ({
         ...lobby,
         modPack: null,

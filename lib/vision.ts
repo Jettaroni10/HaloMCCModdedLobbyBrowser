@@ -1,5 +1,5 @@
 import { ImageAnnotatorClient } from "@google-cloud/vision";
-import { getBucketName } from "@/lib/firebaseAdmin";
+import { getBucket, getBucketName } from "@/lib/firebaseAdmin";
 
 type ServiceAccount = {
   project_id: string;
@@ -94,8 +94,29 @@ export async function checkImageSafe(objectPath: string) {
 
   const gcsUri = `gs://${bucketName}/${objectPath}`;
   const client = getVisionClient();
-  const [result] = await client.safeSearchDetection(gcsUri);
-  const annotation = result.safeSearchAnnotation;
+  let annotation:
+    | {
+        adult?: string | null;
+        racy?: string | null;
+        violence?: string | null;
+      }
+    | null
+    | undefined;
+  try {
+    const [result] = await client.safeSearchDetection(gcsUri);
+    annotation = result.safeSearchAnnotation;
+  } catch (error) {
+    try {
+      const bucket = getBucket();
+      const [buffer] = await bucket.file(objectPath).download();
+      const [result] = await client.safeSearchDetection({
+        image: { content: buffer },
+      });
+      annotation = result.safeSearchAnnotation;
+    } catch {
+      throw error;
+    }
+  }
   if (!annotation) {
     return { ok: true };
   }

@@ -48,9 +48,6 @@ export default function MapImageUploader({ lobbyId }: MapImageUploaderProps) {
       }
       setCurrentUrl(null);
       setSuccess("Image removed.");
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
     } finally {
       setBusy(false);
     }

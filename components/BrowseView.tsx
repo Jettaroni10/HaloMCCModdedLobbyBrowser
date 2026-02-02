@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { formatEnum } from "@/lib/format";
 import { formatMinutesAgo } from "@/lib/time";
@@ -26,6 +27,16 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
   const now = new Date();
   const user = await getCurrentUser();
   const userId = user?.id ?? null;
+  const memberWhere = { userId: userId ?? "__none__" };
+
+  type LobbyRow = Prisma.LobbyGetPayload<{
+    include: {
+      host: { select: { gamertag: true; srLevel: true } };
+      _count: { select: { members: true } };
+      modPack: { select: { modPackMods: { select: { isOptional: true } } } };
+      members: { select: { userId: true } };
+    };
+  }>;
 
   const game = parseEnum(getParam(searchParams.game), Games);
   const region = parseEnum(getParam(searchParams.region), Regions);
@@ -33,8 +44,10 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
   const vibe = parseEnum(getParam(searchParams.vibe), Vibes);
   const tags = parseStringArray(getParam(searchParams.tags));
 
-  const lobbies = dbReady
-    ? await prisma.lobby.findMany({
+  let lobbies: LobbyRow[] = [];
+  if (dbReady) {
+    try {
+      lobbies = await prisma.lobby.findMany({
         where: {
           isActive: true,
           expiresAt: { gt: now },
@@ -53,12 +66,33 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
               modPackMods: { select: { isOptional: true } },
             },
           },
-          ...(userId
-            ? { members: { where: { userId }, select: { userId: true } } }
-            : {}),
+          members: { where: memberWhere, select: { userId: true } },
         },
-      })
-    : [];
+      });
+    } catch {
+      const fallback = await prisma.lobby.findMany({
+        where: {
+          isActive: true,
+          expiresAt: { gt: now },
+          ...(game ? { game } : {}),
+          ...(region ? { region } : {}),
+          ...(voice ? { voice } : {}),
+          ...(vibe ? { vibe } : {}),
+          ...(tags.length > 0 ? { tags: { hasSome: tags } } : {}),
+        },
+        orderBy: { lastHeartbeatAt: "desc" },
+        include: {
+          host: { select: { gamertag: true, srLevel: true } },
+          _count: { select: { members: true } },
+          members: { where: memberWhere, select: { userId: true } },
+        },
+      });
+      lobbies = fallback.map((lobby) => ({
+        ...lobby,
+        modPack: null,
+      })) as LobbyRow[];
+    }
+  }
 
   const imageUrls = new Map<string, string | null>();
   if (dbReady) {
@@ -81,10 +115,7 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
   const decoratedLobbies = lobbies.map((lobby) => {
     const isHosting = Boolean(userId && lobby.hostUserId === userId);
     const isMember = Boolean(
-      userId &&
-        "members" in lobby &&
-        Array.isArray(lobby.members) &&
-        lobby.members.length > 0
+      userId && Array.isArray(lobby.members) && lobby.members.length > 0
     );
     const requiredModsFromPack = lobby.modPack
       ? lobby.modPack.modPackMods.filter((mod) => !mod.isOptional).length

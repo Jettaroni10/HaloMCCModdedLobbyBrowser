@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { formatEnum } from "@/lib/format";
 import { getCurrentUser } from "@/lib/auth";
@@ -28,20 +29,47 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
   }
 
   const perfStart = Date.now();
-  const lobby = await prisma.lobby.findUnique({
-    where: { id: params.id },
+  type LobbyWithPack = Prisma.LobbyGetPayload<{
     include: {
-      host: { select: { gamertag: true, nametagColor: true, srLevel: true } },
+      host: { select: { gamertag: true; nametagColor: true; srLevel: true } };
       modPack: {
         include: {
           modPackMods: {
-            orderBy: { sortOrder: "asc" },
-            include: { mod: true },
+            orderBy: { sortOrder: "asc" };
+            include: { mod: true };
+          };
+        };
+      };
+    };
+  }>;
+
+  let lobby: LobbyWithPack | null = null;
+  try {
+    lobby = await prisma.lobby.findUnique({
+      where: { id: params.id },
+      include: {
+        host: { select: { gamertag: true, nametagColor: true, srLevel: true } },
+        modPack: {
+          include: {
+            modPackMods: {
+              orderBy: { sortOrder: "asc" },
+              include: { mod: true },
+            },
           },
         },
       },
-    },
-  });
+    });
+  } catch {
+    const fallback = await prisma.lobby.findUnique({
+      where: { id: params.id },
+      include: {
+        host: { select: { gamertag: true, nametagColor: true, srLevel: true } },
+      },
+    });
+    lobby = fallback
+      ? ({ ...fallback, modPack: null } as LobbyWithPack)
+      : null;
+  }
 
   if (!lobby) {
     notFound();

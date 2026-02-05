@@ -6,9 +6,9 @@ import { sendPasswordReset } from "@/lib/firebaseAuth";
 import { isFirebaseConfigured } from "@/lib/firebaseClient";
 
 const ERROR_MESSAGES: Record<string, string> = {
-  "auth/invalid-email": "Enter a valid email address.",
-  "auth/user-not-found": "No matching account found.",
-  "auth/too-many-requests": "Too many attempts. Try again later.",
+  "auth/invalid-email": "Please enter a valid email address.",
+  "auth/user-not-found": "We couldn't find an account with that email.",
+  "auth/too-many-requests": "Too many attempts. Please try again later.",
 };
 
 function resolveFirebaseError(error: unknown) {
@@ -26,7 +26,7 @@ function resolveFirebaseError(error: unknown) {
   return (
     (code && ERROR_MESSAGES[code]) ||
     message ||
-    "Password reset failed. Please try again."
+    "We couldn't send the reset email. Please try again."
   );
 }
 
@@ -49,7 +49,7 @@ export default function ForgotPasswordForm() {
     setSuccess(null);
     try {
       await sendPasswordReset(email);
-      setSuccess("Check your email for a reset link.");
+      setSuccess("Please check your email for a reset link.");
     } catch (err) {
       setError(resolveFirebaseError(err));
     } finally {

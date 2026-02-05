@@ -107,10 +107,12 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
         isBanned: true,
       },
     });
-    if (!user || user.authStatus !== "ACTIVE") {
-      return null;
+    if (user && user.authStatus === "ACTIVE") {
+      return user;
     }
-    return user;
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("DEV_USER_ID not found or inactive; falling back to session.");
+    }
   }
 
   const cookieValue = cookies().get(SESSION_COOKIE)?.value ?? null;

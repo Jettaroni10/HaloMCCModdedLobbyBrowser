@@ -12,16 +12,16 @@ import {
 import { isFirebaseConfigured } from "@/lib/firebaseClient";
 
 const ERROR_MESSAGES: Record<string, string> = {
-  "auth/email-already-in-use": "That email is already in use.",
-  "auth/invalid-email": "Enter a valid email address.",
-  "auth/weak-password": "Password should be at least 6 characters.",
-  "auth/popup-blocked": "Popup blocked. Allow popups and try again.",
+  "auth/email-already-in-use": "An account with that email already exists.",
+  "auth/invalid-email": "Please enter a valid email address.",
+  "auth/weak-password": "Password must be at least 6 characters.",
+  "auth/popup-blocked": "Pop-up blocked. Please allow pop-ups and try again.",
   "auth/account-exists-with-different-credential":
-    "Account exists with another sign-in method.",
-  gamertag_required: "Gamertag is required for email sign up.",
+    "This email is linked to a different sign-in method.",
+  gamertag_required: "Please enter a gamertag to continue.",
   gamertag_taken: "That gamertag is already in use.",
   gamertag_invalid:
-    "Gamertag must be 3-24 characters and use letters, numbers, spaces, or underscore.",
+    "Gamertag must be 3-24 characters and contain only letters, numbers, spaces, or underscores.",
 };
 
 function resolveFirebaseError(error: unknown) {
@@ -42,7 +42,7 @@ function resolveFirebaseError(error: unknown) {
   return (
     (code && ERROR_MESSAGES[code]) ||
     message ||
-    "Sign up failed. Please try again."
+    "We couldn't complete your sign-up. Please try again."
   );
 }
 

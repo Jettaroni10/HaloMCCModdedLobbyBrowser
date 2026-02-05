@@ -65,6 +65,7 @@ export async function createBackendSession(
 ) {
   const response = await fetch("/api/auth/firebase", {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ idToken, gamertag }),
   });

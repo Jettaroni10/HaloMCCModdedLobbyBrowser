@@ -11,14 +11,14 @@ import {
 import { isFirebaseConfigured } from "@/lib/firebaseClient";
 
 const ERROR_MESSAGES: Record<string, string> = {
-  "auth/invalid-email": "Enter a valid email address.",
-  "auth/user-not-found": "No matching account found.",
-  "auth/wrong-password": "Incorrect password.",
-  "auth/too-many-requests": "Too many attempts. Try again later.",
-  "auth/popup-blocked": "Popup blocked. Allow popups and try again.",
+  "auth/invalid-email": "Please enter a valid email address.",
+  "auth/user-not-found": "We couldn't find an account with that email.",
+  "auth/wrong-password": "The password you entered is incorrect.",
+  "auth/too-many-requests": "Too many attempts. Please try again later.",
+  "auth/popup-blocked": "Pop-up blocked. Please allow pop-ups and try again.",
   "auth/account-exists-with-different-credential":
-    "Account exists with another sign-in method.",
-  provider: "Unsupported sign-in provider.",
+    "This email is linked to a different sign-in method.",
+  provider: "This sign-in provider is not supported.",
 };
 
 function resolveFirebaseError(error: unknown) {
@@ -41,10 +41,13 @@ function resolveFirebaseError(error: unknown) {
       ? (error as { status: number }).status
       : null;
   if (status === 403) {
-    return "This account is banned.";
+    return "This account is not eligible for access.";
+  }
+  if (code === "auth/invalid-credential") {
+    return "invalid credential : Firebase: Error (auth/invalid-credential).";
   }
   if (code === "account_conflict") {
-    return "Account exists with another sign-in method.";
+    return "This email is linked to a different sign-in method.";
   }
   return (
     (code && ERROR_MESSAGES[code]) ||

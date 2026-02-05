@@ -126,8 +126,8 @@ export async function POST(request: Request) {
     logFailure("account_conflict");
     return jsonError(
       "account_conflict",
-      "Account exists with a different sign-in method.",
-      409
+      409,
+      "Account exists with a different sign-in method."
     );
   }
 
@@ -136,8 +136,8 @@ export async function POST(request: Request) {
       logFailure("gamertag_required");
       return jsonError(
         "gamertag_required",
-        "Gamertag is required for email sign up.",
-        400
+        400,
+        "Gamertag is required for email sign up."
       );
     }
     let needsGamertag = false;
@@ -152,8 +152,8 @@ export async function POST(request: Request) {
       logFailure("gamertag_taken");
       return jsonError(
         "gamertag_taken",
-        "That gamertag is already in use.",
-        409
+        409,
+        "That gamertag is already in use."
       );
     }
 
@@ -189,8 +189,8 @@ export async function POST(request: Request) {
         logFailure("gamertag_taken");
         return jsonError(
           "gamertag_taken",
-          "That gamertag is already in use.",
-          409
+          409,
+          "That gamertag is already in use."
         );
       }
       user = await prisma.user.update({

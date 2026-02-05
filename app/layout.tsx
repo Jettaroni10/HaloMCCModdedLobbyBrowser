@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import "./globals.css";
 import "@/lib/env";
 import { getCurrentUser, isAdminUser } from "@/lib/auth";
@@ -28,13 +29,19 @@ export default async function RootLayout({
     <html lang="en">
       <body className="antialiased">
         <AnalyticsLoader />
-        <AnalyticsTracker />
+        <Suspense fallback={null}>
+          <AnalyticsTracker />
+        </Suspense>
         <AuthProvider>
-          <GamertagGate user={user} />
+          <Suspense fallback={null}>
+            <GamertagGate user={user} />
+          </Suspense>
           <HostNotificationsProvider hostUserId={user?.id ?? null}>
             <div className="flex min-h-screen flex-col">
               <SiteHeader user={user} isAdmin={isAdmin} />
-              <main className="flex-1">{children}</main>
+              <main className="flex-1">
+                <Suspense fallback={null}>{children}</Suspense>
+              </main>
               <SiteFooter />
             </div>
           </HostNotificationsProvider>

@@ -5,6 +5,7 @@ import FavoriteWeaponSelect from "@/components/FavoriteWeaponSelect";
 import { HALO_GAMES } from "@/data/haloGames";
 import {
   ReachColors,
+  type ReachColorHex,
   nameplateTextColor,
   resolveNametagColor,
 } from "@/lib/reach-colors";
@@ -49,7 +50,9 @@ export default function ProfileSettingsForm({
   const [favoriteWeaponId, setFavoriteWeaponId] = useState(
     initial.favoriteWeaponId
   );
-  const [nametagColor, setNametagColor] = useState(initial.nametagColor);
+  const [nametagColor, setNametagColor] = useState<ReachColorHex>(
+    initial.nametagColor
+  );
   const [resetKey, setResetKey] = useState(0);
 
   useEffect(() => {
@@ -203,9 +206,7 @@ export default function ProfileSettingsForm({
                         name="nametagColor"
                         value={color.hex}
                         checked={nametagColor === color.hex}
-                        onChange={(event) =>
-                          setNametagColor(event.target.value)
-                        }
+                        onChange={() => setNametagColor(color.hex)}
                         className="peer sr-only"
                       />
                       <span

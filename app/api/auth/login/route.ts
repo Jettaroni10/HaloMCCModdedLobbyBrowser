@@ -58,6 +58,22 @@ export async function POST(request: Request) {
     return NextResponse.redirect(absoluteUrl(request, "/login?error=banned"));
   }
 
+  if (user.authStatus && user.authStatus !== "ACTIVE") {
+    const message =
+      user.authStatus === "LEGACY"
+        ? "Your account was created before our login upgrade. Please re-register to continue."
+        : "Account is disabled.";
+    if (isJson) {
+      return NextResponse.json({ error: message }, { status: 403 });
+    }
+    return NextResponse.redirect(
+      absoluteUrl(
+        request,
+        `/login?error=${user.authStatus.toLowerCase()}`
+      )
+    );
+  }
+
   if (!user.passwordHash) {
     if (isJson) {
       return NextResponse.json(

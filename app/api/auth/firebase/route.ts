@@ -122,6 +122,11 @@ export async function POST(request: Request) {
     return jsonError("banned", 403, "Account is banned.");
   }
 
+  if (user && user.authStatus && user.authStatus !== "ACTIVE") {
+    logFailure("account_disabled", { authStatus: user.authStatus });
+    return jsonError("account_disabled", 403, "Account is disabled.");
+  }
+
   if (user && user.firebaseUid && user.firebaseUid !== decoded.uid) {
     logFailure("account_conflict");
     return jsonError(
@@ -167,6 +172,10 @@ export async function POST(request: Request) {
         gamertag: uniqueGamertag,
         passwordHash,
         firebaseUid: decoded.uid,
+        authStatus: "ACTIVE",
+        authProvider: "FIREBASE",
+        legacyReason: null,
+        disabledAt: null,
         needsGamertag,
       },
     });
@@ -174,7 +183,13 @@ export async function POST(request: Request) {
     if (!user.firebaseUid) {
       user = await prisma.user.update({
         where: { id: user.id },
-        data: { firebaseUid: decoded.uid },
+        data: {
+          firebaseUid: decoded.uid,
+          authStatus: "ACTIVE",
+          authProvider: "FIREBASE",
+          legacyReason: null,
+          disabledAt: null,
+        },
       });
     }
 

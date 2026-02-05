@@ -13,6 +13,23 @@ export async function POST(request: Request) {
   const formData = body ? null : await request.formData();
   const isJson = contentType.includes("application/json");
 
+  // Legacy email/password signup is disabled after Firebase migration.
+  const legacySignupDisabled = true;
+  if (legacySignupDisabled) {
+    if (isJson) {
+      return NextResponse.json(
+        {
+          error:
+            "Legacy sign-up is disabled. Please use Firebase sign-up instead.",
+        },
+        { status: 410 }
+      );
+    }
+    return NextResponse.redirect(
+      absoluteUrl(request, "/signup?error=legacy_signup_disabled")
+    );
+  }
+
   const gamertag = normalizeHandleText(
     body?.gamertag ?? formData?.get("gamertag"),
     32

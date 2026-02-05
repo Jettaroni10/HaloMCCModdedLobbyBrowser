@@ -87,6 +87,18 @@ enum ConversationType {
   DM
 }
 
+enum AuthStatus {
+  ACTIVE
+  LEGACY
+  DISABLED
+  DELETED
+}
+
+enum AuthProvider {
+  FIREBASE
+  LEGACY
+}
+
 model User {
   id              String           @id @default(uuid())
   firebaseUid     String?          @unique
@@ -99,6 +111,10 @@ model User {
   favoriteGameId  String?
   favoriteWeaponId String?
   passwordHash    String
+  authStatus      AuthStatus       @default(ACTIVE)
+  authProvider    AuthProvider?
+  legacyReason    String?
+  disabledAt      DateTime?
   steamName       String?
   needsGamertag   Boolean          @default(false)
   reputationScore Int              @default(0)

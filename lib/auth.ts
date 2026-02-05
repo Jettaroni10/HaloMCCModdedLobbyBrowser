@@ -15,6 +15,7 @@ export type SessionUser = Pick<
   | "srLevel"
   | "xpTotal"
   | "xpThisLevel"
+  | "authStatus"
   | "isBanned"
 >;
 
@@ -90,7 +91,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
 
   const devUserId = process.env.DEV_USER_ID;
   if (devUserId) {
-    return prisma.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { id: devUserId },
       select: {
         id: true,
@@ -102,9 +103,14 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
         srLevel: true,
         xpTotal: true,
         xpThisLevel: true,
+        authStatus: true,
         isBanned: true,
       },
     });
+    if (!user || user.authStatus !== "ACTIVE") {
+      return null;
+    }
+    return user;
   }
 
   const cookieValue = cookies().get(SESSION_COOKIE)?.value ?? null;
@@ -113,7 +119,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
     return null;
   }
 
-  return prisma.user.findUnique({
+  const user = await prisma.user.findUnique({
     where: { id: parsed.userId },
     select: {
       id: true,
@@ -125,9 +131,14 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
       srLevel: true,
       xpTotal: true,
       xpThisLevel: true,
+      authStatus: true,
       isBanned: true,
     },
   });
+  if (!user || user.authStatus !== "ACTIVE") {
+    return null;
+  }
+  return user;
 }
 
 export async function requireAuth(options?: { requireGamertag?: boolean }) {

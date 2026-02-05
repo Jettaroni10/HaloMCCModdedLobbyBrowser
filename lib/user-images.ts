@@ -1,6 +1,5 @@
 import "server-only";
 import path from "path";
-import { getBucket } from "./firebaseAdmin";
 
 type SignedUrlCacheEntry = {
   url: string;
@@ -16,6 +15,11 @@ if (process.env.NODE_ENV !== "production") {
   globalForSigned.userImageReadCache = readUrlCache;
 }
 
+async function getBucketLazy() {
+  const { getBucket } = await import("./firebaseAdmin");
+  return getBucket();
+}
+
 export function buildUserImagePath(userId: string, ext: string) {
   const normalizedExt = ext.toLowerCase() === "jpeg" ? "jpg" : ext.toLowerCase();
   const filename = `spartan-portrait-${Date.now()}.${normalizedExt}`;
@@ -26,7 +30,7 @@ export async function getSignedUserUploadUrl(params: {
   objectPath: string;
   contentType: string;
 }) {
-  const bucket = getBucket();
+  const bucket = await getBucketLazy();
   const file = bucket.file(params.objectPath);
   const [url] = await file.getSignedUrl({
     version: "v4",
@@ -43,7 +47,7 @@ export async function getSignedUserReadUrl(objectPath: string) {
   if (cached && cached.expiresAt - now > 60 * 1000) {
     return cached.url;
   }
-  const bucket = getBucket();
+  const bucket = await getBucketLazy();
   const file = bucket.file(objectPath);
   const [url] = await file.getSignedUrl({
     version: "v4",
@@ -55,7 +59,7 @@ export async function getSignedUserReadUrl(objectPath: string) {
 }
 
 export async function deleteUserImage(objectPath: string) {
-  const bucket = getBucket();
+  const bucket = await getBucketLazy();
   try {
     await bucket.file(objectPath).delete({ ignoreNotFound: true });
   } catch {

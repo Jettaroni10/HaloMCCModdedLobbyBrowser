@@ -1,6 +1,5 @@
 import "server-only";
 import path from "path";
-import { getBucket } from "./firebaseAdmin";
 
 export const LOBBY_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 export const LOBBY_IMAGE_ALLOWED_TYPES = new Map([
@@ -23,6 +22,11 @@ const readUrlCache =
 
 if (process.env.NODE_ENV !== "production") {
   globalForSigned.lobbyImageReadCache = readUrlCache;
+}
+
+async function getBucketLazy() {
+  const { getBucket } = await import("./firebaseAdmin");
+  return getBucket();
 }
 
 export function validateLobbyImageMeta(input: {
@@ -57,7 +61,7 @@ export async function getSignedUploadUrl(params: {
   objectPath: string;
   contentType: string;
 }) {
-  const bucket = getBucket();
+  const bucket = await getBucketLazy();
   const file = bucket.file(params.objectPath);
   const [url] = await file.getSignedUrl({
     version: "v4",
@@ -74,7 +78,7 @@ export async function getSignedReadUrl(objectPath: string) {
   if (cached && cached.expiresAt - now > 60 * 1000) {
     return cached.url;
   }
-  const bucket = getBucket();
+  const bucket = await getBucketLazy();
   const file = bucket.file(objectPath);
   const [url] = await file.getSignedUrl({
     version: "v4",
@@ -86,7 +90,7 @@ export async function getSignedReadUrl(objectPath: string) {
 }
 
 export async function deleteLobbyImage(objectPath: string) {
-  const bucket = getBucket();
+  const bucket = await getBucketLazy();
   try {
     await bucket.file(objectPath).delete({ ignoreNotFound: true });
   } catch {

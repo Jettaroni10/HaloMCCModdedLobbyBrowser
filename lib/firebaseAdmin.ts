@@ -22,28 +22,13 @@ function normalizeBucketName(value: string) {
   return trimmed;
 }
 
-function readServiceAccountProjectId() {
-  const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  if (!json || json.trim().length === 0) {
-    return "";
-  }
-  try {
-    const parsed = JSON.parse(json) as Partial<FirebaseServiceAccount>;
-    return parsed.project_id?.trim() ?? "";
-  } catch {
-    return "";
-  }
-}
-
 export function getBucketName() {
   const envBucket = normalizeBucketName(
     process.env.FIREBASE_STORAGE_BUCKET ?? ""
   );
   if (envBucket) return envBucket;
 
-  const projectId =
-    readServiceAccountProjectId() ||
-    (process.env.FIREBASE_ADMIN_PROJECT_ID ?? "").trim();
+  const projectId = (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "").trim();
   if (projectId) {
     return `${projectId}.appspot.com`;
   }
@@ -52,12 +37,7 @@ export function getBucketName() {
 }
 
 function loadServiceAccount(): FirebaseServiceAccount {
-  const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  if (json && json.trim().length > 0) {
-    return JSON.parse(json) as FirebaseServiceAccount;
-  }
-
-  const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID ?? "";
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "";
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL ?? "";
   const privateKey = (process.env.FIREBASE_PRIVATE_KEY ?? "").replace(
     /\\n/g,

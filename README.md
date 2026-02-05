@@ -24,16 +24,16 @@ npm install
 2. Configure environment variables:
 
 ```bash
-cp .env.example .env
+cp .env.example .env.local
 ```
 
-3. Update `DATABASE_URL`, `AUTH_SECRET`, `ADMIN_EMAILS`, and `ABLY_API_KEY` in `.env`, then run migrations:
+3. Update required values in `.env.local`, then run migrations:
 
 ```bash
 npx prisma migrate dev
 ```
 
-4. Start the dev server:
+4. Start the dev server (canonical local runner: `next dev`):
 
 ```bash
 npm run dev

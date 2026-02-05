@@ -22,15 +22,12 @@ export async function POST(request: Request) {
   const requestId = randomUUID();
   let stage = "START";
   const hasStorageBucket = Boolean(process.env.FIREBASE_STORAGE_BUCKET);
-  const hasServiceAccountJson = Boolean(
-    process.env.FIREBASE_SERVICE_ACCOUNT_JSON
-  );
   const hasServiceAccountParts = Boolean(
-    process.env.FIREBASE_PROJECT_ID &&
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID &&
       process.env.FIREBASE_CLIENT_EMAIL &&
       process.env.FIREBASE_PRIVATE_KEY
   );
-  const hasModerationKey = hasServiceAccountJson || hasServiceAccountParts;
+  const hasModerationKey = hasServiceAccountParts;
   const bucketName = (() => {
     try {
       return getBucketName();
@@ -117,7 +114,6 @@ export async function POST(request: Request) {
       bucketName,
       hasStorageBucket,
       hasModerationKey,
-      hasServiceAccountJson,
       hasServiceAccountParts,
     });
 

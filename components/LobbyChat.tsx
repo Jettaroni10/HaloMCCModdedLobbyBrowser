@@ -6,6 +6,7 @@ import SocialRankBadge from "@/components/rank/SocialRankBadge";
 import { rankToLabel } from "@/lib/ranks";
 import { useLobbyChatRealtime } from "./useLobbyChatRealtime";
 import GamertagLink from "@/components/GamertagLink";
+import { trackEvent } from "@/lib/analytics";
 
 type ChatMessage = {
   id: string;
@@ -225,8 +226,10 @@ export default function LobbyChat({
         setMessages((prev) =>
           prev.map((item) => (item.id === tempId ? resolvedMessage : item))
         );
+        trackEvent("message_sent", { source: "lobby" });
       } else {
         await loadMessages();
+        trackEvent("message_sent", { source: "lobby" });
       }
     } catch (err) {
       setMessages((prev) =>

@@ -10,6 +10,7 @@ import {
   signOutFirebase,
 } from "@/lib/firebaseAuth";
 import { isFirebaseConfigured } from "@/lib/firebaseClient";
+import { trackEvent } from "@/lib/analytics";
 
 const ERROR_MESSAGES: Record<string, string> = {
   "auth/email-already-in-use": "An account with that email already exists.",
@@ -46,6 +47,26 @@ function resolveFirebaseError(error: unknown) {
   );
 }
 
+function resolveErrorCode(error: unknown) {
+  if (
+    typeof error === "object" &&
+    error &&
+    "code" in error &&
+    typeof (error as { code?: string }).code === "string"
+  ) {
+    return (error as { code: string }).code;
+  }
+  return undefined;
+}
+
+function isNewUser(credential: {
+  user?: { metadata?: { creationTime?: string | null; lastSignInTime?: string | null } };
+}) {
+  const meta = credential.user?.metadata;
+  if (!meta?.creationTime || !meta?.lastSignInTime) return false;
+  return meta.creationTime === meta.lastSignInTime;
+}
+
 export default function SignupForm() {
   const searchParams = useSearchParams();
   const firebaseReady = isFirebaseConfigured();
@@ -79,8 +100,16 @@ export default function SignupForm() {
     try {
       const credential = await signUpWithEmail(email, password);
       const token = await credential.user.getIdToken();
+      trackEvent("account_created", {
+        method: "email",
+        is_new_user: true,
+      });
       await handleSession(token, gamertag);
     } catch (err) {
+      trackEvent("login_failed", {
+        method: "email",
+        error_code: resolveErrorCode(err),
+      });
       const message = resolveFirebaseError(err);
       setError(message);
       await signOutFirebase().catch(() => {});
@@ -90,7 +119,12 @@ export default function SignupForm() {
   };
 
   const handleProvider = async (
-    action: () => Promise<{ user: { getIdToken(): Promise<string> } }>
+    action: () => Promise<{
+      user: {
+        getIdToken(): Promise<string>;
+        metadata?: { creationTime?: string | null; lastSignInTime?: string | null };
+      };
+    }>
   ) => {
     if (loading) return;
     if (!firebaseReady) {
@@ -102,8 +136,24 @@ export default function SignupForm() {
     try {
       const credential = await action();
       const token = await credential.user.getIdToken();
+      const newUser = isNewUser(credential);
+      if (newUser) {
+        trackEvent("account_created", {
+          method: "google",
+          is_new_user: true,
+        });
+      } else {
+        trackEvent("login_success", {
+          method: "google",
+          is_new_user: false,
+        });
+      }
       await handleSession(token);
     } catch (err) {
+      trackEvent("login_failed", {
+        method: "google",
+        error_code: resolveErrorCode(err),
+      });
       setError(resolveFirebaseError(err));
     } finally {
       setLoading(false);

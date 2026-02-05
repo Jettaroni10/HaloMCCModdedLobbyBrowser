@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { trackEvent } from "@/lib/analytics";
 
 type CompleteProfileFormProps = {
   initialGamertag?: string | null;
@@ -33,12 +34,24 @@ export default function CompleteProfileForm({
       };
       if (!response.ok) {
         setError(data.error ?? "Unable to save gamertag.");
+        trackEvent("profile_updated", {
+          section: "identity",
+          success: false,
+        });
         return;
       }
+      trackEvent("profile_updated", {
+        section: "identity",
+        success: true,
+      });
       router.replace(nextParam);
       router.refresh();
     } catch {
       setError("Unable to save gamertag.");
+      trackEvent("profile_updated", {
+        section: "identity",
+        success: false,
+      });
     } finally {
       setLoading(false);
     }

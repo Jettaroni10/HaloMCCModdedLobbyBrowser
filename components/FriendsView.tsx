@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { resolveNametagColor } from "@/lib/reach-colors";
 import GamertagLink from "@/components/GamertagLink";
+import { trackEvent } from "@/lib/analytics";
 
 type FriendUser = {
   id: string;
@@ -111,6 +112,7 @@ export default function FriendsView({
       setError(payload?.error || "Unable to accept request.");
       return;
     }
+    trackEvent("friend_added", { source: "request_accepted" });
     await refresh();
   }
 
@@ -145,6 +147,7 @@ export default function FriendsView({
       setError(payload?.error || "Unable to remove friend.");
       return;
     }
+    trackEvent("friend_removed");
     await refresh();
   }
 

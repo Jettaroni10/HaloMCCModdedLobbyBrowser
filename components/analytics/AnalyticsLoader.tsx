@@ -2,14 +2,18 @@
 
 import Script from "next/script";
 import { useAnalyticsConsent } from "./useAnalyticsConsent";
+import { isAnalyticsEnabled } from "@/lib/analytics";
 
-const GA_ID =
-  process.env.NEXT_PUBLIC_GA_ID?.trim() || "G-4WCN580TG8";
+const GA_ID = process.env.NEXT_PUBLIC_GA_ID?.trim();
+const DEBUG_MODE =
+  process.env.NEXT_PUBLIC_ANALYTICS_DEBUG === "true" ||
+  process.env.NEXT_PUBLIC_ANALYTICS_DEBUG === "1";
 
 export default function AnalyticsLoader() {
   const { analyticsEnabled } = useAnalyticsConsent();
+  const enabled = analyticsEnabled && isAnalyticsEnabled();
 
-  if (!analyticsEnabled || !GA_ID) {
+  if (!enabled || !GA_ID) {
     return null;
   }
 
@@ -24,7 +28,7 @@ export default function AnalyticsLoader() {
           window.dataLayer = window.dataLayer || [];
           function gtag(){window.dataLayer && window.dataLayer.push(arguments);}
           gtag('js', new Date());
-          gtag('config', '${GA_ID}', { send_page_view: false });
+          gtag('config', '${GA_ID}', { send_page_view: false, debug_mode: ${DEBUG_MODE} });
         `}
       </Script>
     </>

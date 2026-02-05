@@ -6,6 +6,7 @@ import SocialRankBadge from "@/components/rank/SocialRankBadge";
 import { rankToLabel } from "@/lib/ranks";
 import { useDmChatRealtime } from "./useDmChatRealtime";
 import GamertagLink from "@/components/GamertagLink";
+import { hashId, trackEvent } from "@/lib/analytics";
 
 type ChatMessage = {
   id: string;
@@ -76,6 +77,18 @@ export default function DmChat({
   const { publishTyping } = useDmChatRealtime({
     conversationId,
     onMessage: (message) => {
+      if (
+        message.senderUserId !== viewerId &&
+        typeof message.body === "string" &&
+        message.body.startsWith("Invite:")
+      ) {
+        const match = message.body.match(/\/lobbies\/([a-z0-9-]+)/i);
+        if (match?.[1]) {
+          trackEvent("lobby_invite_received", {
+            lobby_id: hashId(match[1]),
+          });
+        }
+      }
       setMessages((prev) => {
         if (prev.some((item) => item.id === message.id)) return prev;
         const tempIndex = prev.findIndex(
@@ -231,8 +244,10 @@ export default function DmChat({
         setMessages((prev) =>
           prev.map((item) => (item.id === tempId ? resolvedMessage : item))
         );
+        trackEvent("message_sent", { source: "dm" });
       } else {
         await loadMessages();
+        trackEvent("message_sent", { source: "dm" });
       }
     } catch (err) {
       setMessages((prev) =>

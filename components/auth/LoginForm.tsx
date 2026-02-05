@@ -9,6 +9,7 @@ import {
   signInWithGoogle,
 } from "@/lib/firebaseAuth";
 import { isFirebaseConfigured } from "@/lib/firebaseClient";
+import { trackEvent } from "@/lib/analytics";
 
 const ERROR_MESSAGES: Record<string, string> = {
   "auth/invalid-email": "Please enter a valid email address.",
@@ -56,6 +57,24 @@ function resolveFirebaseError(error: unknown) {
   );
 }
 
+function resolveErrorCode(error: unknown) {
+  if (
+    typeof error === "object" &&
+    error &&
+    "code" in error &&
+    typeof (error as { code?: string }).code === "string"
+  ) {
+    return (error as { code: string }).code;
+  }
+  return undefined;
+}
+
+function isNewUser(credential: { user?: { metadata?: { creationTime?: string | null; lastSignInTime?: string | null } } }) {
+  const meta = credential.user?.metadata;
+  if (!meta?.creationTime || !meta?.lastSignInTime) return false;
+  return meta.creationTime === meta.lastSignInTime;
+}
+
 export default function LoginForm() {
   const searchParams = useSearchParams();
   const firebaseReady = isFirebaseConfigured();
@@ -83,13 +102,22 @@ export default function LoginForm() {
       setError("Firebase auth is not configured.");
       return;
     }
+    trackEvent("login_started", { method: "email" });
     setLoading(true);
     setError(null);
     try {
       const credential = await signInWithEmail(email, password);
       const token = await credential.user.getIdToken();
+      trackEvent("login_success", {
+        method: "email",
+        is_new_user: isNewUser(credential),
+      });
       await handleSession(token);
     } catch (err) {
+      trackEvent("login_failed", {
+        method: "email",
+        error_code: resolveErrorCode(err),
+      });
       setError(resolveFirebaseError(err));
     } finally {
       setLoading(false);
@@ -97,20 +125,34 @@ export default function LoginForm() {
   };
 
   const handleProvider = async (
-    action: () => Promise<{ user: { getIdToken(): Promise<string> } }>
+    action: () => Promise<{
+      user: {
+        getIdToken(): Promise<string>;
+        metadata?: { creationTime?: string | null; lastSignInTime?: string | null };
+      };
+    }>
   ) => {
     if (loading) return;
     if (!firebaseReady) {
       setError("Firebase auth is not configured.");
       return;
     }
+    trackEvent("login_started", { method: "google" });
     setLoading(true);
     setError(null);
     try {
       const credential = await action();
       const token = await credential.user.getIdToken();
+      trackEvent("login_success", {
+        method: "google",
+        is_new_user: isNewUser(credential),
+      });
       await handleSession(token);
     } catch (err) {
+      trackEvent("login_failed", {
+        method: "google",
+        error_code: resolveErrorCode(err),
+      });
       setError(resolveFirebaseError(err));
     } finally {
       setLoading(false);

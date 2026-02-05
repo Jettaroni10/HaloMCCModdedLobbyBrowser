@@ -1,6 +1,7 @@
 "use client";
 
 import { useHostNotifications } from "./HostNotificationsProvider";
+import { trackEvent } from "@/lib/analytics";
 
 type HostLobbyNotificationsProps = {
   enabled: boolean;
@@ -32,7 +33,12 @@ export default function HostLobbyNotifications({
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={markViewed}
+              onClick={() => {
+                trackEvent("notification_clicked", {
+                  notification_type: "host_unread",
+                });
+                markViewed();
+              }}
               className="rounded-sm border border-ink/20 px-2 py-1 text-[10px] font-semibold text-ink/70"
             >
               Mark viewed

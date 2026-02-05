@@ -7,6 +7,7 @@ import TagsInput from "./TagsInput";
 import { downscaleImageFile } from "@/lib/image-client";
 import MapPreview from "./MapPreview";
 import ImageCropUpload from "@/components/ImageCropUpload";
+import { hashId, trackEvent, trackFeatureUsed } from "@/lib/analytics";
 
 type ModPackSummary = {
   id: string;
@@ -206,6 +207,7 @@ export default function HostLobbyForm({
       if (payload?.id) {
         setSelectedPackId(payload.id);
       }
+      trackFeatureUsed("mod_pack_created", { success: true });
       setShowPackCreator(false);
       setPackName("");
       setPackDescription("");
@@ -215,6 +217,7 @@ export default function HostLobbyForm({
       setPackError(
         error instanceof Error ? error.message : "Unable to create pack."
       );
+      trackFeatureUsed("mod_pack_created", { success: false });
     } finally {
       setPackSaving(false);
     }
@@ -265,6 +268,16 @@ export default function HostLobbyForm({
       payload.modPackId = "";
       payload.modUrls = "";
     }
+    const modUrlsRaw =
+      typeof payload.modUrls === "string" ? payload.modUrls : "";
+    const modCount = isModded
+      ? selectedPack
+        ? selectedPack.mods.filter((mod) => !mod.isOptional).length
+        : modUrlsRaw
+            .split("\n")
+            .map((line) => line.trim())
+            .filter(Boolean).length
+      : 0;
 
     const response = await fetch(action, {
       method: method.toUpperCase(),
@@ -302,6 +315,15 @@ export default function HostLobbyForm({
       setSubmitError(`${uploadError} You can re-upload from the host menu.`);
       router.push(`/host/lobbies/${lobbyId}/edit?uploadFailed=1`);
       return;
+    }
+
+    if (lobbyId) {
+      trackEvent("lobby_created", {
+        lobby_id: hashId(lobbyId),
+        game: String(payload.game ?? ""),
+        is_modded: isModded,
+        mod_count: modCount,
+      });
     }
 
     router.push("/host");

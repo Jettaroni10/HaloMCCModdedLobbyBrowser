@@ -10,6 +10,7 @@ import type {
 import { useHostNotifications } from "./HostNotificationsProvider";
 import Nametag from "@/components/user/Nametag";
 import { resolveNametagColor } from "@/lib/reach-colors";
+import { hashId, trackEvent } from "@/lib/analytics";
 
 type LobbySummary = {
   id: string;
@@ -220,16 +221,23 @@ export default function HostDashboard({
       method: "POST",
     });
     if (!response.ok) return;
+    const lobby = activeLobbies.find((item) => item.id === lobbyId);
     const data = (await response.json()) as LobbySummary;
     setActiveLobbies((prev) =>
       prev.map((item) => (item.id === lobbyId ? { ...item, ...data } : item))
     );
+    trackEvent("lobby_deleted", {
+      lobby_id: hashId(lobbyId),
+      game: lobby?.game ?? undefined,
+      is_modded: lobby?.isModded ?? undefined,
+    });
   }
 
   async function actOnRequest(
     requestId: string,
     action: "accept" | "decline" | "block"
   ) {
+    const request = allRequests.find((item) => item.id === requestId);
     const response = await fetch(`/api/requests/${requestId}/${action}`, {
       method: "POST",
     });
@@ -247,6 +255,24 @@ export default function HostDashboard({
           : item
       )
     );
+
+    const lobbyMeta = request
+      ? activeLobbies.find((item) => item.id === request.lobby.id)
+      : undefined;
+    if (action === "accept") {
+      trackEvent("lobby_join_approved", {
+        lobby_id: request ? hashId(request.lobby.id) : undefined,
+        game: lobbyMeta?.game ?? undefined,
+        is_modded: request?.lobby.isModded ?? undefined,
+      });
+    }
+    if (action === "decline" || action === "block") {
+      trackEvent("lobby_join_denied", {
+        lobby_id: request ? hashId(request.lobby.id) : undefined,
+        game: lobbyMeta?.game ?? undefined,
+        is_modded: request?.lobby.isModded ?? undefined,
+      });
+    }
   }
 
   return (

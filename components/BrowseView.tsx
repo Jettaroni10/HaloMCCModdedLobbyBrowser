@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { prisma, modPacksSupported } from "@/lib/db";
 import { formatEnum } from "@/lib/format";
@@ -10,6 +9,8 @@ import GamertagLink from "@/components/GamertagLink";
 import SocialRankBadge from "@/components/rank/SocialRankBadge";
 import { getSignedReadUrl } from "@/lib/lobby-images";
 import { getCurrentUser } from "@/lib/auth";
+import BrowseAnalyticsTracker from "@/components/analytics/BrowseAnalyticsTracker";
+import TrackedLobbyLink from "@/components/analytics/TrackedLobbyLink";
 
 type BrowseViewProps = {
   searchParams?: Record<string, string | string[] | undefined>;
@@ -122,6 +123,7 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-12">
+      <BrowseAnalyticsTracker />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-semibold text-ink">Browse lobbies</h1>
@@ -229,10 +231,15 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
       )}
 
       <div className="flex flex-col gap-5">
-        {decoratedLobbies.map((lobby) => (
-          <Link
+        {decoratedLobbies.map((lobby, index) => (
+          <TrackedLobbyLink
             key={lobby.id}
             href={`/lobbies/${lobby.id}`}
+            lobbyId={lobby.id}
+            game={lobby.game}
+            isModded={lobby.isModded}
+            modCount={lobby.modCount}
+            position={index + 1}
             className={`relative min-h-[140px] overflow-hidden rounded-xl border border-ink/10 bg-transparent p-5 transition-transform duration-150 ease-out hover:scale-[1.01] hover:shadow-xl ${
               lobby.isHosting
                 ? "ring-2 ring-clay/80 shadow-[0_0_22px_rgba(74,163,255,0.35)]"
@@ -315,7 +322,7 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
                 </span>
               </div>
             </div>
-          </Link>
+          </TrackedLobbyLink>
         ))}
       </div>
 

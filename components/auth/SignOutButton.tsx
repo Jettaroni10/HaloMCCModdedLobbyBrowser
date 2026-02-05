@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { signOutFirebase } from "@/lib/firebaseAuth";
+import { trackEvent } from "@/lib/analytics";
 
 type SignOutButtonProps = {
   className?: string;
@@ -15,6 +16,7 @@ export default function SignOutButton({ className }: SignOutButtonProps) {
     setLoading(true);
     try {
       await signOutFirebase();
+      trackEvent("logout");
     } finally {
       window.location.href = "/api/auth/logout";
     }

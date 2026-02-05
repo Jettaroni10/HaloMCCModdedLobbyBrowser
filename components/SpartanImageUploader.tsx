@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import SpartanPortrait from "@/components/SpartanPortrait";
 import ImageCropUpload from "@/components/ImageCropUpload";
+import { trackEvent } from "@/lib/analytics";
 
 type SpartanImageUploaderProps = {
   initialUrl?: string | null;
@@ -25,6 +26,7 @@ export default function SpartanImageUploader({
   function handleUploaded(url: string | null) {
     setCurrentUrl(url);
     setSuccess("Image uploaded.");
+    trackEvent("portrait_uploaded", { success: true });
   }
 
   async function handleRemove() {
@@ -36,10 +38,12 @@ export default function SpartanImageUploader({
       });
       if (!response.ok) {
         setError("Failed to remove image.");
+        trackEvent("portrait_removed", { success: false });
         return;
       }
       setCurrentUrl(null);
       setSuccess("Image removed.");
+      trackEvent("portrait_removed", { success: true });
     } finally {
       setBusy(false);
     }
@@ -78,6 +82,7 @@ export default function SpartanImageUploader({
           onUploaded={handleUploaded}
           onError={(message) => {
             setError(message);
+            trackEvent("portrait_uploaded", { success: false });
           }}
         />
         {busy && (

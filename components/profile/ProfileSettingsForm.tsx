@@ -9,6 +9,7 @@ import {
   nameplateTextColor,
   resolveNametagColor,
 } from "@/lib/reach-colors";
+import { trackEvent } from "@/lib/analytics";
 
 type ProfileSettingsFormProps = {
   needsGamertag: boolean;
@@ -54,6 +55,8 @@ export default function ProfileSettingsForm({
     initial.nametagColor
   );
   const [resetKey, setResetKey] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
     setGamertag(initial.gamertag);
@@ -63,6 +66,10 @@ export default function ProfileSettingsForm({
     setNametagColor(initial.nametagColor);
     setResetKey((prev) => prev + 1);
   }, [initial]);
+
+  useEffect(() => {
+    trackEvent("profile_viewed", { section: "identity" });
+  }, []);
 
   const isDirty =
     gamertag !== initial.gamertag ||
@@ -82,10 +89,55 @@ export default function ProfileSettingsForm({
     setResetKey((prev) => prev + 1);
   };
 
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (saving) return;
+    setSaving(true);
+    setSubmitError(null);
+
+    const identityChanged =
+      gamertag !== initial.gamertag ||
+      email !== initial.email ||
+      nametagColor !== initial.nametagColor;
+    const preferencesChanged =
+      favoriteGameId !== initial.favoriteGameId ||
+      favoriteWeaponId !== initial.favoriteWeaponId;
+    const section =
+      preferencesChanged && !identityChanged ? "preferences" : "identity";
+
+    try {
+      const response = await fetch("/api/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          gamertag,
+          email,
+          favoriteGameId,
+          favoriteWeaponId,
+          nametagColor,
+        }),
+      });
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as
+          | { error?: string }
+          | null;
+        setSubmitError(payload?.error ?? "Unable to update profile.");
+        trackEvent("profile_updated", { section, success: false });
+        return;
+      }
+      trackEvent("profile_updated", { section, success: true });
+      window.location.href = "/settings/profile";
+    } catch {
+      setSubmitError("Unable to update profile.");
+      trackEvent("profile_updated", { section, success: false });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <form
-      action="/api/profile"
-      method="post"
+      onSubmit={handleSubmit}
       className="rounded-md border border-ink/10 bg-sand/80 p-4 sm:p-5 backdrop-blur"
     >
       <div className="space-y-6">
@@ -235,12 +287,17 @@ export default function ProfileSettingsForm({
             </button>
             <button
               type="submit"
-              disabled={!isDirty}
+              disabled={!isDirty || saving}
               className="inline-flex items-center justify-center rounded-sm bg-ink px-4 py-2 text-sm font-semibold text-sand hover:bg-ink/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink/60 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Save changes
+              {saving ? "Saving..." : "Save changes"}
             </button>
           </div>
+          {submitError && (
+            <p className="mt-2 text-xs font-semibold text-clay">
+              {submitError}
+            </p>
+          )}
         </div>
       </div>
     </form>

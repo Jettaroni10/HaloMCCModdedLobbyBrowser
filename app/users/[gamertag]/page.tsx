@@ -8,6 +8,7 @@ import { HALO_GAMES } from "@/data/haloGames";
 import { HALO_WEAPONS } from "@/data/haloWeapons";
 import { clampRank } from "@/lib/ranks";
 import { getSignedUserReadUrl } from "@/lib/user-images";
+import ProfileViewTracker from "@/components/analytics/ProfileViewTracker";
 
 export default async function UserProfilePage({
   params,
@@ -119,6 +120,7 @@ export default async function UserProfilePage({
 
   return (
     <div className="mx-auto w-full max-w-6xl px-6 py-12">
+      <ProfileViewTracker section="identity" />
       <header>
         <h1 className="text-3xl font-semibold text-ink">Profile</h1>
         <p className="mt-2 text-sm text-ink/70">

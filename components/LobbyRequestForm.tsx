@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { hashId, trackEvent } from "@/lib/analytics";
 
 type ModEntry = {
   id: string;
@@ -18,6 +19,7 @@ type ModPackSummary = {
 
 type LobbyRequestFormProps = {
   lobbyId: string;
+  game?: string;
   workshopCollectionUrl: string | null;
   workshopItemUrls: string[];
   modNotes: string | null;
@@ -31,6 +33,7 @@ type LobbyRequestFormProps = {
 
 export default function LobbyRequestForm({
   lobbyId,
+  game,
   workshopCollectionUrl,
   workshopItemUrls,
   modNotes,
@@ -171,6 +174,12 @@ export default function LobbyRequestForm({
         setInfo("You have left the previous lobby.");
       }
       setSuccess(true);
+      trackEvent("lobby_request_join", {
+        lobby_id: hashId(lobbyId),
+        game: game ?? undefined,
+        is_modded: isModded,
+        mod_count: isModded ? requiredModIds.length : 0,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Request failed.");
     } finally {

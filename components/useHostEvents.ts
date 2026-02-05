@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { createHostRealtimeClient } from "@/lib/realtime/ablyClient";
+import { trackEvent } from "@/lib/analytics";
 
 export type HostRequestCreatedEvent = {
   id: string;
@@ -354,6 +355,10 @@ export function useHostEvents(options: UseHostEventsOptions = {}) {
         dispatchHostEvent("customs:hostRequestCreated", payload);
         onRequestCreatedRef.current?.(payload);
         incrementUnread();
+        trackEvent("notification_received", {
+          notification_type: "request_created",
+          source: "host_realtime",
+        });
         const name =
           payload.requesterGamertag?.trim() ||
           payload.requesterHandleText ||
@@ -368,6 +373,10 @@ export function useHostEvents(options: UseHostEventsOptions = {}) {
         dispatchHostEvent("customs:hostLobbyExpired", payload);
         onLobbyExpiredRef.current?.(payload);
         incrementUnread();
+        trackEvent("notification_received", {
+          notification_type: "lobby_expired",
+          source: "host_realtime",
+        });
         enqueueToast("Lobby expired");
         void playPing();
       }
@@ -378,6 +387,10 @@ export function useHostEvents(options: UseHostEventsOptions = {}) {
         dispatchHostEvent("customs:hostRequestDecided", payload);
         onRequestDecidedRef.current?.(payload);
         decrementUnread();
+        trackEvent("notification_received", {
+          notification_type: "request_decided",
+          source: "host_realtime",
+        });
       }
     };
 

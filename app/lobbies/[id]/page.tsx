@@ -12,6 +12,7 @@ import HostLobbyNotifications from "@/components/HostLobbyNotifications";
 import LobbyChat from "@/components/LobbyChat";
 import LobbyBackground from "@/components/LobbyBackground";
 import Nametag from "@/components/user/Nametag";
+import LobbyViewTracker from "@/components/analytics/LobbyViewTracker";
 
 type LobbyPageProps = {
   params: { id: string };
@@ -209,6 +210,12 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
+      <LobbyViewTracker
+        lobbyId={lobby.id}
+        game={lobby.game}
+        isModded={lobby.isModded}
+        modCount={requiredModCount}
+      />
       <LobbyBackground
         lobbyId={lobby.id}
         hasRealImage={Boolean(lobby.mapImagePath)}
@@ -280,6 +287,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
               !isHost && (
                 <LobbyRequestForm
                   lobbyId={lobby.id}
+                  game={lobby.game}
                   workshopCollectionUrl={lobby.workshopCollectionUrl}
                   workshopItemUrls={lobby.workshopItemUrls}
                   modNotes={lobby.modNotes}

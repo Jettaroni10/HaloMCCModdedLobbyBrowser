@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { trackEvent } from "@/lib/analytics";
 
 type UserProfileActionsProps = {
   targetGamertag: string;
@@ -80,6 +81,7 @@ export default function UserProfileActions({
       return;
     }
     setInviteStatus("Invite sent.");
+    trackEvent("lobby_invite_sent");
   }
 
   if (blockedByTarget) {

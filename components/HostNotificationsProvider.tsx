@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { createContext, useContext } from "react";
 import { useHostEvents } from "./useHostEvents";
+import { trackEvent } from "@/lib/analytics";
 
 type HostNotificationsContextValue = ReturnType<typeof useHostEvents>;
 
@@ -37,7 +38,12 @@ export default function HostNotificationsProvider({
                 <span>{toast.message}</span>
                 <button
                   type="button"
-                  onClick={() => value.dismissToast(toast.id)}
+                  onClick={() => {
+                    trackEvent("notification_clicked", {
+                      notification_type: "host_toast",
+                    });
+                    value.dismissToast(toast.id);
+                  }}
                   className="text-xs font-semibold text-ink/60"
                 >
                   Dismiss

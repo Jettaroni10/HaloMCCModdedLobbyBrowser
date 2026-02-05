@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import HostLobbyForm from "./HostLobbyForm";
 import MapImageUploader from "./MapImageUploader";
+import { hashId, trackEvent } from "@/lib/analytics";
 
 type HostLobbyEditFormProps = {
   lobbyId: string;
@@ -48,6 +49,20 @@ export default function HostLobbyEditForm({
     });
 
     if (response.ok) {
+      const modUrls =
+        typeof payload.modUrls === "string"
+          ? payload.modUrls
+              .split("\n")
+              .map((line) => line.trim())
+              .filter(Boolean)
+          : [];
+      const isModded = Boolean(payload.isModded);
+      trackEvent("lobby_updated", {
+        lobby_id: hashId(lobbyId),
+        game: typeof payload.game === "string" ? payload.game : defaultValues.game,
+        is_modded: isModded,
+        mod_count: isModded ? modUrls.length : 0,
+      });
       router.push("/host");
     }
   }

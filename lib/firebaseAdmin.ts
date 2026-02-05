@@ -1,3 +1,4 @@
+import "server-only";
 import admin from "firebase-admin";
 
 type FirebaseServiceAccount = {
@@ -27,7 +28,7 @@ export function getBucketName() {
   );
   if (envBucket) return envBucket;
 
-  const projectId = (process.env.FIREBASE_PROJECT_ID ?? "").trim();
+  const projectId = (process.env.FIREBASE_ADMIN_PROJECT_ID ?? "").trim();
   if (projectId) {
     return `${projectId}.appspot.com`;
   }
@@ -41,7 +42,7 @@ function loadServiceAccount(): FirebaseServiceAccount {
     return JSON.parse(json) as FirebaseServiceAccount;
   }
 
-  const projectId = process.env.FIREBASE_PROJECT_ID ?? "";
+  const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID ?? "";
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL ?? "";
   const privateKey = (process.env.FIREBASE_PRIVATE_KEY ?? "").replace(
     /\\n/g,

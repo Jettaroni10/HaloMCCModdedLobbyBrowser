@@ -1,3 +1,4 @@
+import "server-only";
 import { ImageAnnotatorClient, protos } from "@google-cloud/vision";
 import { getBucket, getBucketName } from "@/lib/firebaseAdmin";
 
@@ -29,7 +30,7 @@ function hasVisionConfig() {
   const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (json && json.trim().length > 0) return true;
   return Boolean(
-    process.env.FIREBASE_PROJECT_ID &&
+    process.env.FIREBASE_ADMIN_PROJECT_ID &&
       process.env.FIREBASE_CLIENT_EMAIL &&
       process.env.FIREBASE_PRIVATE_KEY
   );
@@ -41,7 +42,7 @@ function loadServiceAccount(): ServiceAccount {
     return JSON.parse(json) as ServiceAccount;
   }
 
-  const projectId = process.env.FIREBASE_PROJECT_ID ?? "";
+  const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID ?? "";
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL ?? "";
   const privateKey = (process.env.FIREBASE_PRIVATE_KEY ?? "").replace(
     /\\n/g,

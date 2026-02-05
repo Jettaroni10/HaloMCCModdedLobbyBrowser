@@ -13,8 +13,18 @@ type FirebaseAuthPayload = {
   gamertag?: string;
 };
 
-function jsonError(message: string, status = 400, code?: string) {
-  return NextResponse.json({ error: message, code }, { status });
+function jsonError(
+  error: string,
+  status = 400,
+  message?: string,
+  code?: string
+) {
+  return NextResponse.json({ error, message, code }, { status });
+}
+
+function logFailure(stage: string, details?: Record<string, unknown>) {
+  const payload = details ? { stage, ...details } : { stage };
+  console.warn("AUTH_FIREBASE_FAIL", payload);
 }
 
 async function findUserByGamertag(gamertag: string) {
@@ -38,24 +48,36 @@ export async function POST(request: Request) {
   try {
     body = (await request.json()) as FirebaseAuthPayload;
   } catch {
-    return jsonError("Invalid request payload.");
+    logFailure("invalid_json");
+    return jsonError("invalid_request_payload", 400);
   }
 
   const idToken = typeof body.idToken === "string" ? body.idToken : "";
   if (!idToken) {
-    return jsonError("Missing id token.");
+    logFailure("missing_id_token");
+    return jsonError("missing_id_token", 400);
   }
 
   let decoded;
   try {
     decoded = await getAdminAuth().verifyIdToken(idToken);
-  } catch {
-    return jsonError("Invalid or expired token.", 401);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const code =
+      typeof error === "object" &&
+      error &&
+      "code" in error &&
+      typeof (error as { code?: string }).code === "string"
+        ? (error as { code: string }).code
+        : undefined;
+    logFailure("verify_failed", { message, code });
+    return jsonError("verify_failed", 401, message, code);
   }
 
   const email = decoded.email?.toLowerCase().trim();
   if (!email) {
-    return jsonError("Email not available for this account.", 400, "no_email");
+    logFailure("missing_email");
+    return jsonError("missing_email", 400, "Email not available for this account.");
   }
 
   const requestedGamertag = normalizeText(body.gamertag, 24);
@@ -68,14 +90,21 @@ export async function POST(request: Request) {
     signInProvider &&
     !["password", "google.com"].includes(signInProvider)
   ) {
-    return jsonError("Unsupported sign-in provider.", 400, "provider");
+    logFailure("provider_rejected", { signInProvider });
+    return jsonError(
+      "provider_rejected",
+      400,
+      "Unsupported sign-in provider.",
+      "provider"
+    );
   }
 
   if (requestedGamertag && !isValidGamertag(requestedGamertag)) {
+    logFailure("gamertag_invalid");
     return jsonError(
-      "Gamertag must be 3-24 characters and use letters, numbers, spaces, or underscore.",
+      "gamertag_invalid",
       400,
-      "gamertag_invalid"
+      "Gamertag must be 3-24 characters and use letters, numbers, spaces, or underscore."
     );
   }
 
@@ -89,23 +118,26 @@ export async function POST(request: Request) {
   });
 
   if (user?.isBanned) {
-    return jsonError("Account is banned.", 403, "banned");
+    logFailure("banned");
+    return jsonError("banned", 403, "Account is banned.");
   }
 
   if (user && user.firebaseUid && user.firebaseUid !== decoded.uid) {
+    logFailure("account_conflict");
     return jsonError(
+      "account_conflict",
       "Account exists with a different sign-in method.",
-      409,
-      "account_conflict"
+      409
     );
   }
 
   if (!user) {
     if (signInProvider === "password" && !requestedGamertag) {
+      logFailure("gamertag_required");
       return jsonError(
+        "gamertag_required",
         "Gamertag is required for email sign up.",
-        400,
-        "gamertag_required"
+        400
       );
     }
     let needsGamertag = false;
@@ -117,10 +149,11 @@ export async function POST(request: Request) {
 
     const uniqueGamertag = await generateUniqueGamertag(gamertag);
     if (requestedGamertag && uniqueGamertag !== requestedGamertag) {
+      logFailure("gamertag_taken");
       return jsonError(
+        "gamertag_taken",
         "That gamertag is already in use.",
-        409,
-        "gamertag_taken"
+        409
       );
     }
 
@@ -153,10 +186,11 @@ export async function POST(request: Request) {
         },
       });
       if (conflict) {
+        logFailure("gamertag_taken");
         return jsonError(
+          "gamertag_taken",
           "That gamertag is already in use.",
-          409,
-          "gamertag_taken"
+          409
         );
       }
       user = await prisma.user.update({
@@ -168,7 +202,8 @@ export async function POST(request: Request) {
 
   const session = createSessionToken(user.id);
   if (!session) {
-    return jsonError("Auth secret missing.", 500, "server_error");
+    logFailure("auth_secret_missing");
+    return jsonError("auth_secret_missing", 500, "Auth secret missing.");
   }
 
   const redirectTo =

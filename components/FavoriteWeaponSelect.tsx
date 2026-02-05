@@ -7,6 +7,7 @@ import { HALO_GAMES } from "@/data/haloGames";
 type FavoriteWeaponSelectProps = {
   name?: string;
   defaultValue?: string | null;
+  onValueChange?: (value: string) => void;
 };
 
 const gameNameById = new Map(HALO_GAMES.map((game) => [game.id, game.name]));
@@ -14,6 +15,7 @@ const gameNameById = new Map(HALO_GAMES.map((game) => [game.id, game.name]));
 export default function FavoriteWeaponSelect({
   name = "favoriteWeaponId",
   defaultValue,
+  onValueChange,
 }: FavoriteWeaponSelectProps) {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(defaultValue ?? "");
@@ -59,7 +61,7 @@ export default function FavoriteWeaponSelect({
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="flex w-full items-center justify-between rounded-sm border border-ink/10 bg-mist/80 px-3 py-2 text-left text-sm text-ink shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)]"
+        className="flex w-full items-center justify-between rounded-sm border border-ink/10 bg-mist/80 px-3 py-2 text-left text-sm text-ink shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink/40"
       >
         <span className={selectedWeapon ? "text-ink" : "text-ink/60"}>
           {selectedLabel}
@@ -80,6 +82,7 @@ export default function FavoriteWeaponSelect({
               type="button"
               onClick={() => {
                 setSelectedId("");
+                onValueChange?.("");
                 setQuery("");
                 setOpen(false);
               }}
@@ -93,6 +96,7 @@ export default function FavoriteWeaponSelect({
                 type="button"
                 onClick={() => {
                   setSelectedId(weapon.id);
+                  onValueChange?.(weapon.id);
                   setQuery("");
                   setOpen(false);
                 }}

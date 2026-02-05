@@ -46,7 +46,7 @@ export default function SpartanImageUploader({
   }
 
   return (
-    <div className="space-y-3 rounded-md border border-ink/10 bg-sand/80 p-4 backdrop-blur">
+    <div className="space-y-3 rounded-md border border-ink/10 bg-sand/80 p-4 backdrop-blur sm:p-5">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-ink">Spartan portrait</p>
@@ -59,7 +59,7 @@ export default function SpartanImageUploader({
             type="button"
             onClick={handleRemove}
             disabled={busy}
-            className="rounded-sm border border-clay/40 px-3 py-1 text-xs font-semibold text-clay disabled:opacity-60"
+            className="rounded-sm border border-clay/40 px-3 py-1 text-xs font-semibold text-clay disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay/60"
           >
             Remove
           </button>

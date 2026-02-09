@@ -666,7 +666,18 @@ private:
         if (!connected) {
             return names;
         }
-        names.reserve(mapNameAddresses.size());
+        names.reserve(mapNameAddresses.size() + 1);
+
+        EnsureModuleBases();
+        if (mccBase != 0) {
+            uintptr_t basePtr = 0;
+            if (TryReadMemory(mccBase + 0x4001590, &basePtr) && basePtr != 0) {
+                std::string name;
+                if (TryReadString(basePtr + 0x44D, &name, 64) && IsLikelyMapName(name)) {
+                    names.push_back(name);
+                }
+            }
+        }
 
         for (uintptr_t address : mapNameAddresses) {
             std::string name;

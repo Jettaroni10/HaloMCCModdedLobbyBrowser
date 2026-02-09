@@ -222,6 +222,8 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
       <LobbyBackground
         lobbyId={lobby.id}
         hasRealImage={Boolean(lobby.mapImagePath)}
+        fallbackMapName={lobby.map}
+        isHost={isHost}
       />
       <div className="relative z-10">
         <div className="fixed left-4 top-24 z-20 w-[min(92vw,640px)] lg:left-10 lg:top-24">

@@ -1,20 +1,39 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import FadeInImage from "./FadeInImage";
+import { useOverlayTelemetry } from "@/lib/useOverlayTelemetry";
+import { getLobbyBgImage } from "@/lib/maps/reachMapImages";
 
 type LobbyBackgroundProps = {
   lobbyId: string;
   hasRealImage: boolean;
+  fallbackMapName: string;
+  isHost: boolean;
   fallbackUrl?: string;
 };
 
 export default function LobbyBackground({
   lobbyId,
   hasRealImage,
-  fallbackUrl = "/images/map-placeholder.webp",
+  fallbackMapName,
+  isHost,
+  fallbackUrl,
 }: LobbyBackgroundProps) {
   const [url, setUrl] = useState<string | null>(null);
+  const { isConnected, state } = useOverlayTelemetry();
+  const telemetryMapName =
+    isHost && isConnected && state?.map ? state.map : null;
+  const resolvedFallback = useMemo(
+    () =>
+      getLobbyBgImage({
+        customImageUrl: null,
+        telemetryMapName,
+        fallbackMapName,
+      }),
+    [telemetryMapName, fallbackMapName]
+  );
+  const fallbackImage = fallbackUrl ?? resolvedFallback;
 
   useEffect(() => {
     let active = true;
@@ -42,7 +61,7 @@ export default function LobbyBackground({
   return (
     <>
       <img
-        src={fallbackUrl}
+        src={fallbackImage}
         alt="Lobby map background"
         className="fixed inset-0 -z-20 h-full w-full object-cover"
       />

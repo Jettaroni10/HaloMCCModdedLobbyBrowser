@@ -1,29 +1,49 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import FadeInImage from "./FadeInImage";
+import { useOverlayTelemetry } from "@/lib/useOverlayTelemetry";
+import { getLobbyBgImage } from "@/lib/maps/reachMapImages";
 
 type LobbyCardBackgroundProps = {
   imageUrl?: string | null;
+  fallbackMapName?: string | null;
+  isHost?: boolean;
 };
 
 export default function LobbyCardBackground({
   imageUrl,
+  fallbackMapName,
+  isHost = false,
 }: LobbyCardBackgroundProps) {
   const [failed, setFailed] = useState(false);
+  const { isConnected, state } = useOverlayTelemetry();
+  const telemetryMapName =
+    isHost && isConnected && state?.map ? state.map : null;
+  const fallbackUrl = useMemo(
+    () =>
+      getLobbyBgImage({
+        customImageUrl: imageUrl ?? null,
+        telemetryMapName,
+        fallbackMapName,
+      }),
+    [imageUrl, telemetryMapName, fallbackMapName]
+  );
 
   useEffect(() => {
     setFailed(false);
   }, [imageUrl]);
 
   const hasRealImage = Boolean(imageUrl) && !failed;
+  const resolvedUrl = hasRealImage ? imageUrl : fallbackUrl;
+  const hasImage = Boolean(resolvedUrl);
 
   return (
     <>
       <div className="absolute inset-0 z-0 bg-sand" />
-      {hasRealImage && (
+      {hasImage && (
         <FadeInImage
-          src={imageUrl ?? ""}
+          src={resolvedUrl ?? ""}
           alt=""
           loading="lazy"
           referrerPolicy="no-referrer"

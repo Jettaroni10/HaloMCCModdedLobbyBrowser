@@ -251,7 +251,11 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
                 : ""
             }`}
           >
-            <LobbyCardBackground imageUrl={lobby.mapImageUrl} />
+            <LobbyCardBackground
+              imageUrl={lobby.mapImageUrl}
+              fallbackMapName={lobby.map}
+              isHost={lobby.isHosting}
+            />
             <div
               className="relative z-20"
               style={{ textShadow: "0 4px 16px rgba(0,0,0,0.95)" }}

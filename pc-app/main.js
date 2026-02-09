@@ -145,6 +145,7 @@ function showOverlay() {
     }
   }
   overlayWindow.setAlwaysOnTop(true, "screen-saver");
+  applyOverlayEffects();
   overlayWindow.setOpacity(0);
   animateOpacity(OVERLAY_VISIBLE_OPACITY, OVERLAY_FADE_MS);
   overlayWindow.blur();
@@ -405,7 +406,8 @@ function createOverlayWindow() {
     frame: false,
     resizable: false,
     movable: false,
-    fullscreen: true,
+    fullscreen: false,
+    fullscreenable: false,
     alwaysOnTop: true,
     hasShadow: false,
     skipTaskbar: true,

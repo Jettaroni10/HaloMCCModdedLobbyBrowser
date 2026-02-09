@@ -63,7 +63,7 @@ body.hmcc-overlay {
 }
 
 body.hmcc-overlay::before {
-  opacity: 0.35;
+  opacity: 0.2;
 }
 
 .hmcc-overlay-glass {
@@ -71,9 +71,9 @@ body.hmcc-overlay::before {
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
-  background: rgba(10, 15, 25, 0.35);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  background: rgba(10, 15, 25, 0.45);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 

@@ -11,6 +11,7 @@ import AnalyticsTracker from "@/components/analytics/AnalyticsTracker";
 import AuthProvider from "@/components/auth/AuthProvider";
 import GamertagGate from "@/components/auth/GamertagGate";
 import OverlayGlassShell from "@/components/OverlayGlassShell";
+import OverlayAutoRefresher from "@/components/OverlayAutoRefresher";
 
 export const metadata: Metadata = {
   title: "Customs on the Ring",
@@ -34,6 +35,7 @@ export default async function RootLayout({
           <AnalyticsTracker />
         </Suspense>
         <OverlayGlassShell />
+        <OverlayAutoRefresher />
         <AuthProvider>
           <Suspense fallback={null}>
             <GamertagGate user={user} />

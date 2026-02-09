@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Halo MCC Lobby Browser (PC)</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Local Desktop App</p>
+        <h1>Halo MCC Modded Lobby Browser</h1>
+        <p class="subhead">
+          Standalone PC companion with local monitoring + lobby registry.
+        </p>
+      </div>
+      <div class="status-pill" id="monitor-status">Monitor: stopped</div>
+    </header>
+
+    <main class="layout">
+      <section class="panel">
+        <h2>Session Monitor (Simulated)</h2>
+        <p class="muted">
+          Hook this to real MCC telemetry later. For now, toggle the simulated
+          state and the monitor will publish a lobby automatically.
+        </p>
+        <div class="button-row">
+          <button id="monitor-start" class="primary">Start monitor</button>
+          <button id="monitor-stop" class="ghost">Stop monitor</button>
+        </div>
+        <form id="monitor-form" class="form-grid">
+          <label>
+            <span>Custom game running</span>
+            <input type="checkbox" id="monitor-custom" />
+          </label>
+          <label>
+            <span>Lobby title</span>
+            <input id="monitor-title" placeholder="Custom Lobby" />
+          </label>
+          <label>
+            <span>Game</span>
+            <input id="monitor-game" placeholder="MCC" />
+          </label>
+          <label>
+            <span>Mode</span>
+            <input id="monitor-mode" placeholder="Custom" />
+          </label>
+          <label>
+            <span>Map</span>
+            <input id="monitor-map" placeholder="Unknown" />
+          </label>
+          <label>
+            <span>Host name</span>
+            <input id="monitor-host" placeholder="Host" />
+          </label>
+          <label>
+            <span>Current players</span>
+            <input id="monitor-current" type="number" min="1" max="32" />
+          </label>
+          <label>
+            <span>Max players</span>
+            <input id="monitor-max" type="number" min="2" max="32" />
+          </label>
+          <label class="inline">
+            <input type="checkbox" id="monitor-modded" />
+            <span>Modded lobby</span>
+          </label>
+          <label class="span-2">
+            <span>Required mods (comma separated)</span>
+            <input id="monitor-mods" placeholder="example_mod_1, example_mod_2" />
+          </label>
+          <button class="primary" type="submit">Update simulated state</button>
+        </form>
+        <div class="divider"></div>
+        <h3 class="section-title">Telemetry File (Experimental)</h3>
+        <p class="muted">
+          Point this to a JSON file written by your telemetry writer.
+          Expected shape: <code>{ "version": "1.0", "data": { ... } }</code>.
+        </p>
+        <form id="telemetry-form" class="form-row">
+          <input id="telemetry-path" placeholder="%APPDATA%\\MCC\\customs_state.json" />
+          <button class="ghost" type="button" id="telemetry-choose">
+            Choose file
+          </button>
+        </form>
+        <div class="button-row" style="margin-top: 12px;">
+          <button class="primary" type="button" id="telemetry-connect">
+            Use telemetry
+          </button>
+          <button class="ghost" type="button" id="telemetry-disconnect">
+            Use simulator
+          </button>
+        </div>
+        <div id="telemetry-status" class="muted"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Installed Mods</h2>
+        <p class="muted">
+          Set the mods installed on this PC so the validator can highlight
+          missing dependencies for each lobby.
+        </p>
+        <form id="mods-form" class="form-row">
+          <input id="mods-installed" placeholder="mod_a, mod_b" />
+          <button class="primary" type="submit">Save mods</button>
+          <button class="ghost" type="button" id="mods-scan">
+            Scan default folders
+          </button>
+        </form>
+        <div id="mods-scan-result" class="muted"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Manual Lobby Create</h2>
+        <p class="muted">
+          Use this to publish a lobby without the monitor.
+        </p>
+        <form id="create-form" class="form-grid">
+          <label>
+            <span>Lobby title</span>
+            <input id="create-title" placeholder="Friday customs" required />
+          </label>
+          <label>
+            <span>Game</span>
+            <input id="create-game" placeholder="MCC" />
+          </label>
+          <label>
+            <span>Mode</span>
+            <input id="create-mode" placeholder="Custom" />
+          </label>
+          <label>
+            <span>Map</span>
+            <input id="create-map" placeholder="Valhalla" />
+          </label>
+          <label>
+            <span>Host name</span>
+            <input id="create-host" placeholder="Host" />
+          </label>
+          <label>
+            <span>Current players</span>
+            <input id="create-current" type="number" min="1" max="32" />
+          </label>
+          <label>
+            <span>Max players</span>
+            <input id="create-max" type="number" min="2" max="32" />
+          </label>
+          <label class="inline">
+            <input type="checkbox" id="create-modded" />
+            <span>Modded lobby</span>
+          </label>
+          <label class="span-2">
+            <span>Required mods (comma separated)</span>
+            <input id="create-mods" placeholder="example_mod_1, example_mod_2" />
+          </label>
+          <button class="primary" type="submit">Publish lobby</button>
+        </form>
+      </section>
+
+      <section class="panel span-2">
+        <div class="panel-header">
+          <div>
+            <h2>Active Lobbies</h2>
+            <p class="muted">Local registry stored on this PC.</p>
+          </div>
+          <button id="refresh-button" class="ghost">Refresh</button>
+        </div>
+        <div id="lobbies" class="lobbies"></div>
+      </section>
+    </main>
+
+    <script src="renderer.js"></script>
+  </body>
+</html>

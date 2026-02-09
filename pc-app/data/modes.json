@@ -1,0 +1,26 @@
+{
+  "Slayer": {
+    "description": "Team deathmatch. First team to reach the score limit wins.",
+    "recommendedMap": "Valhalla",
+    "settings": {
+      "scoreToWin": 50,
+      "timeLimitMinutes": 12
+    }
+  },
+  "CTF": {
+    "description": "Capture the flag. Coordinate offense and defense.",
+    "recommendedMap": "Blood Gulch",
+    "settings": {
+      "scoreToWin": 3,
+      "timeLimitMinutes": 15
+    }
+  },
+  "Oddball": {
+    "description": "Hold the skull to score points.",
+    "recommendedMap": "Narrows",
+    "settings": {
+      "scoreToWin": 200,
+      "timeLimitMinutes": 12
+    }
+  }
+}

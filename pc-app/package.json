@@ -1,0 +1,17 @@
+{
+  "name": "halo-mcc-lobby-browser-pc",
+  "private": true,
+  "version": "0.1.0",
+  "main": "main.js",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "electron .",
+    "start": "electron .",
+    "telemetry:demo": "node tools/telemetry-demo.js",
+    "telemetry:receiver": "node tools/telemetry-receiver.js"
+  },
+  "devDependencies": {
+    "active-win": "^9.0.0",
+    "electron": "^30.0.0"
+  }
+}

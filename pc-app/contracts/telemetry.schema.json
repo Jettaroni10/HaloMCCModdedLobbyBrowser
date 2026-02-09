@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mcc-telemetry.schema.json",
+  "title": "MCC Telemetry Envelope",
+  "type": "object",
+  "required": ["version", "data"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "data": {
+      "type": "object",
+      "required": ["isCustomGame"],
+      "properties": {
+        "isCustomGame": { "type": "boolean" },
+        "mapName": { "type": "string" },
+        "gameMode": { "type": "string" },
+        "playlist": { "type": "string" },
+        "playerCount": { "type": "integer", "minimum": 0, "maximum": 32 },
+        "maxPlayers": { "type": "integer", "minimum": 0, "maximum": 32 },
+        "hostName": { "type": "string" },
+        "mods": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "sessionID": { "type": "string" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,113 @@
+:root {
+  --sand: 7 12 18;
+  --mist: 12 18 26;
+  --ink: 210 225 245;
+  --clay: 74 163 255;
+  --moss: 46 96 140;
+  --border-soft: rgba(210, 225, 245, 0.12);
+  --glass: rgba(7, 12, 18, 0.78);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  font-family: "Bahnschrift", "DIN Condensed", "Arial Narrow", "Segoe UI",
+    sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(var(--ink));
+  background: transparent;
+}
+
+body {
+  overflow: hidden;
+}
+
+.overlay-root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: 16px;
+  pointer-events: auto;
+  -webkit-app-region: drag;
+}
+
+.lobby-card {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  min-height: 140px;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid rgba(210, 225, 245, 0.1);
+  background: transparent;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.card-bg {
+  position: absolute;
+  inset: 0;
+  background: rgb(var(--sand));
+}
+
+.card-overlay {
+  position: absolute;
+  inset: 0;
+}
+
+.card-overlay-tint {
+  background: rgba(7, 12, 18, 0.35);
+}
+
+.card-overlay-horizontal {
+  background: linear-gradient(
+    90deg,
+    rgba(7, 12, 18, 0.95) 0%,
+    rgba(7, 12, 18, 0.8) 35%,
+    rgba(7, 12, 18, 0.8) 65%,
+    rgba(7, 12, 18, 0.95) 100%
+  );
+}
+
+.card-overlay-vertical {
+  background: linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.55) 0%,
+    rgba(0, 0, 0, 0.25) 30%,
+    rgba(0, 0, 0, 0.00) 55%
+  );
+}
+
+.card-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  text-shadow: 0 4px 16px rgba(0, 0, 0, 0.95);
+}
+
+.card-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.card-subline {
+  margin: 0;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.dot {
+  margin: 0 6px;
+}

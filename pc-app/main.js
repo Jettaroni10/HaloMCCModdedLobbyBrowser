@@ -1,0 +1,678 @@
+const {
+  app,
+  BrowserWindow,
+  ipcMain,
+  dialog,
+  screen,
+  globalShortcut,
+} = require("electron");
+const path = require("path");
+const { spawn } = require("child_process");
+const fs = require("fs");
+const { LobbyStore } = require("./store");
+const { GameSessionMonitor, SimulatedGameStateProvider } = require("./monitor");
+const { AutoLobbyPopulator } = require("./populator");
+const { scanDefaultModPaths } = require("./modScanner");
+const { FileGameStateProvider } = require("./telemetryProvider");
+const { readConfig, writeConfig } = require("./config");
+
+let overlayWindow = null;
+let store = null;
+let monitor = null;
+let provider = null;
+let populator = null;
+let configPath = null;
+let config = {};
+let telemetryPath = "";
+let useTelemetry = false;
+let overlaySettings = null;
+let readerProcess = null;
+let latestTelemetryState = null;
+
+const OVERLAY_URL = "https://halomoddedcustoms.com";
+const OVERLAY_FADE_MS = 200;
+const OVERLAY_VISIBLE_OPACITY = 0.82;
+const ACTIVE_WIN_POLL_MS = 140;
+const DEBUG_OVERLAY = String(process.env.HMCC_OVERLAY_DEBUG || "") === "1";
+let overlayVisible = false;
+let overlayEnabled = true;
+let overlayReady = false;
+let mccFocused = false;
+let fadeTimer = null;
+let focusPollTimer = null;
+let focusPollInFlight = false;
+let activeWinGetter = null;
+
+const DEFAULT_OVERLAY_SETTINGS = {
+  bounds: { width: 1200, height: 820, x: null, y: null },
+  opacity: 0.9,
+  compact: false,
+  clickThrough: false,
+  pinned: true,
+};
+
+function resolveTelemetryPath(inputPath) {
+  const raw = String(inputPath || "").trim();
+  if (!raw) return raw;
+  return raw.replace(/%([^%]+)%/g, (_match, name) => {
+    const value = process.env[name];
+    return typeof value === "string" ? value : `%${name}%`;
+  });
+}
+
+function getDefaultTelemetryPath() {
+  const appData = app.getPath("appData");
+  return path.join(appData, "MCC", "customs_state.json");
+}
+
+function debugLog(message) {
+  if (!DEBUG_OVERLAY) return;
+  console.log(`[overlay] ${message}`);
+}
+
+function stopFade() {
+  if (fadeTimer) {
+    clearInterval(fadeTimer);
+    fadeTimer = null;
+  }
+}
+
+function animateOpacity(targetOpacity, durationMs, onComplete) {
+  if (!overlayWindow || overlayWindow.isDestroyed()) return;
+  stopFade();
+  const startOpacity = overlayWindow.getOpacity();
+  const startTime = Date.now();
+
+  fadeTimer = setInterval(() => {
+    if (!overlayWindow || overlayWindow.isDestroyed()) {
+      stopFade();
+      return;
+    }
+    const elapsed = Date.now() - startTime;
+    const t = Math.min(1, elapsed / durationMs);
+    const eased =
+      t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    const next = startOpacity + (targetOpacity - startOpacity) * eased;
+    overlayWindow.setOpacity(next);
+    if (t >= 1) {
+      stopFade();
+      overlayWindow.setOpacity(targetOpacity);
+      if (onComplete) onComplete();
+    }
+  }, 16);
+}
+
+function showOverlay() {
+  if (!overlayWindow || overlayWindow.isDestroyed()) return;
+  if (!overlayWindow.isVisible()) {
+    if (typeof overlayWindow.showInactive === "function") {
+      overlayWindow.showInactive();
+    } else {
+      overlayWindow.show();
+    }
+  }
+  overlayWindow.setAlwaysOnTop(true, "screen");
+  overlayWindow.setOpacity(0);
+  animateOpacity(OVERLAY_VISIBLE_OPACITY, OVERLAY_FADE_MS);
+  overlayVisible = true;
+}
+
+function hideOverlay() {
+  if (!overlayWindow || overlayWindow.isDestroyed()) return;
+  overlayWindow.setAlwaysOnTop(false);
+  animateOpacity(0, OVERLAY_FADE_MS, () => {
+    if (!overlayWindow || overlayWindow.isDestroyed()) return;
+    overlayWindow.hide();
+    overlayVisible = false;
+  });
+}
+
+function recomputeOverlayVisibility(reason) {
+  if (!overlayWindow || overlayWindow.isDestroyed() || !overlayReady) return;
+  const shouldShow = overlayEnabled && mccFocused;
+
+  if (shouldShow && !overlayVisible) {
+    debugLog(`show overlay (${reason})`);
+    showOverlay();
+    return;
+  }
+
+  if (!shouldShow && overlayVisible) {
+    debugLog(`hide overlay (${reason})`);
+    hideOverlay();
+  }
+}
+
+function toggleOverlayEnabled() {
+  overlayEnabled = !overlayEnabled;
+  debugLog(`overlay enabled: ${overlayEnabled ? "on" : "off"}`);
+  recomputeOverlayVisibility("toggle");
+}
+
+async function loadActiveWinGetter() {
+  if (activeWinGetter) return activeWinGetter;
+  try {
+    const mod = await import("active-win");
+    activeWinGetter = mod.default;
+  } catch (error) {
+    console.warn("Failed to load active-win:", error?.message || String(error));
+    activeWinGetter = null;
+  }
+  return activeWinGetter;
+}
+
+function isMccFocusedWindow(win) {
+  if (!win) return false;
+  const title = String(win.title || "").toLowerCase();
+  const ownerName = String(win.owner?.name || "").toLowerCase();
+  return (
+    ownerName === "mcc-win64-shipping.exe" ||
+    ownerName === "mcc-win64-shipping" ||
+    title.includes("halo: the master chief collection")
+  );
+}
+
+function startFocusWatcher() {
+  if (focusPollTimer) return;
+  focusPollTimer = setInterval(async () => {
+    if (focusPollInFlight) return;
+    focusPollInFlight = true;
+    try {
+      const getter = await loadActiveWinGetter();
+      if (!getter) return;
+      const win = await getter();
+      const nextFocused = isMccFocusedWindow(win);
+      if (nextFocused !== mccFocused) {
+        mccFocused = nextFocused;
+        debugLog(`MCC focused: ${mccFocused ? "yes" : "no"}`);
+        recomputeOverlayVisibility("focus");
+      }
+    } catch (error) {
+      if (DEBUG_OVERLAY) {
+        console.warn("Active window polling failed:", error?.message || error);
+      }
+    } finally {
+      focusPollInFlight = false;
+    }
+  }, ACTIVE_WIN_POLL_MS);
+}
+
+function stopFocusWatcher() {
+  if (focusPollTimer) {
+    clearInterval(focusPollTimer);
+    focusPollTimer = null;
+  }
+}
+
+function saveConfig() {
+  if (!configPath) return;
+  writeConfig(configPath, {
+    telemetryFilePath: telemetryPath,
+    useTelemetry,
+    overlay: overlaySettings,
+  });
+}
+
+function loadOverlaySettings() {
+  const stored = config && typeof config.overlay === "object" ? config.overlay : {};
+  const bounds = stored.bounds && typeof stored.bounds === "object" ? stored.bounds : {};
+  const rawOpacity = Number(stored.opacity);
+  const clampedOpacity = Number.isFinite(rawOpacity)
+    ? Math.max(0.4, Math.min(1, rawOpacity))
+    : DEFAULT_OVERLAY_SETTINGS.opacity;
+  overlaySettings = {
+    ...DEFAULT_OVERLAY_SETTINGS,
+    ...stored,
+    bounds: {
+      ...DEFAULT_OVERLAY_SETTINGS.bounds,
+      ...bounds,
+    },
+    opacity: clampedOpacity,
+  };
+  return overlaySettings;
+}
+
+function setProvider(nextProvider, nextType) {
+  if (provider && provider.stop) provider.stop();
+  provider = nextProvider;
+  if (nextType) {
+    useTelemetry = nextType === "telemetry";
+  }
+  monitor.setProvider(provider);
+  if (provider && provider.start) provider.start();
+  emitTelemetryUpdate();
+}
+
+function getTelemetryStatus() {
+  const base = provider?.getStatus ? provider.getStatus() : null;
+  return {
+    provider: useTelemetry ? "telemetry" : "simulated",
+    filePath: telemetryPath,
+    expectedSchemaVersion: "1.0",
+    ...(base || {}),
+  };
+}
+
+function emitTelemetryUpdate() {
+  const payload = buildTelemetryState();
+  latestTelemetryState = payload;
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayWindow.webContents.send("hmcc:telemetry", payload);
+  }
+}
+
+function loadOverlayContent() {
+  if (!overlayWindow || overlayWindow.isDestroyed()) return;
+  const attemptLoad = () => {
+    if (!overlayWindow || overlayWindow.isDestroyed()) return;
+    overlayWindow
+      .loadURL(OVERLAY_URL)
+      .catch(() => setTimeout(attemptLoad, 700));
+  };
+  attemptLoad();
+}
+
+function resolveReaderPath() {
+  if (process.env.MCC_READER_EXE) {
+    return process.env.MCC_READER_EXE;
+  }
+  return path.resolve(
+    __dirname,
+    "..",
+    "mcc-telemetry-mod-stub",
+    "build",
+    "Release",
+    "mcc_player_overlay.exe"
+  );
+}
+
+function startReaderProcess() {
+  if (readerProcess) return;
+  const readerPath = resolveReaderPath();
+  if (!fs.existsSync(readerPath)) {
+    console.warn(`Reader exe not found: ${readerPath}`);
+    return;
+  }
+  readerProcess = spawn(readerPath, [], {
+    stdio: "ignore",
+    windowsHide: true,
+    env: {
+      ...process.env,
+      MCC_TELEMETRY_OUT: telemetryPath,
+    },
+  });
+  readerProcess.on("exit", () => {
+    readerProcess = null;
+  });
+  readerProcess.on("error", (error) => {
+    console.warn("Reader failed to start:", error?.message || String(error));
+    readerProcess = null;
+  });
+}
+
+function stopReaderProcess() {
+  if (!readerProcess) return;
+  readerProcess.kill();
+  readerProcess = null;
+}
+
+function getFullscreenBounds() {
+  const display = screen.getPrimaryDisplay();
+  return display.bounds;
+}
+
+function applyOverlayEffects() {
+  if (!overlayWindow || overlayWindow.isDestroyed()) return;
+  try {
+    if (typeof overlayWindow.setVibrancy === "function") {
+      overlayWindow.setVibrancy("acrylic");
+    }
+  } catch {}
+  try {
+    if (typeof overlayWindow.setBackgroundMaterial === "function") {
+      overlayWindow.setBackgroundMaterial("acrylic");
+    }
+  } catch {}
+}
+
+function createOverlayWindow() {
+  if (!overlaySettings) loadOverlaySettings();
+  const overlayBounds = getFullscreenBounds();
+
+  overlayWindow = new BrowserWindow({
+    ...overlayBounds,
+    show: false,
+    transparent: true,
+    frame: false,
+    resizable: false,
+    movable: false,
+    fullscreen: true,
+    alwaysOnTop: true,
+    hasShadow: false,
+    skipTaskbar: true,
+    backgroundColor: "#00000000",
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  overlayWindow.setAlwaysOnTop(true, "screen-saver");
+  overlayWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  overlayWindow.setOpacity(0);
+  overlayWindow.setIgnoreMouseEvents(Boolean(overlaySettings.clickThrough), {
+    forward: true,
+  });
+  overlayWindow.setFocusable(!overlaySettings.clickThrough);
+
+  applyOverlayEffects();
+  loadOverlayContent();
+  overlayWindow.once("ready-to-show", () => {
+    if (!overlayWindow || overlayWindow.isDestroyed()) return;
+    overlayReady = true;
+    overlayVisible = false;
+    recomputeOverlayVisibility("ready");
+  });
+}
+
+function normalizeOverlayBounds(bounds) {
+  const primary = screen.getPrimaryDisplay();
+  const width = Math.max(
+    320,
+    Math.min(
+      bounds.width || DEFAULT_OVERLAY_SETTINGS.bounds.width,
+      primary.workArea.width
+    )
+  );
+  const height = Math.max(
+    160,
+    Math.min(
+      bounds.height || DEFAULT_OVERLAY_SETTINGS.bounds.height,
+      primary.workArea.height
+    )
+  );
+
+  let x = Number.isFinite(bounds.x) ? bounds.x : null;
+  let y = Number.isFinite(bounds.y) ? bounds.y : null;
+
+  const display = Number.isFinite(x) && Number.isFinite(y)
+    ? screen.getDisplayMatching({ x, y, width, height })
+    : primary;
+  const workArea = display.workArea;
+
+  if (!Number.isFinite(x) || !Number.isFinite(y)) {
+    x = Math.round(workArea.x + (workArea.width - width) / 2);
+    y = Math.round(workArea.y + (workArea.height - height) / 2);
+  }
+
+  const maxX = workArea.x + workArea.width - width;
+  const maxY = workArea.y + workArea.height - height;
+  const minX = workArea.x;
+  const minY = workArea.y;
+
+  x = Math.min(Math.max(x, minX), maxX);
+  y = Math.min(Math.max(y, minY), maxY);
+
+  overlaySettings.bounds = { width, height, x, y };
+  saveConfig();
+
+  return { width, height, x, y };
+}
+
+function buildTelemetryState() {
+  const state = provider?.getState ? provider.getState() : {};
+  const telemetry = getTelemetryStatus();
+  const isTelemetry = telemetry?.provider === "telemetry";
+  const stale = Boolean(telemetry?.stale);
+  let status = "inactive";
+  if (isTelemetry && stale) {
+    status = "stale";
+  } else if (state?.isCustomGame) {
+    const players = Number(state.currentPlayers || 0);
+    status = players <= 1 ? "waiting" : "active";
+  }
+
+  return {
+    status,
+    map: state.map || "Unknown",
+    mode: state.mode || "Unknown",
+    currentPlayers: Number(state.currentPlayers || 0),
+    maxPlayers: Number(state.maxPlayers || 0),
+    hostName: state.hostName || "Host",
+    requiredMods: Array.isArray(state.requiredMods) ? state.requiredMods : [],
+    sessionId: state.sessionId || "",
+    timestamp: state.timestamp || null,
+    lastUpdatedAt: telemetry?.lastUpdatedAt || null,
+  };
+}
+
+function setupIpc() {
+  ipcMain.handle("lobbies:list", () => store.listLobbies());
+  ipcMain.handle("lobbies:create", (_event, input) => {
+    const lobby = store.createLobby(input || {});
+    emitTelemetryUpdate();
+    return lobby;
+  });
+  ipcMain.handle("lobbies:update", (_event, id, patch) => {
+    const lobby = store.updateLobby(id, patch || {});
+    emitTelemetryUpdate();
+    return lobby;
+  });
+  ipcMain.handle("lobbies:heartbeat", (_event, id) => {
+    const lobby = store.heartbeatLobby(id);
+    emitTelemetryUpdate();
+    return lobby;
+  });
+  ipcMain.handle("lobbies:close", (_event, id) => {
+    const lobby = store.closeLobby(id);
+    emitTelemetryUpdate();
+    return lobby;
+  });
+  ipcMain.handle("lobbies:delete", (_event, id) => {
+    const lobby = store.deleteLobby(id);
+    emitTelemetryUpdate();
+    return lobby;
+  });
+
+  ipcMain.handle("requests:list", (_event, lobbyId) =>
+    store.listRequests(lobbyId)
+  );
+  ipcMain.handle("requests:add", (_event, payload) => {
+    const request = store.addRequest(payload || {});
+    emitTelemetryUpdate();
+    return request;
+  });
+  ipcMain.handle("requests:respond", (_event, payload) => {
+    const request = store.respondRequest(payload || {});
+    emitTelemetryUpdate();
+    return request;
+  });
+
+  ipcMain.handle("mods:setInstalled", (_event, mods) => {
+    const next = store.setInstalledMods(mods || []);
+    emitTelemetryUpdate();
+    return next;
+  });
+  ipcMain.handle("mods:getInstalled", () => store.getInstalledMods());
+  ipcMain.handle("mods:scan", () => scanDefaultModPaths());
+  ipcMain.handle("mods:validate", (_event, requiredMods) =>
+    store.validateMods(requiredMods || [])
+  );
+
+  ipcMain.handle("monitor:start", () => {
+    monitor.start();
+    return { running: true };
+  });
+  ipcMain.handle("monitor:stop", () => {
+    monitor.stop();
+    return { running: false };
+  });
+  ipcMain.handle("monitor:setState", (_event, state) => {
+    if (provider && provider.setState) {
+      provider.setState(state || {});
+      return monitor.checkGameState().then(() => provider.getState());
+    }
+    return provider.getState();
+  });
+  ipcMain.handle("monitor:getState", () => provider.getState());
+
+  ipcMain.handle("telemetry:getStatus", () => getTelemetryStatus());
+  ipcMain.handle("telemetry:setPath", (_event, filePath) => {
+    telemetryPath = resolveTelemetryPath(filePath);
+    saveConfig();
+    if (useTelemetry) {
+      const telemetryProvider = new FileGameStateProvider({
+        filePath: telemetryPath,
+      });
+      setProvider(telemetryProvider, "telemetry");
+      monitor.start();
+    }
+    return getTelemetryStatus();
+  });
+  ipcMain.handle("telemetry:useTelemetry", () => {
+    const telemetryProvider = new FileGameStateProvider({
+      filePath: telemetryPath,
+    });
+    setProvider(telemetryProvider, "telemetry");
+    monitor.start();
+    saveConfig();
+    return getTelemetryStatus();
+  });
+  ipcMain.handle("telemetry:useSimulated", () => {
+    const simulated = new SimulatedGameStateProvider();
+    setProvider(simulated, "simulated");
+    saveConfig();
+    return getTelemetryStatus();
+  });
+  ipcMain.handle("telemetry:select", async () => {
+    const result = await dialog.showOpenDialog({
+      title: "Select MCC telemetry JSON",
+      properties: ["openFile"],
+      filters: [{ name: "JSON", extensions: ["json"] }],
+    });
+    if (result.canceled || result.filePaths.length === 0) return null;
+    telemetryPath = resolveTelemetryPath(result.filePaths[0]);
+    saveConfig();
+    if (useTelemetry) {
+      const telemetryProvider = new FileGameStateProvider({
+        filePath: telemetryPath,
+      });
+      setProvider(telemetryProvider, "telemetry");
+      monitor.start();
+    }
+    return telemetryPath;
+  });
+
+  ipcMain.handle("hmcc:getState", () =>
+    latestTelemetryState || buildTelemetryState()
+  );
+  ipcMain.handle("overlay:getState", () => buildTelemetryState());
+  ipcMain.handle("overlay:getSettings", () => overlaySettings || loadOverlaySettings());
+  ipcMain.handle("overlay:setSettings", (_event, patch) => {
+    if (!overlaySettings) loadOverlaySettings();
+    const next = { ...overlaySettings, ...(patch || {}) };
+    const bounds = patch?.bounds || overlaySettings.bounds;
+    next.bounds = bounds;
+    overlaySettings = next;
+
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      if (typeof next.opacity === "number") {
+        overlayWindow.setOpacity(Math.max(0.3, Math.min(1, next.opacity)));
+      }
+      if (typeof next.clickThrough === "boolean") {
+        overlayWindow.setIgnoreMouseEvents(Boolean(next.clickThrough), {
+          forward: true,
+        });
+        overlayWindow.setFocusable(!next.clickThrough);
+      }
+    }
+
+    saveConfig();
+    return overlaySettings;
+  });
+
+  ipcMain.handle("overlay:snap", (_event, corner) => {
+    if (!overlayWindow || overlayWindow.isDestroyed()) return null;
+    const bounds = overlayWindow.getBounds();
+    const display = screen.getDisplayMatching(bounds);
+    const inset = 16;
+    const work = display.workArea;
+
+    let nextX = bounds.x;
+    let nextY = bounds.y;
+    if (corner === "top-left") {
+      nextX = work.x + inset;
+      nextY = work.y + inset;
+    }
+    if (corner === "top-right") {
+      nextX = work.x + work.width - bounds.width - inset;
+      nextY = work.y + inset;
+    }
+    if (corner === "bottom-left") {
+      nextX = work.x + inset;
+      nextY = work.y + work.height - bounds.height - inset;
+    }
+    if (corner === "bottom-right") {
+      nextX = work.x + work.width - bounds.width - inset;
+      nextY = work.y + work.height - bounds.height - inset;
+    }
+
+    overlayWindow.setBounds({ ...bounds, x: nextX, y: nextY });
+    overlaySettings.bounds = { ...bounds, x: nextX, y: nextY };
+    saveConfig();
+    return overlaySettings.bounds;
+  });
+}
+
+app.whenReady().then(() => {
+  const dataFile = path.join(app.getPath("userData"), "halo-mcc-lobbies.json");
+  configPath = path.join(app.getPath("userData"), "halo-mcc-config.json");
+  config = readConfig(configPath);
+  loadOverlaySettings();
+  telemetryPath = getDefaultTelemetryPath();
+  useTelemetry = true;
+
+  store = new LobbyStore(dataFile);
+  populator = new AutoLobbyPopulator();
+  provider = useTelemetry
+    ? new FileGameStateProvider({ filePath: telemetryPath })
+    : new SimulatedGameStateProvider();
+  monitor = new GameSessionMonitor({
+    store,
+    provider,
+    populator,
+    onUpdate: emitTelemetryUpdate,
+  });
+  if (provider.start) provider.start();
+
+  setupIpc();
+  startReaderProcess();
+  createOverlayWindow();
+  emitTelemetryUpdate();
+
+  globalShortcut.register("Insert", () => {
+    toggleOverlayEnabled();
+  });
+  startFocusWatcher();
+
+  app.on("activate", () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createOverlayWindow();
+    }
+  });
+});
+
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    stopReaderProcess();
+    stopFocusWatcher();
+    app.quit();
+  }
+});
+
+app.on("before-quit", () => {
+  globalShortcut.unregisterAll();
+  stopReaderProcess();
+  stopFocusWatcher();
+});

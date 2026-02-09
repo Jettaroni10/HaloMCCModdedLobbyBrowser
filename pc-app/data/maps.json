@@ -1,0 +1,20 @@
+{
+  "Valhalla": {
+    "type": "Arena",
+    "size": "Large",
+    "description": "Wide open battlefield with multiple lanes and vehicle routes.",
+    "thumbnail": ""
+  },
+  "Blood Gulch": {
+    "type": "Arena",
+    "size": "Large",
+    "description": "Classic canyon layout with two bases and long sightlines.",
+    "thumbnail": ""
+  },
+  "Narrows": {
+    "type": "Arena",
+    "size": "Medium",
+    "description": "Bridge-focused map with vertical combat and power positions.",
+    "thumbnail": ""
+  }
+}

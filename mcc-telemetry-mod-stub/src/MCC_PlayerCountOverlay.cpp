@@ -269,8 +269,6 @@ private:
     std::string telemetryPath;
 
     std::vector<uintptr_t> candidateAddresses;
-    std::vector<uintptr_t> mapNameAddresses;
-    std::vector<uintptr_t> gameModeAddresses;
     uintptr_t mccBase = 0;
     uintptr_t haloReachBase = 0;
 
@@ -431,18 +429,6 @@ private:
             0x7FF3C7D63EEC
         };
 
-        mapNameAddresses = {
-            0x2BD8F3FA818,
-            0x2BD8F3FA4AD
-        };
-
-        gameModeAddresses = {
-            0x2BD8F3FA424,
-            0x2BD8F3FA918,
-            0x2BD8F363870,
-            0x2BDABAF3BB0,
-            0x2BD8F3FA4AD
-        };
     }
 
     ProcessEvent UpdateProcessState() {
@@ -666,7 +652,7 @@ private:
         if (!connected) {
             return names;
         }
-        names.reserve(mapNameAddresses.size() + 1);
+        names.reserve(1);
 
         EnsureModuleBases();
         if (mccBase != 0) {
@@ -679,13 +665,6 @@ private:
             }
         }
 
-        for (uintptr_t address : mapNameAddresses) {
-            std::string name;
-            if (TryReadString(address, &name, 64) && IsLikelyMapName(name)) {
-                names.push_back(name);
-            }
-        }
-
         return names;
     }
 
@@ -694,15 +673,19 @@ private:
         if (!connected) {
             return modes;
         }
-        modes.reserve(gameModeAddresses.size());
+        modes.reserve(1);
 
-        for (uintptr_t address : gameModeAddresses) {
-            std::string mode;
-            if (TryReadString(address, &mode, 64) && IsLikelyGameMode(mode)) {
-                if (!mapName.empty() && mapName != "Unknown" && mode == mapName) {
-                    continue;
+        EnsureModuleBases();
+        if (mccBase != 0) {
+            uintptr_t basePtr = 0;
+            if (TryReadMemory(mccBase + 0x4001590, &basePtr) && basePtr != 0) {
+                std::string mode;
+                if (TryReadString(basePtr + 0x3C4, &mode, 64) && IsLikelyGameMode(mode)) {
+                    if (!mapName.empty() && mapName != "Unknown" && mode == mapName) {
+                        return modes;
+                    }
+                    modes.push_back(mode);
                 }
-                modes.push_back(mode);
             }
         }
 
@@ -929,7 +912,7 @@ private:
 
         const bool hasMap = !mapName.empty() && mapName != "Unknown";
         const bool hasMode = !modeName.empty() && modeName != "Unknown";
-        const bool isCustomGame = hasMap && hasMode && !inMenus;
+        const bool isCustomGame = connected && hasMap && !inMenus;
         const auto now = std::chrono::system_clock::now();
         const auto epochMs =
             std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();

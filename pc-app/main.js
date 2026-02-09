@@ -31,7 +31,7 @@ let latestTelemetryState = null;
 
 const OVERLAY_URL = "https://halomoddedcustoms.com";
 const OVERLAY_FADE_MS = 200;
-const OVERLAY_VISIBLE_OPACITY = 0.9;
+const OVERLAY_VISIBLE_OPACITY = 1.0;
 const OVERLAY_TRANSPARENT = false;
 const OVERLAY_BG_COLOR = "#070c12";
 const ACTIVE_WIN_POLL_MS = 140;

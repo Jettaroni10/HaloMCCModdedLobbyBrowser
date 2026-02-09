@@ -230,7 +230,7 @@ public:
                 playerCount = playerSignal.Update(ReadPlayerCandidates());
                 mapName = mapSignal.Update(ReadMapCandidates());
                 modeName = modeSignal.Update(ReadModeCandidates(mapName));
-                inMenus = IsInMenus();
+                inMenus = IsInMenus(playerCount);
             } else {
                 mapSignal.Reset();
                 modeSignal.Reset();
@@ -877,8 +877,8 @@ private:
         return false;
     }
 
-    bool IsInMenus() const {
-        return mapSignal.noValidTicks >= kMenuFallbackTicks;
+    bool IsInMenus(int playerCount) const {
+        return playerCount <= 0;
     }
 
     std::string BuildStatus(int playerCount, bool inMenus, bool isConnected) const {

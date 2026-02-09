@@ -17,29 +17,195 @@
 
 namespace {
 constexpr int kMaxPlayers = 24;
-constexpr int kStabilizeTicks = 3;
+constexpr int kMapStabilizeTicks = 3;
+constexpr int kModeStabilizeTicks = 3;
+constexpr int kPlayerStabilizeTicks = 2;
 constexpr int kMenuFallbackTicks = 3;
+constexpr bool kUseMapWhitelist = true;
+
+enum class ProcessEventType {
+    None,
+    Started,
+    Stopped,
+    Changed
+};
+
+struct ProcessEvent {
+    ProcessEventType type = ProcessEventType::None;
+    DWORD pid = 0;
+};
+
+template<typename T>
+struct ConsensusResult {
+    T value{};
+    int total = 0;
+    int bestCount = 0;
+    bool hasValue = false;
+};
+
+template<typename T>
+ConsensusResult<T> ComputeConsensus(const std::vector<T>& values) {
+    ConsensusResult<T> result;
+    if (values.empty()) {
+        return result;
+    }
+
+    std::map<T, int> frequency;
+    for (const auto& val : values) {
+        frequency[val]++;
+    }
+
+    auto mostFrequent = std::max_element(
+        frequency.begin(),
+        frequency.end(),
+        [](const auto& a, const auto& b) { return a.second < b.second; }
+    );
+
+    result.total = static_cast<int>(values.size());
+    result.bestCount = mostFrequent->second;
+    result.value = mostFrequent->first;
+    result.hasValue = true;
+    return result;
+}
+
+inline float CalculateConfidence(int bestCount, int total) {
+    if (total <= 0 || bestCount <= 0) {
+        return 0.0f;
+    }
+    return static_cast<float>(bestCount) / static_cast<float>(total);
+}
+
+struct StringSignal {
+    int stabilizeTicks = 3;
+    int staleTicks = 3;
+    std::string stableValue;
+    std::string lastCandidate;
+    int streak = 0;
+    int noValidTicks = 0;
+    float confidence = 0.0f;
+    std::string sourceTag = "none";
+
+    explicit StringSignal(int stabilize, int stale)
+        : stabilizeTicks(stabilize), staleTicks(stale) {}
+
+    void Reset() {
+        stableValue.clear();
+        lastCandidate.clear();
+        streak = 0;
+        noValidTicks = 0;
+        confidence = 0.0f;
+        sourceTag = "none";
+    }
+
+    std::string Update(const std::vector<std::string>& candidates) {
+        const auto consensus = ComputeConsensus(candidates);
+        confidence = CalculateConfidence(consensus.bestCount, consensus.total);
+        if (consensus.total > 1) {
+            sourceTag = "consensus";
+        } else if (consensus.total == 1) {
+            sourceTag = "single";
+        } else {
+            sourceTag = "none";
+        }
+
+        if (!consensus.hasValue) {
+            noValidTicks++;
+            if (noValidTicks >= staleTicks) {
+                stableValue = "Unknown";
+            }
+            return stableValue.empty() ? "Unknown" : stableValue;
+        }
+
+        noValidTicks = 0;
+        if (consensus.value == lastCandidate) {
+            streak++;
+        } else {
+            lastCandidate = consensus.value;
+            streak = 1;
+        }
+
+        if (streak >= stabilizeTicks) {
+            stableValue = consensus.value;
+        }
+
+        return stableValue.empty() ? "Unknown" : stableValue;
+    }
+};
+
+struct IntSignal {
+    int stabilizeTicks = 2;
+    int staleTicks = 2;
+    int stableValue = 0;
+    int lastCandidate = 0;
+    int streak = 0;
+    int noValidTicks = 0;
+    bool hasStable = false;
+    float confidence = 0.0f;
+    std::string sourceTag = "none";
+
+    explicit IntSignal(int stabilize, int stale)
+        : stabilizeTicks(stabilize), staleTicks(stale) {}
+
+    void Reset() {
+        stableValue = 0;
+        lastCandidate = 0;
+        streak = 0;
+        noValidTicks = 0;
+        hasStable = false;
+        confidence = 0.0f;
+        sourceTag = "none";
+    }
+
+    int Update(const std::vector<int>& candidates) {
+        const auto consensus = ComputeConsensus(candidates);
+        confidence = CalculateConfidence(consensus.bestCount, consensus.total);
+        if (consensus.total > 1) {
+            sourceTag = "consensus";
+        } else if (consensus.total == 1) {
+            sourceTag = "single";
+        } else {
+            sourceTag = "none";
+        }
+
+        if (!consensus.hasValue) {
+            noValidTicks++;
+            if (noValidTicks >= staleTicks) {
+                hasStable = false;
+                stableValue = 0;
+            }
+            return hasStable ? stableValue : 0;
+        }
+
+        noValidTicks = 0;
+        if (consensus.value == lastCandidate) {
+            streak++;
+        } else {
+            lastCandidate = consensus.value;
+            streak = 1;
+        }
+
+        if (streak >= stabilizeTicks) {
+            stableValue = consensus.value;
+            hasStable = true;
+        }
+
+        return hasStable ? stableValue : 0;
+    }
+};
 }
 
 class MCCPlayerCountConsole {
 public:
-    MCCPlayerCountConsole() {
+    MCCPlayerCountConsole()
+        : mapSignal(kMapStabilizeTicks, kMenuFallbackTicks),
+          modeSignal(kModeStabilizeTicks, kMenuFallbackTicks),
+          playerSignal(kPlayerStabilizeTicks, kPlayerStabilizeTicks) {
         InitializeAddresses();
     }
 
     bool Initialize() {
         LaunchOverlayIfNeeded();
-        if (!FindGameWindowAndProcess()) {
-            std::cout << "MCC window not found!" << std::endl;
-            return false;
-        }
-        FocusGameWindow();
-
-        if (!AttachToGameProcess()) {
-            std::cout << "Failed to attach to MCC process!" << std::endl;
-            return false;
-        }
-
+        UpdateProcessState();
         std::cout << "MCC Player Count Console running. Press ESC to exit." << std::endl;
         return true;
     }
@@ -50,14 +216,34 @@ public:
                 break;
             }
 
-            int playerCount = DetectPlayerCount();
-            std::string mapName = DetectMapName();
-            std::string gameMode = DetectGameMode(mapName);
-            std::string status = GetGameStatus(playerCount);
-            WriteTelemetrySnapshot(playerCount, mapName, gameMode);
+            ProcessEvent evt = UpdateProcessState();
+            if (evt.type == ProcessEventType::Started || evt.type == ProcessEventType::Changed) {
+                FocusGameWindow();
+            }
+
+            int playerCount = 0;
+            std::string mapName = "Unknown";
+            std::string modeName = "Unknown";
+            bool inMenus = true;
+
+            if (connected) {
+                playerCount = playerSignal.Update(ReadPlayerCandidates());
+                mapName = mapSignal.Update(ReadMapCandidates());
+                modeName = modeSignal.Update(ReadModeCandidates(mapName));
+                inMenus = IsInMenus();
+            } else {
+                mapSignal.Reset();
+                modeSignal.Reset();
+                playerSignal.Reset();
+                inMenus = true;
+            }
+
+            std::string status = BuildStatus(playerCount, inMenus, connected);
+            WriteTelemetrySnapshot(playerCount, mapName, modeName, inMenus, status);
+
             std::string line = "Players: " + std::to_string(playerCount)
                                + " | Map: " + mapName
-                               + " | Mode: " + gameMode
+                               + " | Mode: " + modeName
                                + " | " + status;
 
             if (line.size() < lastLineWidth) {
@@ -78,6 +264,7 @@ private:
     HWND gameWindow = nullptr;
     HANDLE processHandle = nullptr;
     DWORD processId = 0;
+    bool connected = false;
     size_t lastLineWidth = 0;
     std::string telemetryPath;
 
@@ -86,17 +273,10 @@ private:
     std::vector<uintptr_t> gameModeAddresses;
     uintptr_t mccBase = 0;
     uintptr_t haloReachBase = 0;
-    std::string lastMapCandidate;
-    std::string stableMapName;
-    int mapCandidateStreak = 0;
-    int noValidMapTicks = 0;
-    std::string lastModeCandidate;
-    std::string stableModeName;
-    int modeCandidateStreak = 0;
-    float lastPlayerConfidence = 0.0f;
-    float lastMapConfidence = 0.0f;
-    float lastModeConfidence = 0.0f;
-    std::string lastSourceTag;
+
+    StringSignal mapSignal;
+    StringSignal modeSignal;
+    IntSignal playerSignal;
 
     void LaunchOverlayIfNeeded() {
         CloseExistingOverlay();
@@ -189,13 +369,13 @@ private:
             return {};
         }
         std::filesystem::path exePath(buffer);
-        auto dir = exePath.parent_path(); // Release
+        auto dir = exePath.parent_path();
         if (dir.empty()) {
             return {};
         }
-        dir = dir.parent_path(); // build
-        dir = dir.parent_path(); // mcc-telemetry-mod-stub
-        dir = dir.parent_path(); // repo root
+        dir = dir.parent_path();
+        dir = dir.parent_path();
+        dir = dir.parent_path();
         return dir;
     }
 
@@ -265,29 +445,76 @@ private:
         };
     }
 
-    struct ConsensusResult {
-        std::string value;
-        int total = 0;
-        int bestCount = 0;
-    };
-
-    bool FindGameWindowAndProcess() {
-        gameWindow = FindWindowA(nullptr, "Halo: The Master Chief Collection");
-        if (gameWindow) {
-            GetWindowThreadProcessId(gameWindow, &processId);
-            return processId != 0;
+    ProcessEvent UpdateProcessState() {
+        DWORD pid = FindMccProcessId();
+        if (pid == 0) {
+            if (connected) {
+                DisconnectProcess();
+                return { ProcessEventType::Stopped, 0 };
+            }
+            return {};
         }
 
-        processId = FindProcessIdByName("MCC-Win64-Shipping.exe");
-        if (processId == 0) {
-            processId = FindProcessIdByName("MCC-Win64-Shipping");
-        }
-        if (processId == 0) {
-            return false;
+        if (!connected) {
+            if (ConnectToProcess(pid)) {
+                return { ProcessEventType::Started, pid };
+            }
+            return {};
         }
 
-        gameWindow = FindTopLevelWindowForProcess(processId);
-        return gameWindow != nullptr;
+        if (pid != processId) {
+            DisconnectProcess();
+            if (ConnectToProcess(pid)) {
+                return { ProcessEventType::Changed, pid };
+            }
+        }
+
+        return { ProcessEventType::None, pid };
+    }
+
+    DWORD FindMccProcessId() {
+        HWND window = FindWindowA(nullptr, "Halo: The Master Chief Collection");
+        if (window) {
+            DWORD pid = 0;
+            GetWindowThreadProcessId(window, &pid);
+            if (pid != 0) {
+                return pid;
+            }
+        }
+
+        DWORD pid = FindProcessIdByName("MCC-Win64-Shipping.exe");
+        if (pid == 0) {
+            pid = FindProcessIdByName("MCC-Win64-Shipping");
+        }
+        return pid;
+    }
+
+    bool ConnectToProcess(DWORD pid) {
+        processId = pid;
+        gameWindow = FindTopLevelWindowForProcess(pid);
+        processHandle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
+        connected = processHandle != nullptr;
+        ResetSessionState();
+        return connected;
+    }
+
+    void DisconnectProcess() {
+        if (processHandle) {
+            CloseHandle(processHandle);
+            processHandle = nullptr;
+        }
+        connected = false;
+        processId = 0;
+        gameWindow = nullptr;
+        ResetSessionState();
+    }
+
+    void ResetSessionState() {
+        mccBase = 0;
+        haloReachBase = 0;
+        mapSignal.Reset();
+        modeSignal.Reset();
+        playerSignal.Reset();
     }
 
     void FocusGameWindow() {
@@ -358,24 +585,50 @@ private:
         return state.window;
     }
 
-    bool AttachToGameProcess() {
-        if (!processId) {
-            GetWindowThreadProcessId(gameWindow, &processId);
+    void EnsureModuleBases() {
+        if (mccBase != 0 && haloReachBase != 0) {
+            return;
         }
-        if (processId == 0) {
-            return false;
+        if (!connected || processId == 0) {
+            return;
         }
-
-        processHandle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processId);
-        return processHandle != nullptr;
+        if (mccBase == 0) {
+            mccBase = GetRemoteModuleBase("mcc-win64-shipping.exe");
+        }
+        if (haloReachBase == 0) {
+            haloReachBase = GetRemoteModuleBase("haloreach.dll");
+        }
     }
 
-    int DetectPlayerCount() {
-        if (mccBase == 0 || haloReachBase == 0) {
-            FindModuleBases();
+    uintptr_t GetRemoteModuleBase(const char* moduleName) {
+        HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, processId);
+        if (snapshot == INVALID_HANDLE_VALUE) {
+            return 0;
         }
 
+        MODULEENTRY32 entry = {};
+        entry.dwSize = sizeof(entry);
+
+        if (Module32First(snapshot, &entry)) {
+            do {
+                if (_stricmp(entry.szModule, moduleName) == 0) {
+                    CloseHandle(snapshot);
+                    return reinterpret_cast<uintptr_t>(entry.modBaseAddr);
+                }
+            } while (Module32Next(snapshot, &entry));
+        }
+
+        CloseHandle(snapshot);
+        return 0;
+    }
+
+    std::vector<int> ReadPlayerCandidates() {
         std::vector<int> values;
+        if (!connected) {
+            return values;
+        }
+
+        EnsureModuleBases();
         values.reserve(candidateAddresses.size() + 4);
 
         for (uintptr_t address : candidateAddresses) {
@@ -405,14 +658,14 @@ private:
             }
         }
 
-        ConsensusResult consensus = GetConsensusValue(values);
-        lastPlayerConfidence = CalculateConfidence(consensus);
-        lastSourceTag = consensus.total > 1 ? "consensus" : "single";
-        return consensus.value.empty() ? 0 : std::stoi(consensus.value);
+        return values;
     }
 
-    std::string DetectMapName() {
+    std::vector<std::string> ReadMapCandidates() {
         std::vector<std::string> names;
+        if (!connected) {
+            return names;
+        }
         names.reserve(mapNameAddresses.size());
 
         for (uintptr_t address : mapNameAddresses) {
@@ -422,91 +675,27 @@ private:
             }
         }
 
-        ConsensusResult consensus = GetConsensusString(names);
-        UpdateStabilizedValue(consensus.value, lastMapCandidate, mapCandidateStreak, stableMapName);
-        if (consensus.value.empty()) {
-            noValidMapTicks++;
-        } else {
-            noValidMapTicks = 0;
-        }
-        lastMapConfidence = CalculateConfidence(consensus);
-        if (consensus.total > 1) {
-            lastSourceTag = "consensus";
-        }
-
-        if (noValidMapTicks >= kMenuFallbackTicks) {
-            stableMapName.clear();
-            return "Unknown";
-        }
-
-        return stableMapName.empty() ? "Unknown" : stableMapName;
+        return names;
     }
 
-    std::string DetectGameMode(const std::string& mapName) {
+    std::vector<std::string> ReadModeCandidates(const std::string& mapName) {
         std::vector<std::string> modes;
+        if (!connected) {
+            return modes;
+        }
         modes.reserve(gameModeAddresses.size());
 
         for (uintptr_t address : gameModeAddresses) {
             std::string mode;
             if (TryReadString(address, &mode, 64) && IsLikelyGameMode(mode)) {
-                if (!mapName.empty() && mode == mapName) {
+                if (!mapName.empty() && mapName != "Unknown" && mode == mapName) {
                     continue;
                 }
                 modes.push_back(mode);
             }
         }
 
-        ConsensusResult consensus = GetConsensusString(modes);
-        UpdateStabilizedValue(consensus.value, lastModeCandidate, modeCandidateStreak, stableModeName);
-        lastModeConfidence = CalculateConfidence(consensus);
-        if (consensus.total > 1) {
-            lastSourceTag = "consensus";
-        }
-        if (IsInMenus()) {
-            return "Unknown";
-        }
-        return stableModeName.empty() ? "Unknown" : stableModeName;
-    }
-
-    std::string GetGameStatus(int playerCount) {
-        if (IsInMenus()) {
-            return "Lobby in menus";
-        }
-        if (playerCount == 1) {
-            return "Status: Waiting for players";
-        }
-        if (playerCount >= 2) {
-            return "Status: Game ready";
-        }
-
-        return "Status: Detecting...";
-    }
-
-    void FindModuleBases() {
-        mccBase = GetRemoteModuleBase("mcc-win64-shipping.exe");
-        haloReachBase = GetRemoteModuleBase("haloreach.dll");
-    }
-
-    uintptr_t GetRemoteModuleBase(const char* moduleName) {
-        HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, processId);
-        if (snapshot == INVALID_HANDLE_VALUE) {
-            return 0;
-        }
-
-        MODULEENTRY32 entry = {};
-        entry.dwSize = sizeof(entry);
-
-        if (Module32First(snapshot, &entry)) {
-            do {
-                if (_stricmp(entry.szModule, moduleName) == 0) {
-                    CloseHandle(snapshot);
-                    return reinterpret_cast<uintptr_t>(entry.modBaseAddr);
-                }
-            } while (Module32Next(snapshot, &entry));
-        }
-
-        CloseHandle(snapshot);
-        return 0;
+        return modes;
     }
 
     template<typename T>
@@ -587,49 +776,7 @@ private:
         return out.str();
     }
 
-    void WriteTelemetrySnapshot(int playerCount, const std::string& mapName, const std::string& modeName) {
-        if (telemetryPath.empty()) {
-            telemetryPath = ResolveTelemetryPath();
-            std::cout << "\nWriting telemetry to: " << telemetryPath << std::endl;
-        }
-
-        const bool hasMap = !mapName.empty() && mapName != "Unknown";
-        const bool hasMode = !modeName.empty() && modeName != "Unknown";
-        const bool isCustomGame = hasMap && hasMode;
-        const bool connected = processHandle != nullptr;
-        const bool inMenus = IsInMenus();
-        const float confidence = CalculateOverallConfidence();
-        const auto now = std::chrono::system_clock::now();
-        const auto epochMs =
-            std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
-
-        std::ostringstream payload;
-        payload << "{";
-        payload << "\"ts\":" << epochMs << ",";
-        payload << "\"pid\":" << processId << ",";
-        payload << "\"connected\":" << (connected ? "true" : "false") << ",";
-        payload << "\"inMenus\":" << (inMenus ? "true" : "false") << ",";
-        payload << "\"isCustomGame\":" << (isCustomGame ? "true" : "false") << ",";
-        payload << "\"mapName\":\"" << EscapeJson(mapName) << "\",";
-        payload << "\"modeName\":\"" << EscapeJson(modeName) << "\",";
-        payload << "\"gameMode\":\"" << EscapeJson(modeName) << "\",";
-        payload << "\"playerCount\":" << playerCount << ",";
-        payload << "\"maxPlayers\":0,";
-        payload << "\"hostName\":\"\",";
-        payload << "\"mods\":[],";
-        payload << "\"confidence\":" << std::fixed << std::setprecision(2) << confidence << ",";
-        payload << "\"sourceTag\":\"" << EscapeJson(lastSourceTag) << "\"";
-        payload << "}";
-
-        std::ofstream out(telemetryPath, std::ios::binary | std::ios::trunc);
-        if (!out.is_open()) {
-            return;
-        }
-
-        out << "{\"version\":\"1.0\",\"data\":" << payload.str() << "}";
-    }
-
-    bool IsLikelyMapName(const std::string& name) {
+    bool IsLikelyMapName(const std::string& name) const {
         if (name.empty() || name.size() > 64) {
             return false;
         }
@@ -652,10 +799,16 @@ private:
             return false;
         }
 
-        return hasAlpha && IsReachMapName(name);
+        if (!hasAlpha) {
+            return false;
+        }
+        if (!kUseMapWhitelist) {
+            return true;
+        }
+        return IsReachMapName(name);
     }
 
-    bool IsLikelyGameMode(const std::string& mode) {
+    bool IsLikelyGameMode(const std::string& mode) const {
         if (mode.empty() || mode.size() > 64) {
             return false;
         }
@@ -679,111 +832,6 @@ private:
         }
 
         return hasAlpha;
-    }
-
-    ConsensusResult GetConsensusValue(const std::vector<int>& values) {
-        if (values.empty()) {
-            return {};
-        }
-
-        std::map<int, int> frequency;
-        for (int val : values) {
-            frequency[val]++;
-        }
-
-        auto mostFrequent = std::max_element(
-            frequency.begin(),
-            frequency.end(),
-            [](const auto& a, const auto& b) { return a.second < b.second; }
-        );
-
-        ConsensusResult result;
-        result.total = static_cast<int>(values.size());
-        result.bestCount = mostFrequent->second;
-        result.value = std::to_string(mostFrequent->first);
-        return result;
-    }
-
-    ConsensusResult GetConsensusString(const std::vector<std::string>& values) {
-        if (values.empty()) {
-            return {};
-        }
-
-        std::map<std::string, int> frequency;
-        for (const auto& value : values) {
-            frequency[value]++;
-        }
-
-        auto mostFrequent = std::max_element(
-            frequency.begin(),
-            frequency.end(),
-            [](const auto& a, const auto& b) { return a.second < b.second; }
-        );
-
-        ConsensusResult result;
-        result.total = static_cast<int>(values.size());
-        result.bestCount = mostFrequent->second;
-        result.value = mostFrequent->first;
-        return result;
-    }
-
-    static float CalculateConfidence(const ConsensusResult& result) {
-        if (result.total <= 0 || result.bestCount <= 0) {
-            return 0.0f;
-        }
-        return static_cast<float>(result.bestCount) / static_cast<float>(result.total);
-    }
-
-    float CalculateOverallConfidence() const {
-        int parts = 0;
-        float total = 0.0f;
-        if (lastPlayerConfidence > 0.0f) {
-            total += lastPlayerConfidence;
-            parts++;
-        }
-        if (lastMapConfidence > 0.0f) {
-            total += lastMapConfidence;
-            parts++;
-        }
-        if (lastModeConfidence > 0.0f) {
-            total += lastModeConfidence;
-            parts++;
-        }
-        if (parts == 0) {
-            return 0.0f;
-        }
-        return total / static_cast<float>(parts);
-    }
-
-    static void UpdateStabilizedValue(
-        const std::string& candidate,
-        std::string& lastCandidate,
-        int& streak,
-        std::string& stableValue
-    ) {
-        if (candidate.empty()) {
-            streak = 0;
-            lastCandidate.clear();
-            return;
-        }
-
-        if (candidate == lastCandidate) {
-            streak++;
-        } else {
-            lastCandidate = candidate;
-            streak = 1;
-        }
-
-        if (streak >= kStabilizeTicks) {
-            stableValue = candidate;
-        }
-    }
-
-    bool IsInMenus() const {
-        if (stableMapName.empty() || stableMapName == "Unknown") {
-            return true;
-        }
-        return noValidMapTicks >= kMenuFallbackTicks;
     }
 
     static std::string NormalizeMapName(const std::string& name) {
@@ -833,6 +881,75 @@ private:
             }
         }
         return false;
+    }
+
+    bool IsInMenus() const {
+        return mapSignal.noValidTicks >= kMenuFallbackTicks;
+    }
+
+    std::string BuildStatus(int playerCount, bool inMenus, bool isConnected) const {
+        if (!isConnected) {
+            return "Disconnected";
+        }
+        if (inMenus) {
+            return "Lobby in menus";
+        }
+        if (playerCount <= 1) {
+            return "Waiting for players";
+        }
+        return "Game ready";
+    }
+
+    std::string ComputeSourceTag() const {
+        if (mapSignal.sourceTag == "consensus" || modeSignal.sourceTag == "consensus" || playerSignal.sourceTag == "consensus") {
+            return "consensus";
+        }
+        if (mapSignal.sourceTag == "single" || modeSignal.sourceTag == "single" || playerSignal.sourceTag == "single") {
+            return "single";
+        }
+        return "none";
+    }
+
+    void WriteTelemetrySnapshot(int playerCount, const std::string& mapName, const std::string& modeName, bool inMenus, const std::string& status) {
+        if (telemetryPath.empty()) {
+            telemetryPath = ResolveTelemetryPath();
+            std::cout << "\nWriting telemetry to: " << telemetryPath << std::endl;
+        }
+
+        const bool hasMap = !mapName.empty() && mapName != "Unknown";
+        const bool hasMode = !modeName.empty() && modeName != "Unknown";
+        const bool isCustomGame = hasMap && hasMode && !inMenus;
+        const auto now = std::chrono::system_clock::now();
+        const auto epochMs =
+            std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+
+        std::ostringstream payload;
+        payload << "{";
+        payload << "\"ts\":" << epochMs << ",";
+        payload << "\"pid\":" << processId << ",";
+        payload << "\"sessionId\":\"\",";
+        payload << "\"connected\":" << (connected ? "true" : "false") << ",";
+        payload << "\"inMenus\":" << (inMenus ? "true" : "false") << ",";
+        payload << "\"mapName\":\"" << EscapeJson(mapName) << "\",";
+        payload << "\"modeName\":\"" << EscapeJson(modeName) << "\",";
+        payload << "\"playerCount\":" << playerCount << ",";
+        payload << "\"confidence\":{"
+                << "\"map\":" << std::fixed << std::setprecision(2) << mapSignal.confidence << ","
+                << "\"mode\":" << std::fixed << std::setprecision(2) << modeSignal.confidence << ","
+                << "\"players\":" << std::fixed << std::setprecision(2) << playerSignal.confidence
+                << "},";
+        payload << "\"status\":\"" << EscapeJson(status) << "\",";
+        payload << "\"sourceTag\":\"" << EscapeJson(ComputeSourceTag()) << "\",";
+        payload << "\"isCustomGame\":" << (isCustomGame ? "true" : "false") << ",";
+        payload << "\"gameMode\":\"" << EscapeJson(modeName) << "\"";
+        payload << "}";
+
+        std::ofstream out(telemetryPath, std::ios::binary | std::ios::trunc);
+        if (!out.is_open()) {
+            return;
+        }
+
+        out << "{\"version\":\"1.0\",\"data\":" << payload.str() << "}";
     }
 };
 

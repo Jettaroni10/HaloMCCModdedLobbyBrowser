@@ -70,6 +70,7 @@ export default function HostLobbyForm({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [mapPreviewUrl, setMapPreviewUrl] = useState<string | null>(null);
   const [mapFile, setMapFile] = useState<File | null>(null);
+  const [useCustomMapImage, setUseCustomMapImage] = useState(false);
   const [modPacks, setModPacks] = useState<ModPackSummary[]>([]);
   const [modPackLoading, setModPackLoading] = useState(false);
   const [modPackError, setModPackError] = useState<string | null>(null);
@@ -337,7 +338,7 @@ export default function HostLobbyForm({
     const lobbyId = created?.id;
     let uploadError: string | null = null;
 
-    if (enableMapImage && mapFile && lobbyId) {
+    if (enableMapImage && useCustomMapImage && mapFile && lobbyId) {
       try {
         await uploadMapImage(lobbyId, mapFile);
       } catch (error) {
@@ -555,32 +556,51 @@ export default function HostLobbyForm({
 
       {enableMapImage && (
         <div className="rounded-sm border border-ink/10 bg-mist p-4">
-          <p className="text-sm font-semibold text-ink">
-            Map image (optional)
-          </p>
+          <p className="text-sm font-semibold text-ink">Map image</p>
           <p className="mt-1 text-xs text-ink/60">
-            JPG, PNG, or WebP up to 5 MB. We will resize large images.
+            Optional. Enable only if you want a custom lobby image.
           </p>
-          {mapPreviewUrl && (
-            <div className="mt-3">
-              <MapPreview imageUrl={mapPreviewUrl} />
-            </div>
-          )}
-          <div className="mt-3">
-            <ImageCropUpload
-              aspect={16 / 9}
-              maxWidth={1280}
-              maxHeight={720}
-              label="Choose map image"
-              onCropped={(file) => {
-                setSubmitError(null);
-                setMapFile(file);
-                const preview = URL.createObjectURL(file);
-                setMapPreviewUrl(preview);
+          <label className="mt-3 flex items-center gap-2 text-xs font-semibold text-ink/60">
+            <input
+              type="checkbox"
+              checked={useCustomMapImage}
+              onChange={(event) => {
+                const next = event.target.checked;
+                setUseCustomMapImage(next);
+                if (!next) {
+                  setMapFile(null);
+                  setMapPreviewUrl(null);
+                  setSubmitError(null);
+                }
               }}
-              onError={(message) => setSubmitError(message)}
+              className="h-3.5 w-3.5 rounded border-ink/20"
             />
-          </div>
+            Use custom lobby image
+          </label>
+          {useCustomMapImage && (
+            <>
+              {mapPreviewUrl && (
+                <div className="mt-3">
+                  <MapPreview imageUrl={mapPreviewUrl} />
+                </div>
+              )}
+              <div className="mt-3">
+                <ImageCropUpload
+                  aspect={16 / 9}
+                  maxWidth={1280}
+                  maxHeight={720}
+                  label="Choose map image"
+                  onCropped={(file) => {
+                    setSubmitError(null);
+                    setMapFile(file);
+                    const preview = URL.createObjectURL(file);
+                    setMapPreviewUrl(preview);
+                  }}
+                  onError={(message) => setSubmitError(message)}
+                />
+              </div>
+            </>
+          )}
         </div>
       )}
 

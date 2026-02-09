@@ -13,6 +13,7 @@ export default function MapImageUploader({ lobbyId }: MapImageUploaderProps) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [useCustomImage, setUseCustomImage] = useState<boolean | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -30,6 +31,11 @@ export default function MapImageUploader({ lobbyId }: MapImageUploaderProps) {
     };
   }, [lobbyId]);
 
+  useEffect(() => {
+    if (useCustomImage !== null) return;
+    setUseCustomImage(Boolean(currentUrl));
+  }, [currentUrl, useCustomImage]);
+
   function handleUploaded(url: string | null) {
     setCurrentUrl(url);
     setSuccess("Image uploaded.");
@@ -44,10 +50,11 @@ export default function MapImageUploader({ lobbyId }: MapImageUploaderProps) {
       });
       if (!response.ok) {
         setError("Failed to remove image.");
-        return;
+        return false;
       }
       setCurrentUrl(null);
       setSuccess("Image removed.");
+      return true;
     } finally {
       setBusy(false);
     }
@@ -62,7 +69,7 @@ export default function MapImageUploader({ lobbyId }: MapImageUploaderProps) {
             Optional. JPG, PNG, or WebP up to 5 MB.
           </p>
         </div>
-        {currentUrl && (
+        {currentUrl && useCustomImage && (
           <button
             type="button"
             onClick={handleRemove}
@@ -74,30 +81,52 @@ export default function MapImageUploader({ lobbyId }: MapImageUploaderProps) {
         )}
       </div>
 
-      <MapPreview imageUrl={currentUrl} />
-
-      <div className="flex flex-wrap items-center gap-3">
-        <ImageCropUpload
-          aspect={16 / 9}
-          maxWidth={1280}
-          maxHeight={720}
-          uploadUrl={`/api/lobbies/${lobbyId}/map-image/upload`}
-          label="Choose map image"
-          onUploaded={handleUploaded}
-          onError={(message) => {
-            setError(message);
+      <label className="flex items-center gap-2 text-xs font-semibold text-ink/60">
+        <input
+          type="checkbox"
+          checked={Boolean(useCustomImage)}
+          onChange={(event) => {
+            const next = event.target.checked;
+            setUseCustomImage(next);
+            if (!next && currentUrl) {
+              void handleRemove().then((ok) => {
+                if (!ok) {
+                  setUseCustomImage(true);
+                }
+              });
+            }
           }}
+          className="h-3.5 w-3.5 rounded border-ink/20"
         />
-        {busy && (
-          <span className="text-xs uppercase tracking-[0.3em] text-ink/50">
-            Uploading…
-          </span>
-        )}
-        {error && <span className="text-xs text-clay">{error}</span>}
-        {success && !error && (
-          <span className="text-xs text-ink/70">{success}</span>
-        )}
-      </div>
+        Use custom lobby image
+      </label>
+
+      {useCustomImage && currentUrl && <MapPreview imageUrl={currentUrl} />}
+
+      {useCustomImage && (
+        <div className="flex flex-wrap items-center gap-3">
+          <ImageCropUpload
+            aspect={16 / 9}
+            maxWidth={1280}
+            maxHeight={720}
+            uploadUrl={`/api/lobbies/${lobbyId}/map-image/upload`}
+            label="Choose map image"
+            onUploaded={handleUploaded}
+            onError={(message) => {
+              setError(message);
+            }}
+          />
+          {busy && (
+            <span className="text-xs uppercase tracking-[0.3em] text-ink/50">
+              Uploading…
+            </span>
+          )}
+          {error && <span className="text-xs text-clay">{error}</span>}
+          {success && !error && (
+            <span className="text-xs text-ink/70">{success}</span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -42,6 +42,8 @@ let fadeTimer = null;
 let focusPollTimer = null;
 let focusPollInFlight = false;
 let activeWinGetter = null;
+let lastActiveSignature = "";
+let lastDebugSnapshot = "";
 
 const DEFAULT_OVERLAY_SETTINGS = {
   bounds: { width: 1200, height: 820, x: null, y: null },
@@ -68,6 +70,37 @@ function getDefaultTelemetryPath() {
 function debugLog(message) {
   if (!DEBUG_OVERLAY) return;
   console.log(`[overlay] ${message}`);
+}
+
+function debugSnapshot() {
+  if (!DEBUG_OVERLAY) return "";
+  return `enabled=${overlayEnabled} focused=${mccFocused} shouldShow=${
+    overlayEnabled && mccFocused
+  }`;
+}
+
+function debugActiveWindow(win) {
+  if (!DEBUG_OVERLAY) return;
+  const ownerName = String(win?.owner?.name || "");
+  const title = String(win?.title || "");
+  const pid = win?.owner?.processId ?? win?.owner?.pid ?? win?.pid ?? "";
+  const signature = `${ownerName}|${title}|${pid}`;
+  const snapshot = debugSnapshot();
+  if (signature !== lastActiveSignature || snapshot !== lastDebugSnapshot) {
+    lastActiveSignature = signature;
+    lastDebugSnapshot = snapshot;
+    console.log(
+      `[overlay] active=${ownerName || "?"} pid=${pid || "?"} title="${
+        title || ""
+      }" ${snapshot}`
+    );
+  } else {
+    console.log(
+      `[overlay] active=${ownerName || "?"} pid=${pid || "?"} title="${
+        title || ""
+      }" ${snapshot}`
+    );
+  }
 }
 
 function stopFade() {
@@ -111,9 +144,14 @@ function showOverlay() {
       overlayWindow.show();
     }
   }
-  overlayWindow.setAlwaysOnTop(true, "screen");
+  overlayWindow.setAlwaysOnTop(true, "screen-saver");
   overlayWindow.setOpacity(0);
   animateOpacity(OVERLAY_VISIBLE_OPACITY, OVERLAY_FADE_MS);
+  overlayWindow.blur();
+  setTimeout(() => {
+    if (!overlayWindow || overlayWindow.isDestroyed()) return;
+    overlayWindow.blur();
+  }, 0);
   overlayVisible = true;
 }
 
@@ -153,7 +191,10 @@ async function loadActiveWinGetter() {
   if (activeWinGetter) return activeWinGetter;
   try {
     const mod = await import("active-win");
-    activeWinGetter = mod.default;
+    activeWinGetter = mod.activeWindow || mod.default;
+    if (typeof activeWinGetter !== "function") {
+      throw new Error("active-win export missing");
+    }
   } catch (error) {
     console.warn("Failed to load active-win:", error?.message || String(error));
     activeWinGetter = null;
@@ -172,6 +213,13 @@ function isMccFocusedWindow(win) {
   );
 }
 
+function isOverlayActiveWindow(win) {
+  if (!win) return false;
+  const title = String(win.title || "").toLowerCase();
+  const ownerName = String(win.owner?.name || "").toLowerCase();
+  return ownerName.includes("electron") && title.includes("customs on the ring");
+}
+
 function startFocusWatcher() {
   if (focusPollTimer) return;
   focusPollTimer = setInterval(async () => {
@@ -179,8 +227,19 @@ function startFocusWatcher() {
     focusPollInFlight = true;
     try {
       const getter = await loadActiveWinGetter();
-      if (!getter) return;
+      if (!getter) {
+        debugLog("active-win getter unavailable");
+        debugActiveWindow(null);
+        return;
+      }
       const win = await getter();
+      if (!win) {
+        debugLog("active-win returned null");
+      }
+      debugActiveWindow(win);
+      if (isOverlayActiveWindow(win)) {
+        return;
+      }
       const nextFocused = isMccFocusedWindow(win);
       if (nextFocused !== mccFocused) {
         mccFocused = nextFocused;
@@ -372,6 +431,7 @@ function createOverlayWindow() {
     if (!overlayWindow || overlayWindow.isDestroyed()) return;
     overlayReady = true;
     overlayVisible = false;
+    debugLog("overlay ready-to-show");
     recomputeOverlayVisibility("ready");
   });
 }
@@ -651,9 +711,13 @@ app.whenReady().then(() => {
   createOverlayWindow();
   emitTelemetryUpdate();
 
-  globalShortcut.register("Insert", () => {
+  const shortcutRegistered = globalShortcut.register("Insert", () => {
     toggleOverlayEnabled();
   });
+  debugLog("Electron app ready");
+  debugLog(`globalShortcut Insert registered: ${shortcutRegistered}`);
+  debugLog("overlay window created");
+  debugLog(`initial ${debugSnapshot()}`);
   startFocusWatcher();
 
   app.on("activate", () => {

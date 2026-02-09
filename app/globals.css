@@ -58,6 +58,25 @@ body::before {
     linear-gradient(160deg, rgba(7, 12, 18, 0.95), rgba(12, 18, 26, 0.9));
 }
 
+body.hmcc-overlay {
+  background: transparent;
+}
+
+body.hmcc-overlay::before {
+  opacity: 0.35;
+}
+
+.hmcc-overlay-glass {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  background: rgba(10, 15, 25, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;

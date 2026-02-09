@@ -10,6 +10,7 @@ import AnalyticsLoader from "@/components/analytics/AnalyticsLoader";
 import AnalyticsTracker from "@/components/analytics/AnalyticsTracker";
 import AuthProvider from "@/components/auth/AuthProvider";
 import GamertagGate from "@/components/auth/GamertagGate";
+import OverlayGlassShell from "@/components/OverlayGlassShell";
 
 export const metadata: Metadata = {
   title: "Customs on the Ring",
@@ -32,12 +33,13 @@ export default async function RootLayout({
         <Suspense fallback={null}>
           <AnalyticsTracker />
         </Suspense>
+        <OverlayGlassShell />
         <AuthProvider>
           <Suspense fallback={null}>
             <GamertagGate user={user} />
           </Suspense>
           <HostNotificationsProvider hostUserId={user?.id ?? null}>
-            <div className="flex min-h-screen flex-col">
+            <div className="relative z-10 flex min-h-screen flex-col">
               <SiteHeader user={user} isAdmin={isAdmin} />
               <main className="flex-1">
                 <Suspense fallback={null}>{children}</Suspense>

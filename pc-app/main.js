@@ -31,7 +31,7 @@ let latestTelemetryState = null;
 
 const OVERLAY_URL = "https://halomoddedcustoms.com";
 const OVERLAY_FADE_MS = 200;
-const OVERLAY_VISIBLE_OPACITY = 0.82;
+const OVERLAY_VISIBLE_OPACITY = 0.9;
 const ACTIVE_WIN_POLL_MS = 140;
 const DEBUG_OVERLAY = String(process.env.HMCC_OVERLAY_DEBUG || "") === "1";
 let overlayVisible = false;
@@ -707,6 +707,7 @@ app.whenReady().then(() => {
     onUpdate: emitTelemetryUpdate,
   });
   if (provider.start) provider.start();
+  monitor.start();
 
   setupIpc();
   startReaderProcess();

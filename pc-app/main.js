@@ -32,6 +32,8 @@ let latestTelemetryState = null;
 const OVERLAY_URL = "https://halomoddedcustoms.com";
 const OVERLAY_FADE_MS = 200;
 const OVERLAY_VISIBLE_OPACITY = 0.9;
+const OVERLAY_TRANSPARENT = false;
+const OVERLAY_BG_COLOR = "#070c12";
 const ACTIVE_WIN_POLL_MS = 140;
 const DEBUG_OVERLAY = String(process.env.HMCC_OVERLAY_DEBUG || "") === "1";
 let overlayVisible = false;
@@ -393,6 +395,10 @@ function getFullscreenBounds() {
 
 function applyOverlayEffects() {
   if (!overlayWindow || overlayWindow.isDestroyed()) return;
+  if (!OVERLAY_TRANSPARENT) {
+    debugLog("Skipping acrylic (overlay not transparent)");
+    return;
+  }
   if (process.platform === "win32") {
     if (typeof overlayWindow.setBackgroundMaterial === "function") {
       try {
@@ -437,7 +443,7 @@ function createOverlayWindow() {
   const windowOptions = {
     ...overlayBounds,
     show: false,
-    transparent: true,
+    transparent: OVERLAY_TRANSPARENT,
     frame: false,
     resizable: false,
     movable: false,
@@ -446,7 +452,7 @@ function createOverlayWindow() {
     alwaysOnTop: true,
     hasShadow: false,
     skipTaskbar: true,
-    backgroundColor: "#00000000",
+    backgroundColor: OVERLAY_BG_COLOR,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -765,8 +771,15 @@ app.whenReady().then(() => {
   const shortcutRegistered = globalShortcut.register("Insert", () => {
     toggleOverlayEnabled();
   });
+  const escapeRegistered = globalShortcut.register("Escape", () => {
+    if (!overlayVisible) return;
+    overlayEnabled = false;
+    debugLog("overlay enabled: off (esc)");
+    recomputeOverlayVisibility("esc");
+  });
   debugLog("Electron app ready");
   debugLog(`globalShortcut Insert registered: ${shortcutRegistered}`);
+  debugLog(`globalShortcut Escape registered: ${escapeRegistered}`);
   debugLog("overlay window created");
   debugLog(`initial ${debugSnapshot()}`);
   startFocusWatcher();

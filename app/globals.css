@@ -47,11 +47,6 @@ body {
   text-transform: uppercase;
 }
 
-html,
-body {
-  background: transparent !important;
-}
-
 body::before {
   content: "";
   position: fixed;
@@ -64,7 +59,7 @@ body::before {
 }
 
 body.hmcc-overlay {
-  background: transparent;
+  background: rgb(var(--sand));
 }
 
 body.hmcc-overlay::before {

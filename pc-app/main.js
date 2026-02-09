@@ -45,6 +45,16 @@ let activeWinGetter = null;
 let lastActiveSignature = "";
 let lastDebugSnapshot = "";
 
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  app.quit();
+  process.exit(0);
+} else {
+  app.on("second-instance", () => {
+    // Do not steal focus; just ignore extra launches.
+  });
+}
+
 const DEFAULT_OVERLAY_SETTINGS = {
   bounds: { width: 1200, height: 820, x: null, y: null },
   opacity: 0.9,

@@ -101,7 +101,11 @@ export async function POST(request: Request) {
   const vibe = parseEnum(body.vibe, Vibes);
   const tags = sanitizeTags(body.tags);
   const friendsOnly = parseBoolean(body.friendsOnly) ?? false;
-  const slotsTotalInput = clampInt(parseNumber(body.slotsTotal), 2, 32);
+  const slotsTotalInput = clampInt(
+    parseNumber(body.maxPlayers ?? body.slotsTotal),
+    2,
+    32
+  );
   const slotsTotal = slotsTotalInput ?? 16;
   const isModded = parseBoolean(body.isModded) ?? false;
   const workshopCollectionUrl = normalizeText(

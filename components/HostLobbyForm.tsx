@@ -155,6 +155,11 @@ export default function HostLobbyForm({
 
   const liveBindingEnabled =
     enableTelemetryBinding && isConnected && !manualOverride;
+  const overlayMap = typeof overlayState?.map === "string" ? overlayState.map : "";
+  const overlayInMenus =
+    isConnected &&
+    (!overlayMap.trim() || overlayMap.trim().toLowerCase() === "unknown");
+  const overlayStatus = overlayInMenus ? "Lobby in menus" : "In match";
 
   useEffect(() => {
     if (!liveBindingEnabled || !overlayState) return;
@@ -164,18 +169,7 @@ export default function HostLobbyForm({
     if (typeof overlayState.map === "string" && overlayState.map.length > 0) {
       setMapValue(overlayState.map);
     }
-    if (
-      typeof overlayState.maxPlayers === "number" &&
-      overlayState.maxPlayers > 0
-    ) {
-      setSlotsValue(overlayState.maxPlayers);
-    }
-  }, [
-    liveBindingEnabled,
-    overlayState?.mode,
-    overlayState?.map,
-    overlayState?.maxPlayers,
-  ]);
+  }, [liveBindingEnabled, overlayState?.mode, overlayState?.map]);
 
   const selectedPack = useMemo(
     () => modPacks.find((pack) => pack.id === selectedPackId) ?? null,
@@ -401,7 +395,7 @@ export default function HostLobbyForm({
             </span>
           </div>
 
-          <div className="mt-3 grid gap-2 text-xs text-ink/70 md:grid-cols-3">
+          <div className="mt-3 grid gap-2 text-xs text-ink/70 md:grid-cols-4">
             <div>
               Map{" "}
               <span className="font-semibold text-ink">
@@ -421,9 +415,15 @@ export default function HostLobbyForm({
                   ? overlayState.currentPlayers
                   : 0}
                 /
-                {typeof overlayState?.maxPlayers === "number"
-                  ? overlayState.maxPlayers
+                {typeof slotsValue === "number" || typeof slotsValue === "string"
+                  ? slotsValue
                   : 0}
+              </span>
+            </div>
+            <div>
+              Status{" "}
+              <span className="font-semibold text-ink">
+                {overlayStatus}
               </span>
             </div>
           </div>
@@ -586,15 +586,15 @@ export default function HostLobbyForm({
 
       <div className="grid gap-4 md:grid-cols-2">
         <label className="block text-sm font-semibold text-ink">
-          Slots total
+          Max players
           <input
-            name="slotsTotal"
+            name="maxPlayers"
             type="number"
             min={2}
             max={32}
             value={slotsValue}
             onChange={(event) => setSlotsValue(event.target.value)}
-            readOnly={liveBindingEnabled}
+            required
             className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
           />
         </label>

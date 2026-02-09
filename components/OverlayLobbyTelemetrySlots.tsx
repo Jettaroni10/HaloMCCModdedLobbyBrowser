@@ -19,16 +19,16 @@ export default function OverlayLobbyTelemetrySlots({
   const hasLive =
     isHost &&
     isConnected &&
-    typeof state?.maxPlayers === "number" &&
-    state.maxPlayers > 0;
+    typeof state?.currentPlayers === "number";
   const liveCurrent = hasLive
     ? Math.max(0, Number(state?.currentPlayers ?? 0))
     : fallbackCurrentPlayers;
-  const liveMax = hasLive ? Number(state?.maxPlayers ?? 0) : fallbackMaxPlayers;
+  const liveMax = Number.isFinite(fallbackMaxPlayers) ? fallbackMaxPlayers : 0;
+  const slotsAvailable = Math.max(0, Math.min(liveMax, liveMax - liveCurrent));
 
   return (
     <span className={className}>
-      Slots {liveCurrent}/{liveMax}
+      Players {liveCurrent}/{liveMax} · Slots {slotsAvailable}
     </span>
   );
 }

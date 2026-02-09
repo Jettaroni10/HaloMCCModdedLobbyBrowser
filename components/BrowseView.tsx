@@ -11,6 +11,8 @@ import { getSignedReadUrl } from "@/lib/lobby-images";
 import { getCurrentUser } from "@/lib/auth";
 import BrowseAnalyticsTracker from "@/components/analytics/BrowseAnalyticsTracker";
 import TrackedLobbyLink from "@/components/analytics/TrackedLobbyLink";
+import OverlayLobbyTelemetryLine from "@/components/OverlayLobbyTelemetryLine";
+import OverlayLobbyTelemetrySlots from "@/components/OverlayLobbyTelemetrySlots";
 
 type BrowseViewProps = {
   searchParams?: Record<string, string | string[] | undefined>;
@@ -113,6 +115,7 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
     const modCount = lobby.isModded ? requiredModsFromPack || legacyModCount : 0;
     return {
       ...lobby,
+      memberCount: lobby._count.members,
       slotsOpen: Math.max(0, lobby.slotsTotal - lobby._count.members),
       mapImageUrl: imageUrls.get(lobby.id) ?? null,
       isHosting,
@@ -258,9 +261,14 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
                   <h2 className="text-xl font-semibold text-white">
                     {lobby.title}
                   </h2>
-                  <p className="text-sm text-white/70">
-                    {formatEnum(lobby.game)} · {lobby.mode} · {lobby.map}
-                  </p>
+                  <OverlayLobbyTelemetryLine
+                    fallbackMode={lobby.mode}
+                    fallbackMap={lobby.map}
+                    isHost={lobby.isHosting}
+                    className="text-sm text-white/70"
+                    as="p"
+                    prefix={formatEnum(lobby.game)}
+                  />
                   <p className="text-xs uppercase tracking-[0.3em] text-white/60">
                     {formatEnum(lobby.region)}
                   </p>
@@ -298,9 +306,11 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
                 {lobby.slotsTotal !== null && (
                   <>
                     <span>•</span>
-                    <span>
-                      Slots {lobby.slotsOpen ?? "?"}/{lobby.slotsTotal}
-                    </span>
+                    <OverlayLobbyTelemetrySlots
+                      fallbackCurrentPlayers={lobby.memberCount}
+                      fallbackMaxPlayers={lobby.slotsTotal ?? 16}
+                      isHost={lobby.isHosting}
+                    />
                   </>
                 )}
               </div>

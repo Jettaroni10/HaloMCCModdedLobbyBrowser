@@ -117,7 +117,11 @@ export async function PATCH(
   const friendsOnly = parseBoolean(body.friendsOnly);
   if (typeof friendsOnly === "boolean") data.friendsOnly = friendsOnly;
 
-  const slotsTotal = clampInt(parseNumber(body.slotsTotal), 2, 32);
+  const slotsTotal = clampInt(
+    parseNumber(body.maxPlayers ?? body.slotsTotal),
+    2,
+    32
+  );
   if (slotsTotal !== undefined) data.slotsTotal = slotsTotal;
 
   const isModded = parseBoolean(body.isModded);

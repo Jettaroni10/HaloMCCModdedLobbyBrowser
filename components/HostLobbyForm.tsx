@@ -8,6 +8,7 @@ import { downscaleImageFile } from "@/lib/image-client";
 import MapPreview from "./MapPreview";
 import ImageCropUpload from "@/components/ImageCropUpload";
 import { hashId, trackEvent, trackFeatureUsed } from "@/lib/analytics";
+import { useOverlayTelemetry } from "@/lib/useOverlayTelemetry";
 
 type ModPackSummary = {
   id: string;
@@ -51,6 +52,7 @@ type HostLobbyFormProps = {
   method?: "post" | "get";
   onSubmit?: React.FormEventHandler<HTMLFormElement>;
   enableMapImage?: boolean;
+  enableTelemetryBinding?: boolean;
 };
 
 export default function HostLobbyForm({
@@ -60,8 +62,10 @@ export default function HostLobbyForm({
   method = "post",
   onSubmit,
   enableMapImage = false,
+  enableTelemetryBinding = false,
 }: HostLobbyFormProps) {
   const router = useRouter();
+  const { isConnected, state: overlayState } = useOverlayTelemetry();
   const defaultTags = useMemo(() => defaultValues?.tags ?? [], [defaultValues]);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [mapPreviewUrl, setMapPreviewUrl] = useState<string | null>(null);
@@ -84,6 +88,12 @@ export default function HostLobbyForm({
   ]);
   const [packSaving, setPackSaving] = useState(false);
   const [packError, setPackError] = useState<string | null>(null);
+  const [manualOverride, setManualOverride] = useState(false);
+  const [modeValue, setModeValue] = useState(defaultValues?.mode ?? "");
+  const [mapValue, setMapValue] = useState(defaultValues?.map ?? "");
+  const [slotsValue, setSlotsValue] = useState<string | number>(
+    defaultValues?.slotsTotal ?? 16
+  );
   const defaultModUrls = useMemo(() => {
     const urls: string[] = [];
     if (defaultValues?.workshopCollectionUrl) {
@@ -136,6 +146,36 @@ export default function HostLobbyForm({
     if (!isModded) return;
     void loadModPacks();
   }, [isModded]);
+
+  useEffect(() => {
+    if (!enableTelemetryBinding) {
+      setManualOverride(false);
+    }
+  }, [enableTelemetryBinding]);
+
+  const liveBindingEnabled =
+    enableTelemetryBinding && isConnected && !manualOverride;
+
+  useEffect(() => {
+    if (!liveBindingEnabled || !overlayState) return;
+    if (typeof overlayState.mode === "string" && overlayState.mode.length > 0) {
+      setModeValue(overlayState.mode);
+    }
+    if (typeof overlayState.map === "string" && overlayState.map.length > 0) {
+      setMapValue(overlayState.map);
+    }
+    if (
+      typeof overlayState.maxPlayers === "number" &&
+      overlayState.maxPlayers > 0
+    ) {
+      setSlotsValue(overlayState.maxPlayers);
+    }
+  }, [
+    liveBindingEnabled,
+    overlayState?.mode,
+    overlayState?.map,
+    overlayState?.maxPlayers,
+  ]);
 
   const selectedPack = useMemo(
     () => modPacks.find((pack) => pack.id === selectedPackId) ?? null,
@@ -337,6 +377,69 @@ export default function HostLobbyForm({
       onSubmit={handleSubmit}
       className="mt-6 space-y-5 rounded-md border border-ink/10 bg-sand p-6"
     >
+      {enableTelemetryBinding && (
+        <div className="rounded-sm border border-ink/10 bg-mist p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-ink/50">
+                Overlay Telemetry
+              </p>
+              <p className="mt-1 text-xs text-ink/60">
+                {isConnected
+                  ? "Live telemetry connected. Fields stay in sync while live binding is on."
+                  : "Overlay not detected yet. Launch the overlay app to connect."}
+              </p>
+            </div>
+            <span
+              className={`rounded-sm border px-3 py-1 text-xs font-semibold ${
+                isConnected
+                  ? "border-ink/20 bg-sand text-ink"
+                  : "border-ink/10 bg-sand/60 text-ink/50"
+              }`}
+            >
+              {isConnected ? "Live Connected" : "Disconnected"}
+            </span>
+          </div>
+
+          <div className="mt-3 grid gap-2 text-xs text-ink/70 md:grid-cols-3">
+            <div>
+              Map{" "}
+              <span className="font-semibold text-ink">
+                {overlayState?.map ?? "Unknown"}
+              </span>
+            </div>
+            <div>
+              Mode{" "}
+              <span className="font-semibold text-ink">
+                {overlayState?.mode ?? "Unknown"}
+              </span>
+            </div>
+            <div>
+              Players{" "}
+              <span className="font-semibold text-ink">
+                {typeof overlayState?.currentPlayers === "number"
+                  ? overlayState.currentPlayers
+                  : 0}
+                /
+                {typeof overlayState?.maxPlayers === "number"
+                  ? overlayState.maxPlayers
+                  : 0}
+              </span>
+            </div>
+          </div>
+
+          <label className="mt-3 flex items-center gap-2 text-xs font-semibold text-ink/60">
+            <input
+              type="checkbox"
+              checked={manualOverride}
+              onChange={(event) => setManualOverride(event.target.checked)}
+              className="h-3.5 w-3.5 rounded border-ink/20"
+            />
+            Manual override (stop live binding)
+          </label>
+        </div>
+      )}
+
       <label className="block text-sm font-semibold text-ink">
         Title
         <input
@@ -353,7 +456,9 @@ export default function HostLobbyForm({
           <input
             name="mode"
             required
-            defaultValue={defaultValues?.mode ?? ""}
+            value={modeValue}
+            onChange={(event) => setModeValue(event.target.value)}
+            readOnly={liveBindingEnabled}
             className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
           />
         </label>
@@ -362,7 +467,9 @@ export default function HostLobbyForm({
           <input
             name="map"
             required
-            defaultValue={defaultValues?.map ?? ""}
+            value={mapValue}
+            onChange={(event) => setMapValue(event.target.value)}
+            readOnly={liveBindingEnabled}
             className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
           />
         </label>
@@ -485,7 +592,9 @@ export default function HostLobbyForm({
             type="number"
             min={2}
             max={32}
-            defaultValue={defaultValues?.slotsTotal ?? 16}
+            value={slotsValue}
+            onChange={(event) => setSlotsValue(event.target.value)}
+            readOnly={liveBindingEnabled}
             className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
           />
         </label>

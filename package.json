@@ -4,6 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "prisma generate && next dev",
+    "pc-app:dev": "npm run dev --prefix pc-app",
+    "telemetry:demo": "npm run telemetry:demo --prefix pc-app",
+    "telemetry:receiver": "npm run telemetry:receiver --prefix pc-app",
     "build": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
     "lint": "next lint",

@@ -13,6 +13,8 @@ import LobbyChat from "@/components/LobbyChat";
 import LobbyBackground from "@/components/LobbyBackground";
 import Nametag from "@/components/user/Nametag";
 import LobbyViewTracker from "@/components/analytics/LobbyViewTracker";
+import OverlayLobbyTelemetryLine from "@/components/OverlayLobbyTelemetryLine";
+import OverlayLobbyTelemetrySlots from "@/components/OverlayLobbyTelemetrySlots";
 
 type LobbyPageProps = {
   params: { id: string };
@@ -173,6 +175,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
 
   const slotsTotal = lobby.slotsTotal ?? 16;
   const slotsOpen = Math.max(0, slotsTotal - rosterCount);
+  const currentPlayers = Math.max(0, slotsTotal - slotsOpen);
   const modPack = lobby.modPack
     ? {
         id: lobby.modPack.id,
@@ -255,9 +258,12 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
                   </span>
                 )}
               </div>
-              <p className="mt-4 text-sm text-white/70">
-                {lobby.mode} · {lobby.map}
-              </p>
+              <OverlayLobbyTelemetryLine
+                fallbackMode={lobby.mode}
+                fallbackMap={lobby.map}
+                isHost={isHost}
+                className="mt-4 text-sm text-white/70"
+              />
               <div className="mt-3 flex flex-wrap gap-3 text-xs uppercase tracking-[0.25em] text-white/60">
                 <span>{formatEnum(lobby.game)}</span>
                 <span>•</span>
@@ -267,9 +273,11 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
                 <span>•</span>
                 <span>{formatEnum(lobby.vibe)}</span>
                 <span>•</span>
-                <span>
-                  Slots {slotsOpen}/{slotsTotal}
-                </span>
+                <OverlayLobbyTelemetrySlots
+                  fallbackCurrentPlayers={currentPlayers}
+                  fallbackMaxPlayers={slotsTotal}
+                  isHost={isHost}
+                />
               </div>
               <div className="mt-4">
                 <ReportForm

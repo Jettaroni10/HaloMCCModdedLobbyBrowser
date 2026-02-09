@@ -393,23 +393,48 @@ function getFullscreenBounds() {
 
 function applyOverlayEffects() {
   if (!overlayWindow || overlayWindow.isDestroyed()) return;
-  try {
-    if (typeof overlayWindow.setVibrancy === "function") {
-      overlayWindow.setVibrancy("acrylic");
-    }
-  } catch {}
-  try {
+  if (process.platform === "win32") {
     if (typeof overlayWindow.setBackgroundMaterial === "function") {
-      overlayWindow.setBackgroundMaterial("acrylic");
+      try {
+        overlayWindow.setBackgroundMaterial("acrylic");
+        debugLog("Applying acrylic... success");
+      } catch (error) {
+        debugLog(
+          `Applying acrylic... failed (${error?.message || String(error)})`
+        );
+        try {
+          overlayWindow.setBackgroundMaterial("mica");
+          debugLog("Applying mica... success");
+        } catch (fallbackError) {
+          debugLog(
+            `Applying mica... failed (${fallbackError?.message || String(
+              fallbackError
+            )})`
+          );
+        }
+      }
+    } else {
+      debugLog("Applying acrylic... skipped (setBackgroundMaterial unavailable)");
     }
-  } catch {}
+  } else {
+    try {
+      if (typeof overlayWindow.setVibrancy === "function") {
+        overlayWindow.setVibrancy("acrylic");
+        debugLog("Applying vibrancy... success");
+      }
+    } catch (error) {
+      debugLog(
+        `Applying vibrancy... failed (${error?.message || String(error)})`
+      );
+    }
+  }
 }
 
 function createOverlayWindow() {
   if (!overlaySettings) loadOverlaySettings();
   const overlayBounds = getFullscreenBounds();
 
-  overlayWindow = new BrowserWindow({
+  const windowOptions = {
     ...overlayBounds,
     show: false,
     transparent: true,
@@ -427,7 +452,19 @@ function createOverlayWindow() {
       contextIsolation: true,
       nodeIntegration: false,
     },
-  });
+  };
+
+  overlayWindow = new BrowserWindow(windowOptions);
+
+  debugLog(`platform: ${process.platform}`);
+  debugLog(
+    `window transparent=${windowOptions.transparent} backgroundColor=${windowOptions.backgroundColor}`
+  );
+  debugLog(
+    `setBackgroundMaterial available: ${
+      typeof overlayWindow.setBackgroundMaterial === "function"
+    }`
+  );
 
   overlayWindow.setAlwaysOnTop(true, "screen-saver");
   overlayWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
@@ -441,6 +478,7 @@ function createOverlayWindow() {
   loadOverlayContent();
   overlayWindow.once("ready-to-show", () => {
     if (!overlayWindow || overlayWindow.isDestroyed()) return;
+    applyOverlayEffects();
     overlayReady = true;
     overlayVisible = false;
     debugLog("overlay ready-to-show");

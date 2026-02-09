@@ -47,6 +47,11 @@ body {
   text-transform: uppercase;
 }
 
+html,
+body {
+  background: transparent !important;
+}
+
 body::before {
   content: "";
   position: fixed;

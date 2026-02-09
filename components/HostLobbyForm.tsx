@@ -591,7 +591,7 @@ export default function HostLobbyForm({
             name="maxPlayers"
             type="number"
             min={2}
-            max={32}
+            max={16}
             value={slotsValue}
             onChange={(event) => setSlotsValue(event.target.value)}
             required

@@ -120,7 +120,7 @@ export async function PATCH(
   const slotsTotal = clampInt(
     parseNumber(body.maxPlayers ?? body.slotsTotal),
     2,
-    32
+    16
   );
   if (slotsTotal !== undefined) data.slotsTotal = slotsTotal;
 

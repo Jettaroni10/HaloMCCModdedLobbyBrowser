@@ -104,7 +104,7 @@ export async function POST(request: Request) {
   const slotsTotalInput = clampInt(
     parseNumber(body.maxPlayers ?? body.slotsTotal),
     2,
-    32
+    16
   );
   const slotsTotal = slotsTotalInput ?? 16;
   const isModded = parseBoolean(body.isModded) ?? false;

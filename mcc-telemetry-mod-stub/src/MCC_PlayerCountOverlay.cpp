@@ -1,6 +1,7 @@
 #include <Windows.h>
 #include <TlHelp32.h>
 
+#include <array>
 #include <algorithm>
 #include <cctype>
 #include <chrono>
@@ -915,19 +916,60 @@ private:
 
         bool ok = TryReadStringUtf8(address, &value, maxLength, &bytesRead);
         if (ok) {
-            // Heuristic: if it looks like UTF-16LE bytes (lots of zeros), try UTF-16.
-            int zeroCount = 0;
-            for (size_t i = 1; i < std::min(bytesRead, static_cast<size_t>(32)); i += 2) {
-                if (reinterpret_cast<const unsigned char*>(value.data())[i] == 0) {
-                    zeroCount++;
-                }
-            }
-            if (zeroCount >= 6) {
-                std::string utf16;
-                size_t bytesRead16 = 0;
-                if (TryReadStringUtf16(address, &utf16, maxLength, &bytesRead16)) {
-                    value = utf16;
-                    bytesRead = bytesRead16;
+            const bool labelIsMap = label && std::strncmp(label, "map", 3) == 0;
+            const bool labelIsMode = label && std::strncmp(label, "mode", 4) == 0;
+            const bool utf8LooksValid =
+                (labelIsMap && IsLikelyMapName(value)) ||
+                (labelIsMode && IsLikelyGameMode(value));
+
+            // Heuristic: if the underlying bytes look like UTF-16LE (lots of zeros at odd indices), try UTF-16.
+            // Important: do NOT scan past value.size(); bytesRead may be > value.size() for short strings.
+            // Also, UTF-16 strings should be 2-byte aligned; skip the heuristic on odd addresses (e.g. mapName at base+0x44D).
+            if (!utf8LooksValid && (address % 2) == 0) {
+                std::array<unsigned char, 32> probe{};
+                SIZE_T probeRead = 0;
+                if (ReadProcessMemory(processHandle, reinterpret_cast<LPCVOID>(address), probe.data(), probe.size(), &probeRead) &&
+                    probeRead > 0) {
+                    const size_t n = std::min(static_cast<size_t>(probeRead), probe.size());
+
+                    // Only treat it as UTF-16 if the *early* bytes follow the pattern: <printable> 00 <printable> 00 ...
+                    // This avoids false positives for short ASCII strings with lots of trailing NUL padding.
+                    const size_t pairs = std::min(n / 2, static_cast<size_t>(8));
+                    int oddZero = 0;
+                    int evenPrintable = 0;
+                    for (size_t i = 0; i < pairs; i++) {
+                        const unsigned char even = probe[i * 2];
+                        const unsigned char odd = probe[i * 2 + 1];
+                        if (odd == 0) oddZero++;
+                        if (even >= 32 && even <= 126) evenPrintable++;
+                    }
+
+                    if (pairs >= 2 && oddZero >= static_cast<int>(pairs - 1) && evenPrintable >= 2) {
+                        std::string utf16;
+                        size_t bytesRead16 = 0;
+                        if (TryReadStringUtf16(address, &utf16, maxLength, &bytesRead16) && !utf16.empty()) {
+                            const bool utf16LooksValid =
+                                (labelIsMap && IsLikelyMapName(utf16)) ||
+                                (labelIsMode && IsLikelyGameMode(utf16)) ||
+                                (!labelIsMap && !labelIsMode);
+                            if (!utf16LooksValid) {
+                                // Keep UTF-8 if UTF-16 decode produced garbage for a known field type.
+                                *out_value = value;
+                                if (out_debug) {
+                                    ReadAttempt attempt;
+                                    attempt.label = label ? label : "str";
+                                    attempt.address = address;
+                                    attempt.ok = ok;
+                                    attempt.bytesRead = bytesRead;
+                                    attempt.value = ok ? value : "";
+                                    out_debug->attempts.push_back(std::move(attempt));
+                                }
+                                return ok;
+                            }
+                            value = utf16;
+                            bytesRead = bytesRead16;
+                        }
+                    }
                 }
             }
             *out_value = value;

@@ -348,6 +348,9 @@ function resolveReaderPath() {
   if (process.env.MCC_READER_EXE) {
     return process.env.MCC_READER_EXE;
   }
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, "bin", "mcc_player_overlay.exe");
+  }
   return path.resolve(
     __dirname,
     "..",
@@ -362,7 +365,16 @@ function startReaderProcess() {
   if (readerProcess) return;
   const readerPath = resolveReaderPath();
   if (!fs.existsSync(readerPath)) {
-    console.warn(`Reader exe not found: ${readerPath}`);
+    const expectedPackagedPath = path.join(
+      process.resourcesPath,
+      "bin",
+      "mcc_player_overlay.exe"
+    );
+    console.error(`Reader exe not found: ${readerPath}`);
+    console.error(`Packaged reader path: ${expectedPackagedPath}`);
+    console.error(
+      "Build mcc-telemetry-mod-stub first so electron-builder can bundle mcc_player_overlay.exe."
+    );
     return;
   }
   readerProcess = spawn(readerPath, [], {

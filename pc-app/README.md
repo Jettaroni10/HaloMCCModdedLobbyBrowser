@@ -29,6 +29,31 @@ npm run telemetry:demo
 npm run telemetry:receiver
 ```
 
+## Build installer (Windows)
+
+1. Build the native reader first:
+
+```bash
+cmake --build ..\\mcc-telemetry-mod-stub\\build --config Release --target mcc_player_overlay
+```
+
+2. Build NSIS installer:
+
+```bash
+npm run dist
+```
+
+Installer output:
+
+```text
+pc-app/dist/HMCC-Overlay-Setup-<version>.exe
+```
+
+Notes:
+
+- `npm run dist` runs `tools/kill-overlay.js` first to stop `mcc_player_overlay.exe` and Electron processes.
+- If `mcc_player_overlay.exe` is running, linker/packaging can fail due to file locks.
+
 ## Notes
 
 - Data is stored in the Electron user data directory as `halo-mcc-lobbies.json`.

@@ -1,0 +1,10 @@
+{
+  "version": "0.1.0",
+  "publishedAt": "2026-02-10T01:30:00Z",
+  "file": "/downloads/HMCC-Overlay-Setup.exe",
+  "sha256": "0976AF2A6CAE5888565BE1F804F22E356427FE0CAE0122C973C9F2477EC294A8",
+  "notes": [
+    "Initial Windows NSIS installer release.",
+    "Includes bundled MCC reader executable."
+  ]
+}

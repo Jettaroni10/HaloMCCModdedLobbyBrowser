@@ -7,11 +7,53 @@
   "scripts": {
     "dev": "electron .",
     "start": "electron .",
+    "kill:overlay": "node tools/kill-overlay.js",
+    "pack": "npm run kill:overlay && electron-builder --dir",
+    "dist": "npm run kill:overlay && electron-builder --win nsis",
     "telemetry:demo": "node tools/telemetry-demo.js",
     "telemetry:receiver": "node tools/telemetry-receiver.js"
   },
+  "dependencies": {
+    "active-win": "^9.0.0"
+  },
   "devDependencies": {
-    "active-win": "^9.0.0",
-    "electron": "^30.0.0"
+    "electron": "^30.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.halomoddedcustoms.overlay",
+    "productName": "HMCC Overlay",
+    "artifactName": "HMCC-Overlay-Setup-${version}.${ext}",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!dist/**",
+      "!docs/**",
+      "!tools/kill-overlay.ps1"
+    ],
+    "extraResources": [
+      {
+        "from": "../mcc-telemetry-mod-stub/build/Release/mcc_player_overlay.exe",
+        "to": "bin/mcc_player_overlay.exe"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   }
 }

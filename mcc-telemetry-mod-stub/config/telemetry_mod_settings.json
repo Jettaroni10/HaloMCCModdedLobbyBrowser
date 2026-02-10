@@ -1,0 +1,8 @@
+{
+  "enabled": true,
+  "offlineOnly": true,
+  "allowWhenAntiCheatActive": false,
+  "updateInterval": 2000,
+  "endpoint": "http://127.0.0.1:4760/telemetry",
+  "debugMode": false
+}

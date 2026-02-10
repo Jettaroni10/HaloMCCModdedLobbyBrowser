@@ -1,7 +1,7 @@
 {
-  "version": "0.1.0",
-  "publishedAt": "2026-02-09",
+  "version": "0.1.2",
+  "publishedAt": "2026-02-10",
   "file": "/downloads/HMCC-Overlay-Setup.exe",
-  "sha256": "101F3C70D152B43AD6F1E64BDD2E18399E8431E439FE27E324202CBA6F10870A",
-  "notes": "Initial Windows NSIS installer release with bundled MCC reader executable."
+  "sha256": "C34AA7836385D4F12E398FEC0E20F09EB61BE618232160A19FEED2D53293DD09",
+  "notes": "Hardening update: atomic telemetry writes + parse-resilient file provider + improved diagnostics."
 }

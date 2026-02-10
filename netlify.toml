@@ -4,3 +4,10 @@
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+[[headers]]
+  for = "/downloads/*.exe"
+
+  [headers.values]
+    Content-Disposition = "attachment"
+    X-Content-Type-Options = "nosniff"

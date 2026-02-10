@@ -58,6 +58,11 @@ let updaterStatus = "Idle";
 let autoUpdater = null;
 let debugPanelPinned = false;
 let hideOverlayCssKey = null;
+let debugPanelModeActive = false;
+let overlayFullBounds = null;
+
+const DEBUG_PANEL_SIZE = { width: 360, height: 260 };
+const DEBUG_PANEL_INSET = 12;
 
 function ensureAutoUpdaterLoaded() {
   if (autoUpdater) return true;
@@ -241,6 +246,29 @@ function updateOverlayContentMode() {
     wc.insertCSS(css).then((key) => {
       hideOverlayCssKey = key;
     }).catch(() => {});
+
+    // Shrink the window to the debug panel so we don't leave a full-screen solid background.
+    if (!debugPanelModeActive) {
+      try {
+        if (!overlayFullBounds) {
+          overlayFullBounds = overlayWindow.getBounds();
+        }
+        const primary = screen.getPrimaryDisplay();
+        const work = primary.workArea;
+        overlayWindow.setBounds(
+          {
+            x: work.x + DEBUG_PANEL_INSET,
+            y: work.y + work.height - DEBUG_PANEL_SIZE.height - DEBUG_PANEL_INSET,
+            width: DEBUG_PANEL_SIZE.width,
+            height: DEBUG_PANEL_SIZE.height,
+          },
+          false
+        );
+        debugPanelModeActive = true;
+      } catch {
+        // best-effort
+      }
+    }
     return;
   }
 
@@ -248,6 +276,18 @@ function updateOverlayContentMode() {
     const key = hideOverlayCssKey;
     hideOverlayCssKey = null;
     wc.removeInsertedCSS(key).catch(() => {});
+  }
+
+  // Restore full-screen bounds when leaving debug-only mode.
+  if (debugPanelModeActive) {
+    try {
+      const next = overlayFullBounds || getFullscreenBounds();
+      overlayWindow.setBounds(next, false);
+    } catch {
+      // best-effort
+    } finally {
+      debugPanelModeActive = false;
+    }
   }
 }
 
@@ -698,6 +738,7 @@ function createOverlayWindow() {
   if (!overlaySettings) loadOverlaySettings();
   const overlayBounds = getFullscreenBounds();
   startTelemetryEmitter();
+  overlayFullBounds = overlayBounds;
 
   const windowOptions = {
     ...overlayBounds,

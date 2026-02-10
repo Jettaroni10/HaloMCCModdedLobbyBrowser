@@ -771,15 +771,8 @@ app.whenReady().then(() => {
   const shortcutRegistered = globalShortcut.register("Insert", () => {
     toggleOverlayEnabled();
   });
-  const escapeRegistered = globalShortcut.register("Escape", () => {
-    if (!overlayVisible) return;
-    overlayEnabled = false;
-    debugLog("overlay enabled: off (esc)");
-    recomputeOverlayVisibility("esc");
-  });
   debugLog("Electron app ready");
   debugLog(`globalShortcut Insert registered: ${shortcutRegistered}`);
-  debugLog(`globalShortcut Escape registered: ${escapeRegistered}`);
   debugLog("overlay window created");
   debugLog(`initial ${debugSnapshot()}`);
   startFocusWatcher();

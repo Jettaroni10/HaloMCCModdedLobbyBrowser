@@ -21,12 +21,8 @@ constexpr int kMaxPlayers = 24;
 constexpr int kMapStabilizeTicks = 3;
 constexpr int kModeStabilizeTicks = 3;
 constexpr int kPlayerStabilizeTicks = 2;
-constexpr int kMenuFallbackTicks = 3;
 constexpr bool kUseMapWhitelist = false;
 constexpr int kPollIntervalMs = 200;
-constexpr int kSignalHoldMs = 1500;
-// Map/mode can disappear during load transitions for multiple seconds; keep them sticky for longer.
-constexpr int kStickyMetaHoldMs = 10 * 60 * 1000; // 10 minutes
 constexpr uintptr_t kSharedTelemetryBaseOffset = 0x4001590;
 constexpr uintptr_t kMapNameOffset = 0x44D;
 constexpr uintptr_t kModeNameOffsetPrimary = 0x3C4;
@@ -154,31 +150,32 @@ inline std::string TimestampNow() {
 
 struct StringSignal {
     int stabilizeTicks = 3;
-    int staleTicks = 3;
     std::string stableValue;
     std::string lastCandidate;
     int streak = 0;
-    int noValidTicks = 0;
     float confidence = 0.0f;
     std::string sourceTag = "none";
     uint64_t lastStableMs = 0;
-    int holdForMs = kSignalHoldMs;
+    bool hasStable = false;
+    bool updatedThisTick = false;
 
-    explicit StringSignal(int stabilize, int stale)
-        : stabilizeTicks(stabilize), staleTicks(stale) {}
+    explicit StringSignal(int stabilize)
+        : stabilizeTicks(stabilize) {}
 
     void Reset() {
         stableValue.clear();
         lastCandidate.clear();
         streak = 0;
-        noValidTicks = 0;
         confidence = 0.0f;
         sourceTag = "none";
         lastStableMs = 0;
+        hasStable = false;
+        updatedThisTick = false;
     }
 
     std::string Update(const std::vector<std::string>& candidates) {
         const uint64_t nowMs = NowSteadyMs();
+        updatedThisTick = false;
         const auto consensus = ComputeConsensus(candidates);
         confidence = CalculateConfidence(consensus.bestCount, consensus.total);
         if (consensus.total > 1) {
@@ -190,15 +187,9 @@ struct StringSignal {
         }
 
         if (!consensus.hasValue) {
-            noValidTicks++;
-            const bool holdExpired = lastStableMs == 0 || (nowMs - lastStableMs > static_cast<uint64_t>(holdForMs));
-            if (noValidTicks >= staleTicks && holdExpired) {
-                stableValue = "Unknown";
-            }
-            return stableValue.empty() ? "Unknown" : stableValue;
+            return hasStable ? stableValue : "Unknown";
         }
 
-        noValidTicks = 0;
         if (consensus.value == lastCandidate) {
             streak++;
         } else {
@@ -209,41 +200,42 @@ struct StringSignal {
         if (streak >= stabilizeTicks) {
             stableValue = consensus.value;
             lastStableMs = nowMs;
+            hasStable = true;
+            updatedThisTick = true;
         }
 
-        return stableValue.empty() ? "Unknown" : stableValue;
+        return hasStable ? stableValue : "Unknown";
     }
 };
 
 struct IntSignal {
     int stabilizeTicks = 2;
-    int staleTicks = 2;
     int stableValue = 0;
     int lastCandidate = 0;
     int streak = 0;
-    int noValidTicks = 0;
     bool hasStable = false;
     float confidence = 0.0f;
     std::string sourceTag = "none";
     uint64_t lastStableMs = 0;
-    int holdForMs = kSignalHoldMs;
+    bool updatedThisTick = false;
 
-    explicit IntSignal(int stabilize, int stale)
-        : stabilizeTicks(stabilize), staleTicks(stale) {}
+    explicit IntSignal(int stabilize)
+        : stabilizeTicks(stabilize) {}
 
     void Reset() {
         stableValue = 0;
         lastCandidate = 0;
         streak = 0;
-        noValidTicks = 0;
         hasStable = false;
         confidence = 0.0f;
         sourceTag = "none";
         lastStableMs = 0;
+        updatedThisTick = false;
     }
 
     int Update(const std::vector<int>& candidates) {
         const uint64_t nowMs = NowSteadyMs();
+        updatedThisTick = false;
         const auto consensus = ComputeConsensus(candidates);
         confidence = CalculateConfidence(consensus.bestCount, consensus.total);
         if (consensus.total > 1) {
@@ -255,16 +247,9 @@ struct IntSignal {
         }
 
         if (!consensus.hasValue) {
-            noValidTicks++;
-            const bool holdExpired = lastStableMs == 0 || (nowMs - lastStableMs > static_cast<uint64_t>(holdForMs));
-            if (noValidTicks >= staleTicks && holdExpired) {
-                hasStable = false;
-                stableValue = 0;
-            }
             return hasStable ? stableValue : 0;
         }
 
-        noValidTicks = 0;
         if (consensus.value == lastCandidate) {
             streak++;
         } else {
@@ -276,6 +261,7 @@ struct IntSignal {
             stableValue = consensus.value;
             hasStable = true;
             lastStableMs = nowMs;
+            updatedThisTick = true;
         }
 
         return hasStable ? stableValue : 0;
@@ -286,12 +272,10 @@ struct IntSignal {
 class MCCPlayerCountConsole {
 public:
     MCCPlayerCountConsole()
-        : mapSignal(kMapStabilizeTicks, kMenuFallbackTicks),
-          modeSignal(kModeStabilizeTicks, kMenuFallbackTicks),
-          playerSignal(kPlayerStabilizeTicks, kPlayerStabilizeTicks) {
+        : mapSignal(kMapStabilizeTicks),
+          modeSignal(kModeStabilizeTicks),
+          playerSignal(kPlayerStabilizeTicks) {
         InitializeAddresses();
-        mapSignal.holdForMs = kStickyMetaHoldMs;
-        modeSignal.holdForMs = kStickyMetaHoldMs;
     }
 
     bool Initialize() {
@@ -1173,6 +1157,9 @@ private:
         payload << "\"mapName\":\"" << EscapeJson(mapName) << "\",";
         payload << "\"modeName\":\"" << EscapeJson(modeName) << "\",";
         payload << "\"playerCount\":" << playerCount << ",";
+        payload << "\"mapUpdatedThisTick\":" << (mapSignal.updatedThisTick ? "true" : "false") << ",";
+        payload << "\"modeUpdatedThisTick\":" << (modeSignal.updatedThisTick ? "true" : "false") << ",";
+        payload << "\"playersUpdatedThisTick\":" << (playerSignal.updatedThisTick ? "true" : "false") << ",";
         payload << "\"confidence\":{"
                 << "\"map\":" << std::fixed << std::setprecision(2) << mapSignal.confidence << ","
                 << "\"mode\":" << std::fixed << std::setprecision(2) << modeSignal.confidence << ","
@@ -1195,10 +1182,9 @@ private:
             payload << "\"modeAgeMs\":"
                     << (modeSignal.lastStableMs == 0 ? -1LL : static_cast<long long>(NowSteadyMs() - modeSignal.lastStableMs))
                     << ",";
-            payload << "\"mapHoldMs\":" << mapSignal.holdForMs << ",";
-            payload << "\"modeHoldMs\":" << modeSignal.holdForMs << ",";
-            payload << "\"mapSticky\":true,";
-            payload << "\"modeSticky\":true,";
+            payload << "\"mapUpdatedThisTick\":" << (mapSignal.updatedThisTick ? "true" : "false") << ",";
+            payload << "\"modeUpdatedThisTick\":" << (modeSignal.updatedThisTick ? "true" : "false") << ",";
+            payload << "\"playersUpdatedThisTick\":" << (playerSignal.updatedThisTick ? "true" : "false") << ",";
             payload << "\"mccBase\":" << static_cast<unsigned long long>(debug.mccBase) << ",";
             payload << "\"reachBase\":" << static_cast<unsigned long long>(debug.reachBase) << ",";
             payload << "\"attempts\":[";

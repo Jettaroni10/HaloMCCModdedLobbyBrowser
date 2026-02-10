@@ -23,6 +23,12 @@ function unwrapEnvelope(raw) {
   };
 }
 
+function normalizeUpdatedFlag(value) {
+  if (value === true) return true;
+  if (value === false) return false;
+  return null;
+}
+
 function validatePayload(payload) {
   const issues = [];
   if (!payload || typeof payload !== "object") {
@@ -113,6 +119,9 @@ function normalizeState(payload, version) {
     schemaVersion: version || DEFAULT_SCHEMA_VERSION,
     seq: Number.isFinite(Number(payload.seq)) ? Number(payload.seq) : 0,
     debug: payload.debug && typeof payload.debug === "object" ? payload.debug : null,
+    mapUpdatedThisTick: normalizeUpdatedFlag(payload.mapUpdatedThisTick),
+    modeUpdatedThisTick: normalizeUpdatedFlag(payload.modeUpdatedThisTick),
+    playersUpdatedThisTick: normalizeUpdatedFlag(payload.playersUpdatedThisTick),
   };
 }
 

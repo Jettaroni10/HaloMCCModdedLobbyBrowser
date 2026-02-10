@@ -8,6 +8,9 @@ export type OverlayTelemetryState = {
   mode?: string;
   currentPlayers?: number;
   maxPlayers?: number;
+  mapUpdatedThisTick?: boolean | null;
+  modeUpdatedThisTick?: boolean | null;
+  playersUpdatedThisTick?: boolean | null;
   hostName?: string;
   requiredMods?: string[];
   sessionId?: string;
@@ -61,6 +64,19 @@ function normalizeTelemetry(input: OverlayTelemetryState | null) {
       : null;
   const lastParseError =
     typeof input.lastParseError === "string" ? input.lastParseError : null;
+  const mapUpdatedThisTick =
+    input.mapUpdatedThisTick === null || input.mapUpdatedThisTick === undefined
+      ? null
+      : Boolean(input.mapUpdatedThisTick);
+  const modeUpdatedThisTick =
+    input.modeUpdatedThisTick === null || input.modeUpdatedThisTick === undefined
+      ? null
+      : Boolean(input.modeUpdatedThisTick);
+  const playersUpdatedThisTick =
+    input.playersUpdatedThisTick === null ||
+    input.playersUpdatedThisTick === undefined
+      ? null
+      : Boolean(input.playersUpdatedThisTick);
 
   return {
     status: typeof input.status === "string" ? input.status : undefined,
@@ -68,6 +84,9 @@ function normalizeTelemetry(input: OverlayTelemetryState | null) {
     mode,
     currentPlayers,
     maxPlayers,
+    mapUpdatedThisTick,
+    modeUpdatedThisTick,
+    playersUpdatedThisTick,
     hostName: typeof input.hostName === "string" ? input.hostName : undefined,
     requiredMods: Array.isArray(input.requiredMods) ? input.requiredMods : [],
     sessionId: typeof input.sessionId === "string" ? input.sessionId : "",

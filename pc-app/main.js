@@ -884,6 +884,18 @@ function buildTelemetryState() {
     mode: state.mode || "Unknown",
     currentPlayers: Number(state.currentPlayers || 0),
     maxPlayers: Number(state.maxPlayers || 0),
+    mapUpdatedThisTick:
+      typeof state.mapUpdatedThisTick === "boolean"
+        ? state.mapUpdatedThisTick
+        : null,
+    modeUpdatedThisTick:
+      typeof state.modeUpdatedThisTick === "boolean"
+        ? state.modeUpdatedThisTick
+        : null,
+    playersUpdatedThisTick:
+      typeof state.playersUpdatedThisTick === "boolean"
+        ? state.playersUpdatedThisTick
+        : null,
     hostName: state.hostName || "Host",
     requiredMods: Array.isArray(state.requiredMods) ? state.requiredMods : [],
     sessionId: state.sessionId || "",

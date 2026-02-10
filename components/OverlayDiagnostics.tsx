@@ -25,6 +25,10 @@ function trimError(value: unknown) {
   return compact.length > 120 ? `${compact.slice(0, 120)}…` : compact;
 }
 
+function formatCarry(flag: boolean | null | undefined) {
+  return flag === false ? " (carried)" : "";
+}
+
 export default function OverlayDiagnostics() {
   const { isConnected, state, receiveCount, lastReceiveAt } =
     useOverlayTelemetry() as ReturnType<typeof useOverlayTelemetry> & {
@@ -134,13 +138,20 @@ export default function OverlayDiagnostics() {
         <div>Last good age: {formatNullableNumber(state?.lastGoodAgeMs)}ms</div>
         <div>File mtime: {formatNullableNumber(state?.telemetryFileMtimeMs)}ms</div>
         <div>Last parse error: {trimError(state?.lastParseError)}</div>
-        <div>Map: {state?.map || "Unknown"}</div>
-        <div>Mode: {state?.mode || "Unknown"}</div>
+        <div>
+          Map: {state?.map || "Unknown"}
+          {formatCarry(state?.mapUpdatedThisTick)}
+        </div>
+        <div>
+          Mode: {state?.mode || "Unknown"}
+          {formatCarry(state?.modeUpdatedThisTick)}
+        </div>
         <div>
           Players:{" "}
           {Number.isFinite(Number(state?.currentPlayers))
             ? Number(state?.currentPlayers)
             : 0}
+          {formatCarry(state?.playersUpdatedThisTick)}
         </div>
         {state?.debug ? <div>Reader debug: present</div> : <div>Reader debug: none</div>}
       </div>

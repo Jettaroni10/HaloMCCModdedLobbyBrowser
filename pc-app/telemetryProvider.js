@@ -95,7 +95,36 @@ class FileGameStateProvider {
       const telemetry = parseTelemetryDocument(parsed);
       this.schemaVersion = telemetry.version || DEFAULT_SCHEMA_VERSION;
       this.lastValidationIssues = telemetry.validationIssues;
-      this.state = telemetry.normalizedState;
+      const payload = telemetry.payload;
+      const prevState = this.state;
+      const nextState = { ...telemetry.normalizedState };
+      if (payload && typeof payload === "object") {
+        const hasMap = "mapName" in payload || "map" in payload;
+        const hasMode = "gameMode" in payload || "mode" in payload;
+        const hasPlayers =
+          "playerCount" in payload || "players" in payload || "currentPlayers" in payload;
+        const hasMaxPlayers = "maxPlayers" in payload;
+
+        if (!hasMap && prevState?.map) nextState.map = prevState.map;
+        if (!hasMode && prevState?.mode) nextState.mode = prevState.mode;
+        if (!hasPlayers && Number.isFinite(Number(prevState?.currentPlayers))) {
+          nextState.currentPlayers = prevState.currentPlayers;
+        }
+        if (!hasMaxPlayers && Number.isFinite(Number(prevState?.maxPlayers))) {
+          nextState.maxPlayers = prevState.maxPlayers;
+        }
+
+        if (nextState.mapUpdatedThisTick == null && !hasMap) {
+          nextState.mapUpdatedThisTick = false;
+        }
+        if (nextState.modeUpdatedThisTick == null && !hasMode) {
+          nextState.modeUpdatedThisTick = false;
+        }
+        if (nextState.playersUpdatedThisTick == null && !hasPlayers) {
+          nextState.playersUpdatedThisTick = false;
+        }
+      }
+      this.state = nextState;
       this.lastUpdatedAt = new Date().toISOString();
       this.lastError = null;
       this.parseOk = true;

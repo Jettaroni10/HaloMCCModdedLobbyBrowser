@@ -8,13 +8,16 @@
     "dev": "electron .",
     "start": "electron .",
     "kill:overlay": "node tools/kill-overlay.js",
+    "check:packaged-reader": "node tools/check-packaged-reader.js",
     "pack": "npm run kill:overlay && electron-builder --dir",
-    "dist": "npm run kill:overlay && electron-builder --win nsis",
+    "dist": "npm run kill:overlay && electron-builder --win nsis && npm run check:packaged-reader",
+    "release:publish": "npm run kill:overlay && electron-builder --win nsis --publish always && npm run check:packaged-reader",
     "telemetry:demo": "node tools/telemetry-demo.js",
     "telemetry:receiver": "node tools/telemetry-receiver.js"
   },
   "dependencies": {
-    "active-win": "^9.0.0"
+    "active-win": "^9.0.0",
+    "electron-updater": "^6.3.9"
   },
   "devDependencies": {
     "electron": "^30.0.0",
@@ -54,6 +57,13 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Jettaroni10",
+        "repo": "HaloMCCModdedLobbyBrowser"
+      }
+    ]
   }
 }

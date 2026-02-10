@@ -54,6 +54,23 @@ Notes:
 - `npm run dist` runs `tools/kill-overlay.js` first to stop `mcc_player_overlay.exe` and Electron processes.
 - If `mcc_player_overlay.exe` is running, linker/packaging can fail due to file locks.
 
+## Releasing updates (GitHub Releases)
+
+1. Bump version in `pc-app/package.json`.
+2. Ensure `GH_TOKEN` is set with repo release permissions.
+
+```powershell
+$env:GH_TOKEN="YOUR_GITHUB_TOKEN"
+```
+
+3. Publish installer + update metadata:
+
+```bash
+npm run release:publish
+```
+
+This uses `electron-builder --publish always` and uploads release artifacts used by `electron-updater` (including update metadata files).
+
 ## Notes
 
 - Data is stored in the Electron user data directory as `halo-mcc-lobbies.json`.

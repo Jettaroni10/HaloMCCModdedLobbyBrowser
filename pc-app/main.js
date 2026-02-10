@@ -5,10 +5,12 @@ const {
   dialog,
   screen,
   globalShortcut,
+  Menu,
 } = require("electron");
 const path = require("path");
 const { spawn } = require("child_process");
 const fs = require("fs");
+const { autoUpdater } = require("electron-updater");
 const { LobbyStore } = require("./store");
 const { GameSessionMonitor, SimulatedGameStateProvider } = require("./monitor");
 const { AutoLobbyPopulator } = require("./populator");
@@ -40,12 +42,15 @@ let overlayVisible = false;
 let overlayEnabled = true;
 let overlayReady = false;
 let mccFocused = false;
+let overlayFocused = false;
 let fadeTimer = null;
 let focusPollTimer = null;
 let focusPollInFlight = false;
 let activeWinGetter = null;
 let lastActiveSignature = "";
 let lastDebugSnapshot = "";
+let updaterInitialized = false;
+let updaterStatus = "Idle";
 
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
 if (!gotSingleInstanceLock) {
@@ -86,8 +91,8 @@ function debugLog(message) {
 
 function debugSnapshot() {
   if (!DEBUG_OVERLAY) return "";
-  return `enabled=${overlayEnabled} focused=${mccFocused} shouldShow=${
-    overlayEnabled && mccFocused
+  return `enabled=${overlayEnabled} mccFocused=${mccFocused} overlayFocused=${overlayFocused} shouldShow=${
+    overlayEnabled && (mccFocused || overlayFocused)
   }`;
 }
 
@@ -180,7 +185,7 @@ function hideOverlay() {
 
 function recomputeOverlayVisibility(reason) {
   if (!overlayWindow || overlayWindow.isDestroyed() || !overlayReady) return;
-  const shouldShow = overlayEnabled && mccFocused;
+  const shouldShow = overlayEnabled && (mccFocused || overlayFocused);
 
   if (shouldShow && !overlayVisible) {
     debugLog(`show overlay (${reason})`);
@@ -192,6 +197,20 @@ function recomputeOverlayVisibility(reason) {
     debugLog(`hide overlay (${reason})`);
     hideOverlay();
   }
+}
+
+function setMccFocused(nextValue, reason) {
+  if (mccFocused === nextValue) return;
+  mccFocused = nextValue;
+  debugLog(`MCC focused: ${mccFocused ? "yes" : "no"}`);
+  recomputeOverlayVisibility(reason);
+}
+
+function setOverlayFocused(nextValue, reason) {
+  if (overlayFocused === nextValue) return;
+  overlayFocused = nextValue;
+  debugLog(`Overlay focused: ${overlayFocused ? "yes" : "no"}`);
+  recomputeOverlayVisibility(reason);
 }
 
 function toggleOverlayEnabled() {
@@ -230,7 +249,11 @@ function isOverlayActiveWindow(win) {
   if (!win) return false;
   const title = String(win.title || "").toLowerCase();
   const ownerName = String(win.owner?.name || "").toLowerCase();
-  return ownerName.includes("electron") && title.includes("customs on the ring");
+  const ownerPid = Number(win.owner?.processId ?? win.owner?.pid ?? 0);
+  return (
+    ownerPid === process.pid ||
+    (ownerName.includes("electron") && title.includes("customs on the ring"))
+  );
 }
 
 function startFocusWatcher() {
@@ -250,15 +273,12 @@ function startFocusWatcher() {
         debugLog("active-win returned null");
       }
       debugActiveWindow(win);
-      if (isOverlayActiveWindow(win)) {
-        return;
-      }
-      const nextFocused = isMccFocusedWindow(win);
-      if (nextFocused !== mccFocused) {
-        mccFocused = nextFocused;
-        debugLog(`MCC focused: ${mccFocused ? "yes" : "no"}`);
-        recomputeOverlayVisibility("focus");
-      }
+      setMccFocused(isMccFocusedWindow(win), "focus");
+      const windowFocus =
+        Boolean(overlayWindow) &&
+        !overlayWindow.isDestroyed() &&
+        overlayWindow.isFocused();
+      setOverlayFocused(isOverlayActiveWindow(win) || windowFocus, "focus");
     } catch (error) {
       if (DEBUG_OVERLAY) {
         console.warn("Active window polling failed:", error?.message || error);
@@ -274,6 +294,109 @@ function stopFocusWatcher() {
     clearInterval(focusPollTimer);
     focusPollTimer = null;
   }
+}
+
+function setUpdaterStatus(statusText) {
+  updaterStatus = String(statusText || "Idle");
+  debugLog(`Updater status: ${updaterStatus}`);
+  buildApplicationMenu();
+}
+
+async function triggerUpdateCheck(manual = false) {
+  if (!app.isPackaged) {
+    setUpdaterStatus("Disabled in development");
+    if (manual) {
+      await dialog.showMessageBox({
+        type: "info",
+        title: "Updates",
+        message: "Auto-updater is only enabled in packaged builds.",
+      });
+    }
+    return;
+  }
+  try {
+    await autoUpdater.checkForUpdates();
+  } catch (error) {
+    const message = error?.message || String(error);
+    setUpdaterStatus(`Error: ${message}`);
+    if (manual) {
+      await dialog.showMessageBox({
+        type: "error",
+        title: "Update Check Failed",
+        message,
+      });
+    }
+  }
+}
+
+function buildApplicationMenu() {
+  const menu = Menu.buildFromTemplate([
+    {
+      label: "HMCC Overlay",
+      submenu: [
+        { label: `Version ${app.getVersion()}`, enabled: false },
+        { label: `Updates: ${updaterStatus}`, enabled: false },
+        { type: "separator" },
+        {
+          label: "Check for updates",
+          click: () => {
+            triggerUpdateCheck(true);
+          },
+        },
+        { type: "separator" },
+        { role: "quit", label: "Quit" },
+      ],
+    },
+  ]);
+  Menu.setApplicationMenu(menu);
+}
+
+function initAutoUpdater() {
+  if (updaterInitialized) return;
+  updaterInitialized = true;
+  if (!app.isPackaged) {
+    setUpdaterStatus("Disabled in development");
+    return;
+  }
+
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on("checking-for-update", () => {
+    setUpdaterStatus("Checking for updates...");
+  });
+  autoUpdater.on("update-available", (info) => {
+    setUpdaterStatus(`Update available (${info?.version || "new version"})`);
+  });
+  autoUpdater.on("update-not-available", () => {
+    setUpdaterStatus("Up to date");
+  });
+  autoUpdater.on("error", (error) => {
+    setUpdaterStatus(`Error: ${error?.message || String(error)}`);
+  });
+  autoUpdater.on("download-progress", (progress) => {
+    const percent = Number.isFinite(progress?.percent)
+      ? Math.round(progress.percent)
+      : 0;
+    setUpdaterStatus(`Downloading update... ${percent}%`);
+  });
+  autoUpdater.on("update-downloaded", async (info) => {
+    setUpdaterStatus(`Update downloaded (${info?.version || "new version"})`);
+    const result = await dialog.showMessageBox({
+      type: "question",
+      title: "Update Ready",
+      message: "An update has been downloaded. Restart now to install it?",
+      buttons: ["Later", "Restart now"],
+      defaultId: 1,
+      cancelId: 0,
+    });
+    if (result.response === 1) {
+      autoUpdater.quitAndInstall();
+    }
+  });
+
+  setUpdaterStatus("Checking for updates...");
+  triggerUpdateCheck(false);
 }
 
 function saveConfig() {
@@ -364,6 +487,9 @@ function resolveReaderPath() {
 function startReaderProcess() {
   if (readerProcess) return;
   const readerPath = resolveReaderPath();
+  console.info(
+    `[reader] launch context: app.isPackaged=${app.isPackaged} resourcesPath=${process.resourcesPath} readerPath=${readerPath}`
+  );
   if (!fs.existsSync(readerPath)) {
     const expectedPackagedPath = path.join(
       process.resourcesPath,
@@ -373,23 +499,55 @@ function startReaderProcess() {
     console.error(`Reader exe not found: ${readerPath}`);
     console.error(`Packaged reader path: ${expectedPackagedPath}`);
     console.error(
+      `Installer packaging misconfigured: expected reader at ${expectedPackagedPath}`
+    );
+    console.error(
       "Build mcc-telemetry-mod-stub first so electron-builder can bundle mcc_player_overlay.exe."
     );
     return;
   }
+  let readerStdout = "";
+  let readerStderr = "";
   readerProcess = spawn(readerPath, [], {
-    stdio: "ignore",
+    stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
     env: {
       ...process.env,
       MCC_TELEMETRY_OUT: telemetryPath,
     },
   });
-  readerProcess.on("exit", () => {
+  if (readerProcess.stdout) {
+    readerProcess.stdout.on("data", (chunk) => {
+      readerStdout += chunk.toString();
+    });
+  }
+  if (readerProcess.stderr) {
+    readerProcess.stderr.on("data", (chunk) => {
+      readerStderr += chunk.toString();
+    });
+  }
+  readerProcess.on("exit", (code, signal) => {
+    if (code !== 0) {
+      console.error(
+        `[reader] exited unexpectedly: code=${code} signal=${signal || "none"}`
+      );
+      if (readerStdout.trim()) {
+        console.error(`[reader] stdout: ${readerStdout.trim()}`);
+      }
+      if (readerStderr.trim()) {
+        console.error(`[reader] stderr: ${readerStderr.trim()}`);
+      }
+    }
     readerProcess = null;
   });
   readerProcess.on("error", (error) => {
     console.warn("Reader failed to start:", error?.message || String(error));
+    if (readerStdout.trim()) {
+      console.error(`[reader] stdout: ${readerStdout.trim()}`);
+    }
+    if (readerStderr.trim()) {
+      console.error(`[reader] stderr: ${readerStderr.trim()}`);
+    }
     readerProcess = null;
   });
 }
@@ -491,6 +649,18 @@ function createOverlayWindow() {
     forward: true,
   });
   overlayWindow.setFocusable(!overlaySettings.clickThrough);
+  overlayWindow.on("focus", () => {
+    setOverlayFocused(true, "window-focus");
+  });
+  overlayWindow.on("blur", () => {
+    setOverlayFocused(false, "window-blur");
+  });
+  overlayWindow.on("closed", () => {
+    overlayWindow = null;
+    overlayReady = false;
+    overlayVisible = false;
+    setOverlayFocused(false, "window-closed");
+  });
 
   applyOverlayEffects();
   loadOverlayContent();
@@ -779,6 +949,8 @@ app.whenReady().then(() => {
   startReaderProcess();
   createOverlayWindow();
   emitTelemetryUpdate();
+  buildApplicationMenu();
+  initAutoUpdater();
 
   const shortcutRegistered = globalShortcut.register("Insert", () => {
     toggleOverlayEnabled();

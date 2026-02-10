@@ -14,6 +14,7 @@ import OverlayGlassShell from "@/components/OverlayGlassShell";
 import OverlayAutoRefresher from "@/components/OverlayAutoRefresher";
 import OverlayVersionLabel from "@/components/OverlayVersionLabel";
 import OverlayDiagnostics from "@/components/OverlayDiagnostics";
+import { OverlayTelemetryProvider } from "@/components/OverlayTelemetryProvider";
 
 export const metadata: Metadata = {
   title: "Customs on the Ring",
@@ -36,24 +37,26 @@ export default async function RootLayout({
         <Suspense fallback={null}>
           <AnalyticsTracker />
         </Suspense>
-        <OverlayGlassShell />
-        <OverlayAutoRefresher />
-        <OverlayVersionLabel />
-        <OverlayDiagnostics />
-        <AuthProvider>
-          <Suspense fallback={null}>
-            <GamertagGate user={user} />
-          </Suspense>
-          <HostNotificationsProvider hostUserId={user?.id ?? null}>
-            <div className="relative z-10 flex min-h-screen flex-col">
-              <SiteHeader user={user} isAdmin={isAdmin} />
-              <main className="flex-1">
-                <Suspense fallback={null}>{children}</Suspense>
-              </main>
-              <SiteFooter />
-            </div>
-          </HostNotificationsProvider>
-        </AuthProvider>
+        <OverlayTelemetryProvider>
+          <OverlayGlassShell />
+          <OverlayAutoRefresher />
+          <OverlayVersionLabel />
+          <OverlayDiagnostics />
+          <AuthProvider>
+            <Suspense fallback={null}>
+              <GamertagGate user={user} />
+            </Suspense>
+            <HostNotificationsProvider hostUserId={user?.id ?? null}>
+              <div className="relative z-10 flex min-h-screen flex-col">
+                <SiteHeader user={user} isAdmin={isAdmin} />
+                <main className="flex-1">
+                  <Suspense fallback={null}>{children}</Suspense>
+                </main>
+                <SiteFooter />
+              </div>
+            </HostNotificationsProvider>
+          </AuthProvider>
+        </OverlayTelemetryProvider>
       </body>
     </html>
   );

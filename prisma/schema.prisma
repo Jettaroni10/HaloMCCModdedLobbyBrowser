@@ -151,6 +151,13 @@ model Lobby {
   game                   Game
   mode                   String
   map                    String
+  telemetryMapName       String?
+  telemetryModeName      String?
+  telemetryPlayerCount   Int?
+  telemetryStatus        String?
+  telemetrySeq           Int?
+  telemetryEmittedAt     DateTime?
+  telemetryUpdatedAt     DateTime?
   mapImageUrl            String?
   mapImagePath           String?
   region                 Region

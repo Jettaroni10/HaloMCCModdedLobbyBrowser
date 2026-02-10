@@ -1,11 +1,12 @@
 "use client";
 
-import { useOverlayTelemetry } from "@/lib/useOverlayTelemetry";
+import { useOverlayTelemetryContext } from "@/components/OverlayTelemetryProvider";
 
 type OverlayLobbyTelemetryLineProps = {
   fallbackMode: string;
   fallbackMap: string;
-  isHost: boolean;
+  lobbyId?: string;
+  selected?: boolean;
   className?: string;
   as?: "p" | "span";
   prefix?: string;
@@ -14,19 +15,25 @@ type OverlayLobbyTelemetryLineProps = {
 export default function OverlayLobbyTelemetryLine({
   fallbackMode,
   fallbackMap,
-  isHost,
+  lobbyId,
+  selected = false,
   className,
   as = "p",
   prefix,
 }: OverlayLobbyTelemetryLineProps) {
-  const { isConnected, state } = useOverlayTelemetry();
-  const liveMode =
-    isHost && isConnected && state?.mode ? state.mode : fallbackMode;
-  const liveMap =
-    isHost && isConnected && state?.map ? state.map : fallbackMap;
-  const mapLower = String(state?.map ?? "").trim().toLowerCase();
-  const inMenus =
-    isHost && isConnected && (!mapLower || mapLower === "unknown");
+  const { state: telemetryState } = useOverlayTelemetryContext();
+  const useContextTelemetry =
+    selected && lobbyId && telemetryState.selectedLobbyId === lobbyId;
+  const displayTelemetry = useContextTelemetry
+    ? telemetryState.telemetrySource === "local"
+      ? telemetryState.localTelemetry
+      : telemetryState.serverTelemetry
+    : null;
+  const hasLiveTelemetry = Boolean(useContextTelemetry && displayTelemetry);
+  const liveMode = displayTelemetry?.mode ?? fallbackMode;
+  const liveMap = displayTelemetry?.map ?? fallbackMap;
+  const mapLower = String(displayTelemetry?.map ?? "").trim().toLowerCase();
+  const inMenus = hasLiveTelemetry && (!mapLower || mapLower === "unknown");
 
   const content = inMenus
     ? "Lobby in menus"

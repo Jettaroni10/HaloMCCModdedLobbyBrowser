@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useOverlayTelemetry } from "@/lib/useOverlayTelemetry";
+import { useOverlayTelemetryContext } from "@/components/OverlayTelemetryProvider";
 
 const DEBUG_KEY = "hmcc_overlay_debug";
 const STALE_MS = 2000;
@@ -30,11 +31,12 @@ function formatCarry(flag: boolean | null | undefined) {
 }
 
 export default function OverlayDiagnostics() {
-  const { isConnected, state, receiveCount, lastReceiveAt } =
+  const { isConnected, localTelemetry, receiveCount, lastReceiveAt } =
     useOverlayTelemetry() as ReturnType<typeof useOverlayTelemetry> & {
       receiveCount: number;
       lastReceiveAt: number | null;
     };
+  const { state: telemetryState } = useOverlayTelemetryContext();
 
   const [enabled, setEnabled] = useState(false);
   const [now, setNow] = useState(Date.now());
@@ -61,6 +63,11 @@ export default function OverlayDiagnostics() {
     if (!lastReceiveAt) return null;
     return Math.max(0, now - lastReceiveAt);
   }, [lastReceiveAt, now]);
+
+  const serverAgeMs = useMemo(() => {
+    if (!telemetryState.serverLastUpdateAt) return null;
+    return Math.max(0, now - telemetryState.serverLastUpdateAt);
+  }, [telemetryState.serverLastUpdateAt, now]);
 
   const stale = useMemo(() => {
     if (!isConnected) return true;
@@ -121,39 +128,58 @@ export default function OverlayDiagnostics() {
       </div>
 
       <div className="mt-2 space-y-1 text-ink/70">
+        <div>Selected lobby: {telemetryState.selectedLobbyId ?? "none"}</div>
+        <div>Telemetry source: {telemetryState.telemetrySource ?? "server"}</div>
         <div>Connected: {isConnected ? "yes" : "no"}</div>
         <div>IPC recv: {receiveCount}</div>
-        <div>Last recv: {formatAge(ageMs)}</div>
-        <div>Seq: {Number(state?.seq || 0)}</div>
-        <div>Status: {state?.status || "unknown"}</div>
+        <div>
+          Seq: {Number(localTelemetry?.seq || 0)} · Server seq:{" "}
+          {Number(telemetryState.serverTelemetry?.seq || 0)}
+        </div>
+        <div>
+          Local age: {formatAge(ageMs)} · Server age: {formatAge(serverAgeMs)}
+        </div>
+        <div>Status: {localTelemetry?.status || "unknown"}</div>
         <div>
           Parse OK:{" "}
-          {state?.parseOk === null || state?.parseOk === undefined
+          {localTelemetry?.parseOk === null ||
+          localTelemetry?.parseOk === undefined
             ? "n/a"
-            : state.parseOk
+            : localTelemetry.parseOk
               ? "yes"
               : "no"}
         </div>
-        <div>Consecutive parse errors: {formatNullableNumber(state?.consecutiveParseErrors)}</div>
-        <div>Last good age: {formatNullableNumber(state?.lastGoodAgeMs)}ms</div>
-        <div>File mtime: {formatNullableNumber(state?.telemetryFileMtimeMs)}ms</div>
-        <div>Last parse error: {trimError(state?.lastParseError)}</div>
         <div>
-          Map: {state?.map || "Unknown"}
-          {formatCarry(state?.mapUpdatedThisTick)}
+          Consecutive parse errors:{" "}
+          {formatNullableNumber(localTelemetry?.consecutiveParseErrors)}
         </div>
         <div>
-          Mode: {state?.mode || "Unknown"}
-          {formatCarry(state?.modeUpdatedThisTick)}
+          Last good age: {formatNullableNumber(localTelemetry?.lastGoodAgeMs)}ms
+        </div>
+        <div>
+          File mtime: {formatNullableNumber(localTelemetry?.telemetryFileMtimeMs)}ms
+        </div>
+        <div>Last parse error: {trimError(localTelemetry?.lastParseError)}</div>
+        <div>
+          Map: {localTelemetry?.map || "Unknown"}
+          {formatCarry(localTelemetry?.mapUpdatedThisTick)}
+        </div>
+        <div>
+          Mode: {localTelemetry?.mode || "Unknown"}
+          {formatCarry(localTelemetry?.modeUpdatedThisTick)}
         </div>
         <div>
           Players:{" "}
-          {Number.isFinite(Number(state?.currentPlayers))
-            ? Number(state?.currentPlayers)
+          {Number.isFinite(Number(localTelemetry?.currentPlayers))
+            ? Number(localTelemetry?.currentPlayers)
             : 0}
-          {formatCarry(state?.playersUpdatedThisTick)}
+          {formatCarry(localTelemetry?.playersUpdatedThisTick)}
         </div>
-        {state?.debug ? <div>Reader debug: present</div> : <div>Reader debug: none</div>}
+        {localTelemetry?.debug ? (
+          <div>Reader debug: present</div>
+        ) : (
+          <div>Reader debug: none</div>
+        )}
       </div>
     </div>
   );

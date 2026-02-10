@@ -9,6 +9,7 @@ import MapPreview from "./MapPreview";
 import ImageCropUpload from "@/components/ImageCropUpload";
 import { hashId, trackEvent, trackFeatureUsed } from "@/lib/analytics";
 import { useOverlayTelemetry } from "@/lib/useOverlayTelemetry";
+import { useLiveBindingPreference } from "@/lib/useLiveBindingPreference";
 
 type ModPackSummary = {
   id: string;
@@ -65,7 +66,7 @@ export default function HostLobbyForm({
   enableTelemetryBinding = false,
 }: HostLobbyFormProps) {
   const router = useRouter();
-  const { isConnected, state: overlayState } = useOverlayTelemetry();
+  const { isConnected, localTelemetry } = useOverlayTelemetry();
   const defaultTags = useMemo(() => defaultValues?.tags ?? [], [defaultValues]);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [mapPreviewUrl, setMapPreviewUrl] = useState<string | null>(null);
@@ -89,7 +90,8 @@ export default function HostLobbyForm({
   ]);
   const [packSaving, setPackSaving] = useState(false);
   const [packError, setPackError] = useState<string | null>(null);
-  const [manualOverride, setManualOverride] = useState(false);
+  const { liveBindingPreference, setLiveBindingPreference } =
+    useLiveBindingPreference(true);
   const [modeValue, setModeValue] = useState(defaultValues?.mode ?? "");
   const [mapValue, setMapValue] = useState(defaultValues?.map ?? "");
   const [slotsValue, setSlotsValue] = useState<string | number>(
@@ -148,29 +150,24 @@ export default function HostLobbyForm({
     void loadModPacks();
   }, [isModded]);
 
-  useEffect(() => {
-    if (!enableTelemetryBinding) {
-      setManualOverride(false);
-    }
-  }, [enableTelemetryBinding]);
-
   const liveBindingEnabled =
-    enableTelemetryBinding && isConnected && !manualOverride;
-  const overlayMap = typeof overlayState?.map === "string" ? overlayState.map : "";
+    enableTelemetryBinding && isConnected && liveBindingPreference;
+  const overlayMap =
+    typeof localTelemetry?.map === "string" ? localTelemetry.map : "";
   const overlayInMenus =
     isConnected &&
     (!overlayMap.trim() || overlayMap.trim().toLowerCase() === "unknown");
   const overlayStatus = overlayInMenus ? "Lobby in menus" : "In match";
 
   useEffect(() => {
-    if (!liveBindingEnabled || !overlayState) return;
-    if (typeof overlayState.mode === "string" && overlayState.mode.length > 0) {
-      setModeValue(overlayState.mode);
+    if (!liveBindingEnabled || !localTelemetry) return;
+    if (typeof localTelemetry.mode === "string" && localTelemetry.mode.length > 0) {
+      setModeValue(localTelemetry.mode);
     }
-    if (typeof overlayState.map === "string" && overlayState.map.length > 0) {
-      setMapValue(overlayState.map);
+    if (typeof localTelemetry.map === "string" && localTelemetry.map.length > 0) {
+      setMapValue(localTelemetry.map);
     }
-  }, [liveBindingEnabled, overlayState?.mode, overlayState?.map]);
+  }, [liveBindingEnabled, localTelemetry?.mode, localTelemetry?.map]);
 
   const selectedPack = useMemo(
     () => modPacks.find((pack) => pack.id === selectedPackId) ?? null,
@@ -400,20 +397,20 @@ export default function HostLobbyForm({
             <div>
               Map{" "}
               <span className="font-semibold text-ink">
-                {overlayState?.map ?? "Unknown"}
+                {localTelemetry?.map ?? "Unknown"}
               </span>
             </div>
             <div>
               Mode{" "}
               <span className="font-semibold text-ink">
-                {overlayState?.mode ?? "Unknown"}
+                {localTelemetry?.mode ?? "Unknown"}
               </span>
             </div>
             <div>
               Players{" "}
               <span className="font-semibold text-ink">
-                {typeof overlayState?.currentPlayers === "number"
-                  ? overlayState.currentPlayers
+                {typeof localTelemetry?.currentPlayers === "number"
+                  ? localTelemetry.currentPlayers
                   : 0}
                 /
                 {typeof slotsValue === "number" || typeof slotsValue === "string"
@@ -432,8 +429,10 @@ export default function HostLobbyForm({
           <label className="mt-3 flex items-center gap-2 text-xs font-semibold text-ink/60">
             <input
               type="checkbox"
-              checked={manualOverride}
-              onChange={(event) => setManualOverride(event.target.checked)}
+              checked={!liveBindingPreference}
+              onChange={(event) =>
+                setLiveBindingPreference(!event.target.checked)
+              }
               className="h-3.5 w-3.5 rounded border-ink/20"
             />
             Manual override (stop live binding)

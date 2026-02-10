@@ -1,28 +1,34 @@
 "use client";
 
-import { useOverlayTelemetry } from "@/lib/useOverlayTelemetry";
+import { useOverlayTelemetryContext } from "@/components/OverlayTelemetryProvider";
 
 type OverlayLobbyTelemetrySlotsProps = {
   fallbackCurrentPlayers: number;
   fallbackMaxPlayers: number;
-  isHost: boolean;
+  lobbyId?: string;
+  selected?: boolean;
   className?: string;
 };
 
 export default function OverlayLobbyTelemetrySlots({
   fallbackCurrentPlayers,
   fallbackMaxPlayers,
-  isHost,
+  lobbyId,
+  selected = false,
   className,
 }: OverlayLobbyTelemetrySlotsProps) {
-  const { isConnected, state } = useOverlayTelemetry();
-  const hasLive =
-    isHost &&
-    isConnected &&
-    typeof state?.currentPlayers === "number";
-  const liveCurrent = hasLive
-    ? Math.max(0, Number(state?.currentPlayers ?? 0))
-    : fallbackCurrentPlayers;
+  const { state: telemetryState } = useOverlayTelemetryContext();
+  const useContextTelemetry =
+    selected && lobbyId && telemetryState.selectedLobbyId === lobbyId;
+  const displayTelemetry = useContextTelemetry
+    ? telemetryState.telemetrySource === "local"
+      ? telemetryState.localTelemetry
+      : telemetryState.serverTelemetry
+    : null;
+  const liveCurrent =
+    displayTelemetry && typeof displayTelemetry.currentPlayers === "number"
+      ? Math.max(0, Number(displayTelemetry.currentPlayers ?? 0))
+      : fallbackCurrentPlayers;
   const liveMax = Number.isFinite(fallbackMaxPlayers) ? fallbackMaxPlayers : 0;
   const slotsAvailable = Math.max(0, Math.min(liveMax, liveMax - liveCurrent));
 

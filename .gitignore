@@ -42,3 +42,6 @@ next-env.d.ts
 # Build artifacts
 pc-app/dist/
 
+# local scratch
+one line push
+

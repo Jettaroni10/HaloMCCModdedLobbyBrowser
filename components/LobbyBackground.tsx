@@ -2,14 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import FadeInImage from "./FadeInImage";
-import { useOverlayTelemetry } from "@/lib/useOverlayTelemetry";
+import { useOverlayTelemetryContext } from "@/components/OverlayTelemetryProvider";
 import { getLobbyBgImage } from "@/lib/maps/reachMapImages";
 
 type LobbyBackgroundProps = {
   lobbyId: string;
   hasRealImage: boolean;
   fallbackMapName: string;
-  isHost: boolean;
+  selected?: boolean;
   fallbackUrl?: string;
 };
 
@@ -17,13 +17,19 @@ export default function LobbyBackground({
   lobbyId,
   hasRealImage,
   fallbackMapName,
-  isHost,
+  selected = false,
   fallbackUrl,
 }: LobbyBackgroundProps) {
   const [url, setUrl] = useState<string | null>(null);
-  const { isConnected, state } = useOverlayTelemetry();
-  const telemetryMapName =
-    isHost && isConnected && state?.map ? state.map : null;
+  const { state: telemetryState } = useOverlayTelemetryContext();
+  const useContextTelemetry =
+    selected && telemetryState.selectedLobbyId === lobbyId;
+  const displayTelemetry = useContextTelemetry
+    ? telemetryState.telemetrySource === "local"
+      ? telemetryState.localTelemetry
+      : telemetryState.serverTelemetry
+    : null;
+  const telemetryMapName = displayTelemetry?.map ?? null;
   const resolvedFallback = useMemo(
     () =>
       getLobbyBgImage({

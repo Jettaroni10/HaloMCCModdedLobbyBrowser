@@ -15,6 +15,7 @@ import Nametag from "@/components/user/Nametag";
 import LobbyViewTracker from "@/components/analytics/LobbyViewTracker";
 import OverlayLobbyTelemetryLine from "@/components/OverlayLobbyTelemetryLine";
 import OverlayLobbyTelemetrySlots from "@/components/OverlayLobbyTelemetrySlots";
+import SelectedLobbyTelemetryBridge from "@/components/SelectedLobbyTelemetryBridge";
 
 type LobbyPageProps = {
   params: { id: string };
@@ -176,6 +177,33 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
   const slotsTotal = lobby.slotsTotal ?? 16;
   const slotsOpen = Math.max(0, slotsTotal - rosterCount);
   const currentPlayers = Math.max(0, slotsTotal - slotsOpen);
+  const manualTelemetry = {
+    map: lobby.map,
+    mode: lobby.mode,
+    currentPlayers,
+  };
+  const telemetryMapName = lobby.telemetryMapName ?? lobby.map;
+  const telemetryModeName = lobby.telemetryModeName ?? lobby.mode;
+  const telemetryPlayerCount =
+    typeof lobby.telemetryPlayerCount === "number"
+      ? lobby.telemetryPlayerCount
+      : currentPlayers;
+  const initialServerTelemetry = {
+    map: lobby.telemetryMapName ?? null,
+    mode: lobby.telemetryModeName ?? null,
+    currentPlayers:
+      typeof lobby.telemetryPlayerCount === "number"
+        ? lobby.telemetryPlayerCount
+        : null,
+    status: lobby.telemetryStatus ?? null,
+    seq: lobby.telemetrySeq ?? null,
+    emittedAt: lobby.telemetryEmittedAt
+      ? lobby.telemetryEmittedAt.toISOString()
+      : null,
+    updatedAt: lobby.telemetryUpdatedAt
+      ? lobby.telemetryUpdatedAt.toISOString()
+      : null,
+  };
   const modPack = lobby.modPack
     ? {
         id: lobby.modPack.id,
@@ -213,6 +241,13 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
+      <SelectedLobbyTelemetryBridge
+        lobbyId={lobby.id}
+        hostUserId={lobby.hostUserId}
+        viewerUserId={user?.id ?? null}
+        manualTelemetry={manualTelemetry}
+        initialServerTelemetry={initialServerTelemetry}
+      />
       <LobbyViewTracker
         lobbyId={lobby.id}
         game={lobby.game}
@@ -222,8 +257,8 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
       <LobbyBackground
         lobbyId={lobby.id}
         hasRealImage={Boolean(lobby.mapImagePath)}
-        fallbackMapName={lobby.map}
-        isHost={isHost}
+        fallbackMapName={telemetryMapName}
+        selected
       />
       <div className="relative z-10">
         <div className="fixed left-4 top-24 z-20 w-[min(92vw,640px)] lg:left-10 lg:top-24">
@@ -261,9 +296,10 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
                 )}
               </div>
               <OverlayLobbyTelemetryLine
-                fallbackMode={lobby.mode}
-                fallbackMap={lobby.map}
-                isHost={isHost}
+                fallbackMode={telemetryModeName}
+                fallbackMap={telemetryMapName}
+                lobbyId={lobby.id}
+                selected
                 className="mt-4 text-sm text-white/70"
               />
               <div className="mt-3 flex flex-wrap gap-3 text-xs uppercase tracking-[0.25em] text-white/60">
@@ -276,9 +312,10 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
                 <span>{formatEnum(lobby.vibe)}</span>
                 <span>•</span>
                 <OverlayLobbyTelemetrySlots
-                  fallbackCurrentPlayers={currentPlayers}
+                  fallbackCurrentPlayers={telemetryPlayerCount}
                   fallbackMaxPlayers={slotsTotal}
-                  isHost={isHost}
+                  lobbyId={lobby.id}
+                  selected
                 />
               </div>
               <div className="mt-4">

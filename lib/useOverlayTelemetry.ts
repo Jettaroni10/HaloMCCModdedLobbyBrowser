@@ -105,7 +105,7 @@ function normalizeTelemetry(input: OverlayTelemetryState | null) {
 export function useOverlayTelemetry() {
   const [connection, setConnection] =
     useState<OverlayTelemetryConnection>("disconnected");
-  const [state, setState] = useState<OverlayTelemetryState | null>(null);
+  const [localTelemetry, setLocalTelemetry] = useState<OverlayTelemetryState | null>(null);
   const [receiveCount, setReceiveCount] = useState(0);
   const [lastReceiveAt, setLastReceiveAt] = useState<number | null>(null);
 
@@ -123,7 +123,7 @@ export function useOverlayTelemetry() {
     const handleUpdate = (payload: OverlayTelemetryState | null) => {
       setReceiveCount((prev) => prev + 1);
       setLastReceiveAt(Date.now());
-      setState(normalizeTelemetry(payload));
+      setLocalTelemetry(normalizeTelemetry(payload));
     };
 
     bridge
@@ -143,12 +143,12 @@ export function useOverlayTelemetry() {
   const memoized = useMemo(
     () => ({
       connection,
-      state,
+      localTelemetry,
       isConnected: connection === "connected",
       receiveCount,
       lastReceiveAt,
     }),
-    [connection, state, receiveCount, lastReceiveAt]
+    [connection, localTelemetry, receiveCount, lastReceiveAt]
   );
 
   return memoized;

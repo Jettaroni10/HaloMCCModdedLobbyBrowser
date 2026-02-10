@@ -113,6 +113,12 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
     const legacyModCount =
       (lobby.workshopCollectionUrl ? 1 : 0) + lobby.workshopItemUrls.length;
     const modCount = lobby.isModded ? requiredModsFromPack || legacyModCount : 0;
+    const telemetryMapName = lobby.telemetryMapName ?? lobby.map;
+    const telemetryModeName = lobby.telemetryModeName ?? lobby.mode;
+    const telemetryPlayerCount =
+      typeof lobby.telemetryPlayerCount === "number"
+        ? lobby.telemetryPlayerCount
+        : lobby._count.members;
     return {
       ...lobby,
       memberCount: lobby._count.members,
@@ -121,6 +127,9 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
       isHosting,
       isMember,
       modCount,
+      telemetryMapName,
+      telemetryModeName,
+      telemetryPlayerCount,
     };
   });
 
@@ -253,8 +262,7 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
           >
             <LobbyCardBackground
               imageUrl={lobby.mapImageUrl}
-              fallbackMapName={lobby.map}
-              isHost={lobby.isHosting}
+              fallbackMapName={lobby.telemetryMapName ?? lobby.map}
             />
             <div
               className="relative z-20"
@@ -266,9 +274,9 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
                     {lobby.title}
                   </h2>
                   <OverlayLobbyTelemetryLine
-                    fallbackMode={lobby.mode}
-                    fallbackMap={lobby.map}
-                    isHost={lobby.isHosting}
+                    fallbackMode={lobby.telemetryModeName ?? lobby.mode}
+                    fallbackMap={lobby.telemetryMapName ?? lobby.map}
+                    lobbyId={lobby.id}
                     className="text-sm text-white/70"
                     as="p"
                     prefix={formatEnum(lobby.game)}
@@ -311,9 +319,9 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
                   <>
                     <span>•</span>
                     <OverlayLobbyTelemetrySlots
-                      fallbackCurrentPlayers={lobby.memberCount}
+                      fallbackCurrentPlayers={lobby.telemetryPlayerCount ?? lobby.memberCount}
                       fallbackMaxPlayers={lobby.slotsTotal ?? 16}
-                      isHost={lobby.isHosting}
+                      lobbyId={lobby.id}
                     />
                   </>
                 )}

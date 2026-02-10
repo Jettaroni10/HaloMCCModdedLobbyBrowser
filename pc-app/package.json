@@ -1,69 +1,69 @@
-{
-  "name": "halo-mcc-lobby-browser-pc",
-  "private": true,
-  "version": "0.1.3",
-  "main": "main.js",
-  "type": "commonjs",
-  "scripts": {
-    "dev": "electron .",
-    "start": "electron .",
-    "kill:overlay": "node tools/kill-overlay.js",
-    "check:packaged-reader": "node tools/check-packaged-reader.js",
-    "pack": "npm run kill:overlay && electron-builder --dir",
-    "dist": "npm run kill:overlay && electron-builder --win nsis && npm run check:packaged-reader",
-    "release:publish": "npm run kill:overlay && electron-builder --win nsis --publish always && npm run check:packaged-reader",
-    "telemetry:demo": "node tools/telemetry-demo.js",
-    "telemetry:receiver": "node tools/telemetry-receiver.js"
-  },
-  "dependencies": {
-    "active-win": "^9.0.0",
-    "electron-updater": "^6.3.9"
-  },
-  "devDependencies": {
-    "electron": "^30.0.0",
-    "electron-builder": "^24.13.3"
-  },
-  "build": {
-    "appId": "com.halomoddedcustoms.overlay",
-    "productName": "HMCC Overlay",
-    "artifactName": "HMCC-Overlay-Setup-${version}.${ext}",
-    "directories": {
-      "output": "dist"
-    },
-    "files": [
-      "**/*",
-      "!dist/**",
-      "!docs/**",
-      "!tools/kill-overlay.ps1"
-    ],
-    "extraResources": [
-      {
-        "from": "../mcc-telemetry-mod-stub/build/Release/mcc_player_overlay.exe",
-        "to": "bin/mcc_player_overlay.exe"
-      }
-    ],
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ]
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
-    },
-    "publish": [
-      {
-        "provider": "github",
-        "owner": "Jettaroni10",
-        "repo": "HaloMCCModdedLobbyBrowser"
-      }
-    ]
-  }
+﻿{
+    "name":  "halo-mcc-lobby-browser-pc",
+    "private":  true,
+    "version":  "0.1.4",
+    "main":  "main.js",
+    "type":  "commonjs",
+    "scripts":  {
+                    "dev":  "electron .",
+                    "start":  "electron .",
+                    "kill:overlay":  "node tools/kill-overlay.js",
+                    "check:packaged-reader":  "node tools/check-packaged-reader.js",
+                    "pack":  "npm run kill:overlay \u0026\u0026 electron-builder --dir",
+                    "dist":  "npm run kill:overlay \u0026\u0026 electron-builder --win nsis \u0026\u0026 npm run check:packaged-reader",
+                    "release:publish":  "npm run kill:overlay \u0026\u0026 electron-builder --win nsis --publish always \u0026\u0026 npm run check:packaged-reader",
+                    "telemetry:demo":  "node tools/telemetry-demo.js",
+                    "telemetry:receiver":  "node tools/telemetry-receiver.js"
+                },
+    "dependencies":  {
+                         "active-win":  "^9.0.0",
+                         "electron-updater":  "^6.3.9"
+                     },
+    "devDependencies":  {
+                            "electron":  "^30.0.0",
+                            "electron-builder":  "^24.13.3"
+                        },
+    "build":  {
+                  "appId":  "com.halomoddedcustoms.overlay",
+                  "productName":  "HMCC Overlay",
+                  "artifactName":  "HMCC-Overlay-Setup-${version}.${ext}",
+                  "directories":  {
+                                      "output":  "dist"
+                                  },
+                  "files":  [
+                                "**/*",
+                                "!dist/**",
+                                "!docs/**",
+                                "!tools/kill-overlay.ps1"
+                            ],
+                  "extraResources":  [
+                                         {
+                                             "from":  "../mcc-telemetry-mod-stub/build/Release/mcc_player_overlay.exe",
+                                             "to":  "bin/mcc_player_overlay.exe"
+                                         }
+                                     ],
+                  "win":  {
+                              "target":  [
+                                             {
+                                                 "target":  "nsis",
+                                                 "arch":  [
+                                                              "x64"
+                                                          ]
+                                             }
+                                         ]
+                          },
+                  "nsis":  {
+                               "oneClick":  false,
+                               "allowToChangeInstallationDirectory":  true,
+                               "createDesktopShortcut":  true,
+                               "createStartMenuShortcut":  true
+                           },
+                  "publish":  [
+                                  {
+                                      "provider":  "github",
+                                      "owner":  "Jettaroni10",
+                                      "repo":  "HaloMCCModdedLobbyBrowser"
+                                  }
+                              ]
+              }
 }

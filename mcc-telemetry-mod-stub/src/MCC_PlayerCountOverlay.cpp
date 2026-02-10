@@ -21,7 +21,11 @@ constexpr int kMapStabilizeTicks = 3;
 constexpr int kModeStabilizeTicks = 3;
 constexpr int kPlayerStabilizeTicks = 2;
 constexpr int kMenuFallbackTicks = 3;
-constexpr bool kUseMapWhitelist = true;
+constexpr bool kUseMapWhitelist = false;
+constexpr uintptr_t kSharedTelemetryBaseOffset = 0x4001590;
+constexpr uintptr_t kMapNameOffset = 0x44D;
+constexpr uintptr_t kModeNameOffsetPrimary = 0x3C4;
+constexpr uintptr_t kModeNameOffsetSecondary = 0x8B8;
 
 enum class ProcessEventType {
     None,
@@ -421,13 +425,9 @@ private:
     }
 
     void InitializeAddresses() {
-        candidateAddresses = {
-            0x1CDCAFFA6F8,
-            0x1CDDF517EF8,
-            0x7FF3C7433EEC,
-            0x7FF3C78D3EEC,
-            0x7FF3C7D63EEC
-        };
+        // Legacy absolute addresses are session-specific and produce false positives.
+        // Keep runtime acquisition module-relative only.
+        candidateAddresses.clear();
 
     }
 
@@ -615,14 +615,7 @@ private:
         }
 
         EnsureModuleBases();
-        values.reserve(candidateAddresses.size() + 4);
-
-        for (uintptr_t address : candidateAddresses) {
-            int value = 0;
-            if (TryReadMemory(address, &value) && value >= 0 && value <= kMaxPlayers) {
-                values.push_back(value);
-            }
-        }
+        values.reserve(4);
 
         if (mccBase != 0) {
             int value = 0;
@@ -657,9 +650,9 @@ private:
         EnsureModuleBases();
         if (mccBase != 0) {
             uintptr_t basePtr = 0;
-            if (TryReadMemory(mccBase + 0x4001590, &basePtr) && basePtr != 0) {
+            if (TryReadMemory(mccBase + kSharedTelemetryBaseOffset, &basePtr) && basePtr != 0) {
                 std::string name;
-                if (TryReadString(basePtr + 0x44D, &name, 64) && IsLikelyMapName(name)) {
+                if (TryReadString(basePtr + kMapNameOffset, &name, 64) && IsLikelyMapName(name)) {
                     names.push_back(name);
                 }
             }
@@ -673,18 +666,26 @@ private:
         if (!connected) {
             return modes;
         }
-        modes.reserve(1);
+        modes.reserve(2);
 
         EnsureModuleBases();
         if (mccBase != 0) {
             uintptr_t basePtr = 0;
-            if (TryReadMemory(mccBase + 0x4001590, &basePtr) && basePtr != 0) {
-                std::string mode;
-                if (TryReadString(basePtr + 0x3C4, &mode, 64) && IsLikelyGameMode(mode)) {
-                    if (!mapName.empty() && mapName != "Unknown" && mode == mapName) {
-                        return modes;
+            if (TryReadMemory(mccBase + kSharedTelemetryBaseOffset, &basePtr) && basePtr != 0) {
+                for (uintptr_t offset : {kModeNameOffsetPrimary, kModeNameOffsetSecondary}) {
+                    std::string mode;
+                    if (!TryReadString(basePtr + offset, &mode, 64)) {
+                        continue;
                     }
-                    modes.push_back(mode);
+                    if (!IsLikelyGameMode(mode)) {
+                        continue;
+                    }
+                    if (!mapName.empty() && mapName != "Unknown" && mode == mapName) {
+                        continue;
+                    }
+                    if (std::find(modes.begin(), modes.end(), mode) == modes.end()) {
+                        modes.push_back(mode);
+                    }
                 }
             }
         }

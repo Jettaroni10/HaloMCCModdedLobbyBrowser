@@ -5,6 +5,7 @@
 #include <cctype>
 #include <chrono>
 #include <cstring>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -28,6 +29,36 @@ constexpr uintptr_t kSharedTelemetryBaseOffset = 0x4001590;
 constexpr uintptr_t kMapNameOffset = 0x44D;
 constexpr uintptr_t kModeNameOffsetPrimary = 0x3C4;
 constexpr uintptr_t kModeNameOffsetSecondary = 0x8B8;
+
+inline bool IsReaderDebugEnabled() {
+    const char* value = std::getenv("HMCC_READER_DEBUG");
+    return value && _stricmp(value, "1") == 0;
+}
+
+inline std::string FormatWin32ErrorMessage(DWORD error) {
+    if (error == 0) {
+        return "OK";
+    }
+    LPSTR messageBuffer = nullptr;
+    DWORD size = FormatMessageA(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+        nullptr,
+        error,
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        reinterpret_cast<LPSTR>(&messageBuffer),
+        0,
+        nullptr
+    );
+    std::string message = size ? std::string(messageBuffer, size) : "Unknown error";
+    if (messageBuffer) {
+        LocalFree(messageBuffer);
+    }
+    // Trim trailing newlines/spaces from FormatMessage.
+    while (!message.empty() && (message.back() == '\r' || message.back() == '\n' || message.back() == ' ')) {
+        message.pop_back();
+    }
+    return message;
+}
 
 enum class ProcessEventType {
     None,
@@ -1175,12 +1206,51 @@ private:
         }
         payload << "}";
 
-        std::ofstream out(telemetryPath, std::ios::binary | std::ios::trunc);
-        if (!out.is_open()) {
-            return;
+        const bool readerDebug = debugMode || IsReaderDebugEnabled();
+        std::filesystem::path targetPath(telemetryPath);
+        std::filesystem::path tmpPath = targetPath;
+        tmpPath += ".tmp";
+
+        {
+            std::ofstream out(tmpPath, std::ios::binary | std::ios::trunc);
+            if (!out.is_open()) {
+                if (readerDebug) {
+                    std::cerr << "\n[reader] telemetry write failed: open tmp failed path="
+                              << tmpPath.string() << std::endl;
+                }
+                return;
+            }
+
+            out << "{\"version\":\"1.0\",\"data\":" << payload.str() << "}";
+            out.flush();
+            if (!out.good()) {
+                if (readerDebug) {
+                    std::cerr << "\n[reader] telemetry write failed: write/flush failed tmp="
+                              << tmpPath.string() << std::endl;
+                }
+                return;
+            }
         }
 
-        out << "{\"version\":\"1.0\",\"data\":" << payload.str() << "}";
+        // Atomically replace the target file to avoid torn reads/zero-byte windows.
+        const std::wstring tmpW = tmpPath.wstring();
+        const std::wstring targetW = targetPath.wstring();
+        if (!MoveFileExW(
+                tmpW.c_str(),
+                targetW.c_str(),
+                MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH
+            )) {
+            const DWORD err = GetLastError();
+            if (readerDebug) {
+                std::cerr << "\n[reader] telemetry write failed: MoveFileExW("
+                          << tmpPath.string() << " -> " << targetPath.string()
+                          << ") err=" << err << " msg=" << FormatWin32ErrorMessage(err)
+                          << std::endl;
+            }
+            // Best-effort cleanup of tmp if replace failed.
+            std::error_code ec;
+            std::filesystem::remove(tmpPath, ec);
+        }
     }
 };
 

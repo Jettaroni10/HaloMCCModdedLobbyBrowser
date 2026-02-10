@@ -7,6 +7,7 @@ const {
 } = require("./telemetryContract");
 
 const DEFAULT_STALE_MS = 15000;
+const PARSE_HOLD_MS = 2000;
 
 class FileGameStateProvider {
   constructor({ filePath, staleAfterMs = DEFAULT_STALE_MS } = {}) {
@@ -17,6 +18,11 @@ class FileGameStateProvider {
     this.lastError = null;
     this.lastValidationIssues = [];
     this.schemaVersion = DEFAULT_SCHEMA_VERSION;
+    this.parseOk = false;
+    this.lastParseError = null;
+    this.consecutiveParseErrors = 0;
+    this.lastGoodAtMs = 0;
+    this.lastFileMtimeMs = null;
     this.fileWatcher = null;
     this.dirWatcher = null;
     this.pollTimer = null;
@@ -82,6 +88,8 @@ class FileGameStateProvider {
   readFile() {
     if (!this.filePath) return;
     try {
+      const stat = fs.statSync(this.filePath);
+      this.lastFileMtimeMs = Number.isFinite(stat?.mtimeMs) ? stat.mtimeMs : null;
       const raw = fs.readFileSync(this.filePath, "utf8");
       const parsed = JSON.parse(raw);
       const telemetry = parseTelemetryDocument(parsed);
@@ -90,8 +98,16 @@ class FileGameStateProvider {
       this.state = telemetry.normalizedState;
       this.lastUpdatedAt = new Date().toISOString();
       this.lastError = null;
+      this.parseOk = true;
+      this.lastParseError = null;
+      this.consecutiveParseErrors = 0;
+      this.lastGoodAtMs = Date.now();
     } catch (error) {
-      this.lastError = error?.message || String(error);
+      const message = error?.message || String(error);
+      this.lastError = message;
+      this.parseOk = false;
+      this.lastParseError = message;
+      this.consecutiveParseErrors += 1;
     }
   }
 
@@ -110,7 +126,14 @@ class FileGameStateProvider {
     const last = this.lastUpdatedAt;
     const now = Date.now();
     const lastMs = last ? Date.parse(last) : 0;
-    const stale = lastMs > 0 ? now - lastMs > this.staleAfterMs : true;
+    const staleByTime = lastMs > 0 ? now - lastMs > this.staleAfterMs : true;
+    const lastGoodAgeMs = this.lastGoodAtMs
+      ? Math.max(0, now - this.lastGoodAtMs)
+      : null;
+    const staleByParse =
+      this.parseOk === false &&
+      (lastGoodAgeMs === null || lastGoodAgeMs > PARSE_HOLD_MS);
+    const stale = staleByTime || staleByParse;
     return {
       provider: "telemetry",
       filePath: this.filePath,
@@ -120,6 +143,12 @@ class FileGameStateProvider {
       error: this.lastError,
       schemaVersion: this.schemaVersion,
       validationIssues: [...this.lastValidationIssues],
+      parseOk: Boolean(this.parseOk),
+      lastParseError: this.lastParseError,
+      consecutiveParseErrors: Number(this.consecutiveParseErrors || 0),
+      lastGoodAgeMs,
+      lastFileMtimeMs: this.lastFileMtimeMs,
+      lastGoodHoldMs: PARSE_HOLD_MS,
     };
   }
 }

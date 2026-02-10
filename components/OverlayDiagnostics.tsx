@@ -13,6 +13,18 @@ function formatAge(ms: number | null) {
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
+function formatNullableNumber(value: unknown) {
+  const n = Number(value);
+  return Number.isFinite(n) ? String(n) : "n/a";
+}
+
+function trimError(value: unknown) {
+  const s = typeof value === "string" ? value : "";
+  if (!s) return "none";
+  const compact = s.replace(/\s+/g, " ").trim();
+  return compact.length > 120 ? `${compact.slice(0, 120)}…` : compact;
+}
+
 export default function OverlayDiagnostics() {
   const { isConnected, state, receiveCount, lastReceiveAt } =
     useOverlayTelemetry() as ReturnType<typeof useOverlayTelemetry> & {
@@ -93,6 +105,18 @@ export default function OverlayDiagnostics() {
         <div>Last recv: {formatAge(ageMs)}</div>
         <div>Seq: {Number(state?.seq || 0)}</div>
         <div>Status: {state?.status || "unknown"}</div>
+        <div>
+          Parse OK:{" "}
+          {state?.parseOk === null || state?.parseOk === undefined
+            ? "n/a"
+            : state.parseOk
+              ? "yes"
+              : "no"}
+        </div>
+        <div>Consecutive parse errors: {formatNullableNumber(state?.consecutiveParseErrors)}</div>
+        <div>Last good age: {formatNullableNumber(state?.lastGoodAgeMs)}ms</div>
+        <div>File mtime: {formatNullableNumber(state?.telemetryFileMtimeMs)}ms</div>
+        <div>Last parse error: {trimError(state?.lastParseError)}</div>
         <div>Map: {state?.map || "Unknown"}</div>
         <div>Mode: {state?.mode || "Unknown"}</div>
         <div>
@@ -106,4 +130,3 @@ export default function OverlayDiagnostics() {
     </div>
   );
 }
-

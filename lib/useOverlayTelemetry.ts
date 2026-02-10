@@ -15,6 +15,11 @@ export type OverlayTelemetryState = {
   lastUpdatedAt?: string | number | null;
   seq?: number;
   emittedAt?: string;
+  parseOk?: boolean | null;
+  lastParseError?: string | null;
+  consecutiveParseErrors?: number;
+  lastGoodAgeMs?: number | null;
+  telemetryFileMtimeMs?: number | null;
   debug?: unknown;
 };
 
@@ -35,6 +40,27 @@ function normalizeTelemetry(input: OverlayTelemetryState | null) {
   const maxPlayers = Number.isFinite(Number(input.maxPlayers))
     ? Number(input.maxPlayers)
     : 0;
+  const seq = Number.isFinite(Number(input.seq)) ? Number(input.seq) : 0;
+  const emittedAt = typeof input.emittedAt === "string" ? input.emittedAt : undefined;
+  const parseOk =
+    input.parseOk === null || input.parseOk === undefined
+      ? null
+      : Boolean(input.parseOk);
+  const consecutiveParseErrors = Number.isFinite(Number(input.consecutiveParseErrors))
+    ? Number(input.consecutiveParseErrors)
+    : 0;
+  const lastGoodAgeMs = Number.isFinite(Number(input.lastGoodAgeMs))
+    ? Number(input.lastGoodAgeMs)
+    : input.lastGoodAgeMs === null
+      ? null
+      : null;
+  const telemetryFileMtimeMs = Number.isFinite(Number(input.telemetryFileMtimeMs))
+    ? Number(input.telemetryFileMtimeMs)
+    : input.telemetryFileMtimeMs === null
+      ? null
+      : null;
+  const lastParseError =
+    typeof input.lastParseError === "string" ? input.lastParseError : null;
 
   return {
     status: typeof input.status === "string" ? input.status : undefined,
@@ -47,6 +73,13 @@ function normalizeTelemetry(input: OverlayTelemetryState | null) {
     sessionId: typeof input.sessionId === "string" ? input.sessionId : "",
     timestamp: input.timestamp ?? null,
     lastUpdatedAt: input.lastUpdatedAt ?? null,
+    seq,
+    emittedAt,
+    parseOk,
+    lastParseError,
+    consecutiveParseErrors,
+    lastGoodAgeMs,
+    telemetryFileMtimeMs,
   } satisfies OverlayTelemetryState;
 }
 

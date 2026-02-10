@@ -32,6 +32,7 @@ let readerProcess = null;
 let latestTelemetryState = null;
 let telemetrySeq = 0;
 let lastTelemetryEmitAt = 0;
+let telemetryEmitTimer = null;
 
 const OVERLAY_URL = "https://halomoddedcustoms.com";
 const OVERLAY_FADE_MS = 200;
@@ -457,9 +458,25 @@ function emitTelemetryUpdate() {
   payload.seq = telemetrySeq;
   payload.emittedAt = new Date().toISOString();
   latestTelemetryState = payload;
-  if (overlayWindow && !overlayWindow.isDestroyed()) {
+  if (
+    overlayWindow &&
+    !overlayWindow.isDestroyed() &&
+    overlayWindow.webContents &&
+    !overlayWindow.webContents.isDestroyed()
+  ) {
     overlayWindow.webContents.send("hmcc:telemetry", payload);
   }
+}
+
+function startTelemetryEmitter() {
+  if (telemetryEmitTimer) return;
+  telemetryEmitTimer = setInterval(() => emitTelemetryUpdate(), 500);
+}
+
+function stopTelemetryEmitter() {
+  if (!telemetryEmitTimer) return;
+  clearInterval(telemetryEmitTimer);
+  telemetryEmitTimer = null;
 }
 
 function loadOverlayContent() {
@@ -615,6 +632,7 @@ function applyOverlayEffects() {
 function createOverlayWindow() {
   if (!overlaySettings) loadOverlaySettings();
   const overlayBounds = getFullscreenBounds();
+  startTelemetryEmitter();
 
   const windowOptions = {
     ...overlayBounds,
@@ -666,6 +684,21 @@ function createOverlayWindow() {
     overlayReady = false;
     overlayVisible = false;
     setOverlayFocused(false, "window-closed");
+    stopTelemetryEmitter();
+  });
+
+  overlayWindow.webContents.on("did-finish-load", () => {
+    if (
+      !overlayWindow ||
+      overlayWindow.isDestroyed() ||
+      !overlayWindow.webContents ||
+      overlayWindow.webContents.isDestroyed()
+    ) {
+      return;
+    }
+    // Renderer reloads can miss the initial subscription; always push once on load.
+    const payload = latestTelemetryState || buildTelemetryState();
+    overlayWindow.webContents.send("hmcc:telemetry", payload);
   });
 
   applyOverlayEffects();
@@ -748,6 +781,13 @@ function buildTelemetryState() {
     sessionId: state.sessionId || "",
     timestamp: state.timestamp || null,
     lastUpdatedAt: telemetry?.lastUpdatedAt || null,
+    parseOk: telemetry?.parseOk !== undefined ? Boolean(telemetry.parseOk) : null,
+    lastParseError: telemetry?.lastParseError || null,
+    consecutiveParseErrors: Number(telemetry?.consecutiveParseErrors || 0),
+    lastGoodAgeMs:
+      telemetry?.lastGoodAgeMs !== undefined ? telemetry.lastGoodAgeMs : null,
+    telemetryFileMtimeMs:
+      telemetry?.lastFileMtimeMs !== undefined ? telemetry.lastFileMtimeMs : null,
   };
 }
 
@@ -958,7 +998,7 @@ app.whenReady().then(() => {
   emitTelemetryUpdate();
   buildApplicationMenu();
   initAutoUpdater();
-  setInterval(() => emitTelemetryUpdate(), 500);
+  startTelemetryEmitter();
 
   const shortcutRegistered = globalShortcut.register("Insert", () => {
     toggleOverlayEnabled();
@@ -980,6 +1020,7 @@ app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     stopReaderProcess();
     stopFocusWatcher();
+    stopTelemetryEmitter();
     app.quit();
   }
 });
@@ -988,4 +1029,5 @@ app.on("before-quit", () => {
   globalShortcut.unregisterAll();
   stopReaderProcess();
   stopFocusWatcher();
+  stopTelemetryEmitter();
 });

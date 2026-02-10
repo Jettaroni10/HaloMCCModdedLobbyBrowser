@@ -31,6 +31,10 @@ function sanitize(payload) {
 }
 
 contextBridge.exposeInMainWorld("hmccOverlay", {
+  getAppVersion: async () => {
+    const version = await ipcRenderer.invoke("hmcc:getAppVersion");
+    return typeof version === "string" ? version : "";
+  },
   getState: async () => {
     const data = await ipcRenderer.invoke("hmcc:getState");
     return sanitize(data);

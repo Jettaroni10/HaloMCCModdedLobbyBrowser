@@ -865,6 +865,7 @@ function setupIpc() {
   ipcMain.handle("hmcc:getState", () =>
     latestTelemetryState || buildTelemetryState()
   );
+  ipcMain.handle("hmcc:getAppVersion", () => app.getVersion());
   ipcMain.handle("overlay:getState", () => buildTelemetryState());
   ipcMain.handle("overlay:getSettings", () => overlaySettings || loadOverlaySettings());
   ipcMain.handle("overlay:setSettings", (_event, patch) => {

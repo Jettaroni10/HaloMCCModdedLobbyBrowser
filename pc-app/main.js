@@ -10,7 +10,6 @@ const {
 const path = require("path");
 const { spawn } = require("child_process");
 const fs = require("fs");
-const { autoUpdater } = require("electron-updater");
 const { LobbyStore } = require("./store");
 const { GameSessionMonitor, SimulatedGameStateProvider } = require("./monitor");
 const { AutoLobbyPopulator } = require("./populator");
@@ -34,7 +33,9 @@ let telemetrySeq = 0;
 let lastTelemetryEmitAt = 0;
 let telemetryEmitTimer = null;
 
-const OVERLAY_URL = "https://halomoddedcustoms.com";
+const OVERLAY_URL = String(
+  process.env.HMCC_OVERLAY_URL || "https://halomoddedcustoms.com"
+).trim();
 const OVERLAY_FADE_MS = 200;
 const OVERLAY_VISIBLE_OPACITY = 1.0;
 const OVERLAY_TRANSPARENT = false;
@@ -54,6 +55,24 @@ let lastActiveSignature = "";
 let lastDebugSnapshot = "";
 let updaterInitialized = false;
 let updaterStatus = "Idle";
+let autoUpdater = null;
+
+function ensureAutoUpdaterLoaded() {
+  if (autoUpdater) return true;
+  try {
+    // Lazy-load: electron-updater can throw in dev depending on runtime context.
+    autoUpdater = require("electron-updater").autoUpdater;
+    return Boolean(autoUpdater);
+  } catch (error) {
+    const message = error?.message || String(error);
+    setUpdaterStatus(`Error: ${message}`);
+    if (DEBUG_OVERLAY) {
+      console.warn("Failed to load electron-updater:", message);
+    }
+    autoUpdater = null;
+    return false;
+  }
+}
 
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
 if (!gotSingleInstanceLock) {
@@ -317,6 +336,16 @@ async function triggerUpdateCheck(manual = false) {
     }
     return;
   }
+  if (!ensureAutoUpdaterLoaded()) {
+    if (manual) {
+      await dialog.showMessageBox({
+        type: "error",
+        title: "Updates",
+        message: "Auto-updater failed to initialize. Check logs for details.",
+      });
+    }
+    return;
+  }
   try {
     await autoUpdater.checkForUpdates();
   } catch (error) {
@@ -359,6 +388,9 @@ function initAutoUpdater() {
   updaterInitialized = true;
   if (!app.isPackaged) {
     setUpdaterStatus("Disabled in development");
+    return;
+  }
+  if (!ensureAutoUpdaterLoaded()) {
     return;
   }
 

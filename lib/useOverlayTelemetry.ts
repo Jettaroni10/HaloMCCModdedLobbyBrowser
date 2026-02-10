@@ -13,6 +13,9 @@ export type OverlayTelemetryState = {
   sessionId?: string;
   timestamp?: string | number | null;
   lastUpdatedAt?: string | number | null;
+  seq?: number;
+  emittedAt?: string;
+  debug?: unknown;
 };
 
 export type OverlayTelemetryConnection = "connected" | "disconnected";
@@ -51,6 +54,8 @@ export function useOverlayTelemetry() {
   const [connection, setConnection] =
     useState<OverlayTelemetryConnection>("disconnected");
   const [state, setState] = useState<OverlayTelemetryState | null>(null);
+  const [receiveCount, setReceiveCount] = useState(0);
+  const [lastReceiveAt, setLastReceiveAt] = useState<number | null>(null);
 
   useEffect(() => {
     const bridge = (window as unknown as { hmccOverlay?: OverlayBridge })
@@ -64,6 +69,8 @@ export function useOverlayTelemetry() {
     let unsubscribe: (() => void) | null = null;
 
     const handleUpdate = (payload: OverlayTelemetryState | null) => {
+      setReceiveCount((prev) => prev + 1);
+      setLastReceiveAt(Date.now());
       setState(normalizeTelemetry(payload));
     };
 
@@ -86,8 +93,10 @@ export function useOverlayTelemetry() {
       connection,
       state,
       isConnected: connection === "connected",
+      receiveCount,
+      lastReceiveAt,
     }),
-    [connection, state]
+    [connection, state, receiveCount, lastReceiveAt]
   );
 
   return memoized;

@@ -30,6 +30,8 @@ let useTelemetry = false;
 let overlaySettings = null;
 let readerProcess = null;
 let latestTelemetryState = null;
+let telemetrySeq = 0;
+let lastTelemetryEmitAt = 0;
 
 const OVERLAY_URL = "https://halomoddedcustoms.com";
 const OVERLAY_FADE_MS = 200;
@@ -450,6 +452,10 @@ function getTelemetryStatus() {
 
 function emitTelemetryUpdate() {
   const payload = buildTelemetryState();
+  telemetrySeq += 1;
+  lastTelemetryEmitAt = Date.now();
+  payload.seq = telemetrySeq;
+  payload.emittedAt = new Date().toISOString();
   latestTelemetryState = payload;
   if (overlayWindow && !overlayWindow.isDestroyed()) {
     overlayWindow.webContents.send("hmcc:telemetry", payload);
@@ -952,6 +958,7 @@ app.whenReady().then(() => {
   emitTelemetryUpdate();
   buildApplicationMenu();
   initAutoUpdater();
+  setInterval(() => emitTelemetryUpdate(), 500);
 
   const shortcutRegistered = globalShortcut.register("Insert", () => {
     toggleOverlayEnabled();

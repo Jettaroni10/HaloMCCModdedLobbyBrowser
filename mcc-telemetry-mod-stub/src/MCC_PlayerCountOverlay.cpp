@@ -22,6 +22,8 @@ constexpr int kModeStabilizeTicks = 3;
 constexpr int kPlayerStabilizeTicks = 2;
 constexpr int kMenuFallbackTicks = 3;
 constexpr bool kUseMapWhitelist = false;
+constexpr int kPollIntervalMs = 200;
+constexpr int kSignalHoldMs = 1500;
 constexpr uintptr_t kSharedTelemetryBaseOffset = 0x4001590;
 constexpr uintptr_t kMapNameOffset = 0x44D;
 constexpr uintptr_t kModeNameOffsetPrimary = 0x3C4;
@@ -79,6 +81,44 @@ inline float CalculateConfidence(int bestCount, int total) {
     return static_cast<float>(bestCount) / static_cast<float>(total);
 }
 
+inline uint64_t NowSteadyMs() {
+    const auto now = std::chrono::steady_clock::now();
+    return static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count()
+    );
+}
+
+inline std::string TrimCopy(const std::string& input) {
+    size_t start = 0;
+    while (start < input.size() && std::isspace(static_cast<unsigned char>(input[start]))) {
+        ++start;
+    }
+    size_t end = input.size();
+    while (end > start && std::isspace(static_cast<unsigned char>(input[end - 1]))) {
+        --end;
+    }
+    return input.substr(start, end - start);
+}
+
+inline std::string TimestampNow() {
+    SYSTEMTIME st = {};
+    GetLocalTime(&st);
+    char buffer[64] = {};
+    std::snprintf(
+        buffer,
+        sizeof(buffer),
+        "%04u-%02u-%02u %02u:%02u:%02u.%03u",
+        static_cast<unsigned>(st.wYear),
+        static_cast<unsigned>(st.wMonth),
+        static_cast<unsigned>(st.wDay),
+        static_cast<unsigned>(st.wHour),
+        static_cast<unsigned>(st.wMinute),
+        static_cast<unsigned>(st.wSecond),
+        static_cast<unsigned>(st.wMilliseconds)
+    );
+    return std::string(buffer);
+}
+
 struct StringSignal {
     int stabilizeTicks = 3;
     int staleTicks = 3;
@@ -88,6 +128,8 @@ struct StringSignal {
     int noValidTicks = 0;
     float confidence = 0.0f;
     std::string sourceTag = "none";
+    uint64_t lastStableMs = 0;
+    int holdForMs = kSignalHoldMs;
 
     explicit StringSignal(int stabilize, int stale)
         : stabilizeTicks(stabilize), staleTicks(stale) {}
@@ -99,9 +141,11 @@ struct StringSignal {
         noValidTicks = 0;
         confidence = 0.0f;
         sourceTag = "none";
+        lastStableMs = 0;
     }
 
     std::string Update(const std::vector<std::string>& candidates) {
+        const uint64_t nowMs = NowSteadyMs();
         const auto consensus = ComputeConsensus(candidates);
         confidence = CalculateConfidence(consensus.bestCount, consensus.total);
         if (consensus.total > 1) {
@@ -114,7 +158,8 @@ struct StringSignal {
 
         if (!consensus.hasValue) {
             noValidTicks++;
-            if (noValidTicks >= staleTicks) {
+            const bool holdExpired = lastStableMs == 0 || (nowMs - lastStableMs > static_cast<uint64_t>(holdForMs));
+            if (noValidTicks >= staleTicks && holdExpired) {
                 stableValue = "Unknown";
             }
             return stableValue.empty() ? "Unknown" : stableValue;
@@ -130,6 +175,7 @@ struct StringSignal {
 
         if (streak >= stabilizeTicks) {
             stableValue = consensus.value;
+            lastStableMs = nowMs;
         }
 
         return stableValue.empty() ? "Unknown" : stableValue;
@@ -146,6 +192,8 @@ struct IntSignal {
     bool hasStable = false;
     float confidence = 0.0f;
     std::string sourceTag = "none";
+    uint64_t lastStableMs = 0;
+    int holdForMs = kSignalHoldMs;
 
     explicit IntSignal(int stabilize, int stale)
         : stabilizeTicks(stabilize), staleTicks(stale) {}
@@ -158,9 +206,11 @@ struct IntSignal {
         hasStable = false;
         confidence = 0.0f;
         sourceTag = "none";
+        lastStableMs = 0;
     }
 
     int Update(const std::vector<int>& candidates) {
+        const uint64_t nowMs = NowSteadyMs();
         const auto consensus = ComputeConsensus(candidates);
         confidence = CalculateConfidence(consensus.bestCount, consensus.total);
         if (consensus.total > 1) {
@@ -173,7 +223,8 @@ struct IntSignal {
 
         if (!consensus.hasValue) {
             noValidTicks++;
-            if (noValidTicks >= staleTicks) {
+            const bool holdExpired = lastStableMs == 0 || (nowMs - lastStableMs > static_cast<uint64_t>(holdForMs));
+            if (noValidTicks >= staleTicks && holdExpired) {
                 hasStable = false;
                 stableValue = 0;
             }
@@ -191,6 +242,7 @@ struct IntSignal {
         if (streak >= stabilizeTicks) {
             stableValue = consensus.value;
             hasStable = true;
+            lastStableMs = nowMs;
         }
 
         return hasStable ? stableValue : 0;
@@ -215,6 +267,9 @@ public:
     }
 
     void Run() {
+        const bool debugMode = StringEqualsIgnoreCase(GetEnvVar("HMCC_READER_DEBUG"), "1");
+        uint64_t sequence = 0;
+        uint64_t nextTick = NowSteadyMs();
         while (true) {
             if (GetAsyncKeyState(VK_ESCAPE) & 0x8000) {
                 break;
@@ -230,10 +285,11 @@ public:
             std::string modeName = "Unknown";
             bool inMenus = true;
 
+            ReadDebug tickDebug;
             if (connected) {
-                playerCount = playerSignal.Update(ReadPlayerCandidates());
-                mapName = mapSignal.Update(ReadMapCandidates());
-                modeName = modeSignal.Update(ReadModeCandidates(mapName));
+                playerCount = playerSignal.Update(ReadPlayerCandidates(&tickDebug));
+                mapName = mapSignal.Update(ReadMapCandidates(&tickDebug));
+                modeName = modeSignal.Update(ReadModeCandidates(mapName, &tickDebug));
                 inMenus = IsInMenus(playerCount);
             } else {
                 mapSignal.Reset();
@@ -243,7 +299,7 @@ public:
             }
 
             std::string status = BuildStatus(playerCount, inMenus, connected);
-            WriteTelemetrySnapshot(playerCount, mapName, modeName, inMenus, status);
+            WriteTelemetrySnapshot(++sequence, playerCount, mapName, modeName, inMenus, status, tickDebug, debugMode);
 
             std::string line = "Players: " + std::to_string(playerCount)
                                + " | Map: " + mapName
@@ -258,7 +314,14 @@ public:
 
             std::cout << '\r' << line << std::flush;
 
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+            const uint64_t nowMs = NowSteadyMs();
+            nextTick += static_cast<uint64_t>(kPollIntervalMs);
+            if (nextTick <= nowMs) {
+                // Drift correction if the loop was stalled.
+                nextTick = nowMs + static_cast<uint64_t>(kPollIntervalMs);
+            }
+            const uint64_t sleepMs = nextTick - nowMs;
+            std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(sleepMs)));
         }
 
         std::cout << std::endl;
@@ -279,6 +342,33 @@ private:
     StringSignal mapSignal;
     StringSignal modeSignal;
     IntSignal playerSignal;
+
+    struct ReadAttempt {
+        std::string label;
+        uintptr_t address = 0;
+        bool ok = false;
+        size_t bytesRead = 0;
+        std::string value;
+    };
+
+    struct ReadDebug {
+        bool connected = false;
+        DWORD pid = 0;
+        uintptr_t mccBase = 0;
+        uintptr_t reachBase = 0;
+        std::vector<ReadAttempt> attempts;
+        std::string lastError;
+    };
+
+    static bool StringEqualsIgnoreCase(const std::string& a, const std::string& b) {
+        if (a.size() != b.size()) return false;
+        for (size_t i = 0; i < a.size(); i++) {
+            if (std::tolower(static_cast<unsigned char>(a[i])) != std::tolower(static_cast<unsigned char>(b[i]))) {
+                return false;
+            }
+        }
+        return true;
+    }
 
     void LaunchOverlayIfNeeded() {
         CloseExistingOverlay();
@@ -608,31 +698,41 @@ private:
         return 0;
     }
 
-    std::vector<int> ReadPlayerCandidates() {
+    std::vector<int> ReadPlayerCandidates(ReadDebug* out_debug) {
         std::vector<int> values;
         if (!connected) {
             return values;
         }
 
         EnsureModuleBases();
+        if (out_debug) {
+            out_debug->connected = connected;
+            out_debug->pid = processId;
+            out_debug->mccBase = mccBase;
+            out_debug->reachBase = haloReachBase;
+        }
         values.reserve(4);
 
         if (mccBase != 0) {
             int value = 0;
-            if (TryReadMemory(mccBase + 0x3F92E10, &value) && value >= 0 && value <= kMaxPlayers) {
+            if (TryReadMemory("players.mcc", mccBase + 0x3F92E10, &value, out_debug) &&
+                value >= 0 && value <= kMaxPlayers) {
                 values.push_back(value);
             }
         }
 
         if (haloReachBase != 0) {
             int value = 0;
-            if (TryReadMemory(haloReachBase + 0x2B07470, &value) && value >= 0 && value <= kMaxPlayers) {
+            if (TryReadMemory("players.reach.0", haloReachBase + 0x2B07470, &value, out_debug) &&
+                value >= 0 && value <= kMaxPlayers) {
                 values.push_back(value);
             }
-            if (TryReadMemory(haloReachBase + 0x2B08B50, &value) && value >= 0 && value <= kMaxPlayers) {
+            if (TryReadMemory("players.reach.1", haloReachBase + 0x2B08B50, &value, out_debug) &&
+                value >= 0 && value <= kMaxPlayers) {
                 values.push_back(value);
             }
-            if (TryReadMemory(haloReachBase + 0x2C996A0, &value) && value >= 0 && value <= kMaxPlayers) {
+            if (TryReadMemory("players.reach.2", haloReachBase + 0x2C996A0, &value, out_debug) &&
+                value >= 0 && value <= kMaxPlayers) {
                 values.push_back(value);
             }
         }
@@ -640,7 +740,7 @@ private:
         return values;
     }
 
-    std::vector<std::string> ReadMapCandidates() {
+    std::vector<std::string> ReadMapCandidates(ReadDebug* out_debug) {
         std::vector<std::string> names;
         if (!connected) {
             return names;
@@ -650,10 +750,14 @@ private:
         EnsureModuleBases();
         if (mccBase != 0) {
             uintptr_t basePtr = 0;
-            if (TryReadMemory(mccBase + kSharedTelemetryBaseOffset, &basePtr) && basePtr != 0) {
+            if (TryReadMemory("shared.base", mccBase + kSharedTelemetryBaseOffset, &basePtr, out_debug) &&
+                basePtr != 0) {
                 std::string name;
-                if (TryReadString(basePtr + kMapNameOffset, &name, 64) && IsLikelyMapName(name)) {
-                    names.push_back(name);
+                if (TryReadString("map", basePtr + kMapNameOffset, &name, 64, out_debug)) {
+                    name = TrimCopy(name);
+                    if (IsLikelyMapName(name)) {
+                        names.push_back(name);
+                    }
                 }
             }
         }
@@ -661,7 +765,7 @@ private:
         return names;
     }
 
-    std::vector<std::string> ReadModeCandidates(const std::string& mapName) {
+    std::vector<std::string> ReadModeCandidates(const std::string& mapName, ReadDebug* out_debug) {
         std::vector<std::string> modes;
         if (!connected) {
             return modes;
@@ -671,12 +775,15 @@ private:
         EnsureModuleBases();
         if (mccBase != 0) {
             uintptr_t basePtr = 0;
-            if (TryReadMemory(mccBase + kSharedTelemetryBaseOffset, &basePtr) && basePtr != 0) {
+            if (TryReadMemory("shared.base", mccBase + kSharedTelemetryBaseOffset, &basePtr, out_debug) &&
+                basePtr != 0) {
                 for (uintptr_t offset : {kModeNameOffsetPrimary, kModeNameOffsetSecondary}) {
                     std::string mode;
-                    if (!TryReadString(basePtr + offset, &mode, 64)) {
+                    const char* label = offset == kModeNameOffsetPrimary ? "mode.prim" : "mode.sec";
+                    if (!TryReadString(label, basePtr + offset, &mode, 64, out_debug)) {
                         continue;
                     }
+                    mode = TrimCopy(mode);
                     if (!IsLikelyGameMode(mode)) {
                         continue;
                     }
@@ -694,18 +801,35 @@ private:
     }
 
     template<typename T>
-    bool TryReadMemory(uintptr_t address, T* out_value) {
+    bool TryReadMemory(const char* label, uintptr_t address, T* out_value, ReadDebug* out_debug) {
         if (!processHandle || !out_value) {
             return false;
         }
         SIZE_T bytesRead = 0;
         if (ReadProcessMemory(processHandle, reinterpret_cast<LPCVOID>(address), out_value, sizeof(T), &bytesRead)) {
-            return bytesRead == sizeof(T);
+            const bool ok = bytesRead == sizeof(T);
+            if (out_debug) {
+                ReadAttempt attempt;
+                attempt.label = label ? label : "mem";
+                attempt.address = address;
+                attempt.ok = ok;
+                attempt.bytesRead = bytesRead;
+                out_debug->attempts.push_back(std::move(attempt));
+            }
+            return ok;
+        }
+        if (out_debug) {
+            ReadAttempt attempt;
+            attempt.label = label ? label : "mem";
+            attempt.address = address;
+            attempt.ok = false;
+            attempt.bytesRead = bytesRead;
+            out_debug->attempts.push_back(std::move(attempt));
         }
         return false;
     }
 
-    bool TryReadString(uintptr_t address, std::string* out_value, size_t maxLength) {
+    bool TryReadStringUtf8(uintptr_t address, std::string* out_value, size_t maxLength, size_t* out_bytes_read) {
         if (!processHandle || !out_value || maxLength == 0) {
             return false;
         }
@@ -716,6 +840,7 @@ private:
             return false;
         }
 
+        if (out_bytes_read) *out_bytes_read = static_cast<size_t>(bytesRead);
         buffer[maxLength] = '\0';
         size_t length = strnlen_s(buffer.data(), maxLength);
         if (length == 0) {
@@ -725,6 +850,81 @@ private:
 
         out_value->assign(buffer.data(), length);
         return true;
+    }
+
+    bool TryReadStringUtf16(uintptr_t address, std::string* out_value, size_t maxChars, size_t* out_bytes_read) {
+        if (!processHandle || !out_value || maxChars == 0) {
+            return false;
+        }
+
+        std::vector<wchar_t> buffer(maxChars + 1, 0);
+        SIZE_T bytesRead = 0;
+        const size_t bytesToRead = maxChars * sizeof(wchar_t);
+        if (!ReadProcessMemory(processHandle, reinterpret_cast<LPCVOID>(address), buffer.data(), bytesToRead, &bytesRead)) {
+            return false;
+        }
+
+        if (out_bytes_read) *out_bytes_read = static_cast<size_t>(bytesRead);
+        buffer[maxChars] = L'\0';
+        size_t length = 0;
+        while (length < maxChars && buffer[length] != L'\0') {
+            length++;
+        }
+        if (length == 0) {
+            out_value->clear();
+            return true;
+        }
+
+        int needed = WideCharToMultiByte(CP_UTF8, 0, buffer.data(), static_cast<int>(length), nullptr, 0, nullptr, nullptr);
+        if (needed <= 0) {
+            return false;
+        }
+        std::string utf8;
+        utf8.resize(static_cast<size_t>(needed));
+        WideCharToMultiByte(CP_UTF8, 0, buffer.data(), static_cast<int>(length), utf8.data(), needed, nullptr, nullptr);
+        *out_value = utf8;
+        return true;
+    }
+
+    bool TryReadString(const char* label, uintptr_t address, std::string* out_value, size_t maxLength, ReadDebug* out_debug) {
+        if (!processHandle || !out_value || maxLength == 0) {
+            return false;
+        }
+
+        size_t bytesRead = 0;
+        std::string value;
+
+        bool ok = TryReadStringUtf8(address, &value, maxLength, &bytesRead);
+        if (ok) {
+            // Heuristic: if it looks like UTF-16LE bytes (lots of zeros), try UTF-16.
+            int zeroCount = 0;
+            for (size_t i = 1; i < std::min(bytesRead, static_cast<size_t>(32)); i += 2) {
+                if (reinterpret_cast<const unsigned char*>(value.data())[i] == 0) {
+                    zeroCount++;
+                }
+            }
+            if (zeroCount >= 6) {
+                std::string utf16;
+                size_t bytesRead16 = 0;
+                if (TryReadStringUtf16(address, &utf16, maxLength, &bytesRead16)) {
+                    value = utf16;
+                    bytesRead = bytesRead16;
+                }
+            }
+            *out_value = value;
+        }
+
+        if (out_debug) {
+            ReadAttempt attempt;
+            attempt.label = label ? label : "str";
+            attempt.address = address;
+            attempt.ok = ok;
+            attempt.bytesRead = bytesRead;
+            attempt.value = ok ? value : "";
+            out_debug->attempts.push_back(std::move(attempt));
+        }
+
+        return ok;
     }
 
     std::string ResolveTelemetryPath() {
@@ -905,7 +1105,16 @@ private:
         return "none";
     }
 
-    void WriteTelemetrySnapshot(int playerCount, const std::string& mapName, const std::string& modeName, bool inMenus, const std::string& status) {
+    void WriteTelemetrySnapshot(
+        uint64_t seq,
+        int playerCount,
+        const std::string& mapName,
+        const std::string& modeName,
+        bool inMenus,
+        const std::string& status,
+        const ReadDebug& debug,
+        bool debugMode
+    ) {
         if (telemetryPath.empty()) {
             telemetryPath = ResolveTelemetryPath();
             std::cout << "\nWriting telemetry to: " << telemetryPath << std::endl;
@@ -920,6 +1129,7 @@ private:
 
         std::ostringstream payload;
         payload << "{";
+        payload << "\"seq\":" << seq << ",";
         payload << "\"ts\":" << epochMs << ",";
         payload << "\"pid\":" << processId << ",";
         payload << "\"sessionId\":\"\",";
@@ -937,6 +1147,32 @@ private:
         payload << "\"sourceTag\":\"" << EscapeJson(ComputeSourceTag()) << "\",";
         payload << "\"isCustomGame\":" << (isCustomGame ? "true" : "false") << ",";
         payload << "\"gameMode\":\"" << EscapeJson(modeName) << "\"";
+
+        if (debugMode) {
+            payload << ",";
+            payload << "\"debug\":{";
+            payload << "\"tick\":\"" << EscapeJson(TimestampNow()) << "\",";
+            payload << "\"pollMs\":" << kPollIntervalMs << ",";
+            payload << "\"handleOk\":" << (processHandle ? "true" : "false") << ",";
+            payload << "\"mccBase\":" << static_cast<unsigned long long>(debug.mccBase) << ",";
+            payload << "\"reachBase\":" << static_cast<unsigned long long>(debug.reachBase) << ",";
+            payload << "\"attempts\":[";
+            for (size_t i = 0; i < debug.attempts.size(); i++) {
+                const auto& a = debug.attempts[i];
+                if (i > 0) payload << ",";
+                payload << "{";
+                payload << "\"label\":\"" << EscapeJson(a.label) << "\",";
+                payload << "\"addr\":" << static_cast<unsigned long long>(a.address) << ",";
+                payload << "\"ok\":" << (a.ok ? "true" : "false") << ",";
+                payload << "\"bytes\":" << static_cast<unsigned long long>(a.bytesRead);
+                if (!a.value.empty()) {
+                    payload << ",\"value\":\"" << EscapeJson(a.value) << "\"";
+                }
+                payload << "}";
+            }
+            payload << "]";
+            payload << "}";
+        }
         payload << "}";
 
         std::ofstream out(telemetryPath, std::ios::binary | std::ios::trunc);

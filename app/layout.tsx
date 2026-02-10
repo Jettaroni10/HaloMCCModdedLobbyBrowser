@@ -13,6 +13,7 @@ import GamertagGate from "@/components/auth/GamertagGate";
 import OverlayGlassShell from "@/components/OverlayGlassShell";
 import OverlayAutoRefresher from "@/components/OverlayAutoRefresher";
 import OverlayVersionLabel from "@/components/OverlayVersionLabel";
+import OverlayDiagnostics from "@/components/OverlayDiagnostics";
 
 export const metadata: Metadata = {
   title: "Customs on the Ring",
@@ -38,6 +39,7 @@ export default async function RootLayout({
         <OverlayGlassShell />
         <OverlayAutoRefresher />
         <OverlayVersionLabel />
+        <OverlayDiagnostics />
         <AuthProvider>
           <Suspense fallback={null}>
             <GamertagGate user={user} />

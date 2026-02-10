@@ -111,6 +111,8 @@ function normalizeState(payload, version) {
     sessionId: String(payload.sessionID || payload.sessionId || "").trim(),
     timestamp: payload.timestamp || null,
     schemaVersion: version || DEFAULT_SCHEMA_VERSION,
+    seq: Number.isFinite(Number(payload.seq)) ? Number(payload.seq) : 0,
+    debug: payload.debug && typeof payload.debug === "object" ? payload.debug : null,
   };
 }
 

@@ -25,6 +25,8 @@ constexpr int kMenuFallbackTicks = 3;
 constexpr bool kUseMapWhitelist = false;
 constexpr int kPollIntervalMs = 200;
 constexpr int kSignalHoldMs = 1500;
+// Map/mode can disappear during load transitions for multiple seconds; keep them sticky for longer.
+constexpr int kStickyMetaHoldMs = 10 * 60 * 1000; // 10 minutes
 constexpr uintptr_t kSharedTelemetryBaseOffset = 0x4001590;
 constexpr uintptr_t kMapNameOffset = 0x44D;
 constexpr uintptr_t kModeNameOffsetPrimary = 0x3C4;
@@ -288,6 +290,8 @@ public:
           modeSignal(kModeStabilizeTicks, kMenuFallbackTicks),
           playerSignal(kPlayerStabilizeTicks, kPlayerStabilizeTicks) {
         InitializeAddresses();
+        mapSignal.holdForMs = kStickyMetaHoldMs;
+        modeSignal.holdForMs = kStickyMetaHoldMs;
     }
 
     bool Initialize() {
@@ -1185,6 +1189,16 @@ private:
             payload << "\"tick\":\"" << EscapeJson(TimestampNow()) << "\",";
             payload << "\"pollMs\":" << kPollIntervalMs << ",";
             payload << "\"handleOk\":" << (processHandle ? "true" : "false") << ",";
+            payload << "\"mapAgeMs\":"
+                    << (mapSignal.lastStableMs == 0 ? -1LL : static_cast<long long>(NowSteadyMs() - mapSignal.lastStableMs))
+                    << ",";
+            payload << "\"modeAgeMs\":"
+                    << (modeSignal.lastStableMs == 0 ? -1LL : static_cast<long long>(NowSteadyMs() - modeSignal.lastStableMs))
+                    << ",";
+            payload << "\"mapHoldMs\":" << mapSignal.holdForMs << ",";
+            payload << "\"modeHoldMs\":" << modeSignal.holdForMs << ",";
+            payload << "\"mapSticky\":true,";
+            payload << "\"modeSticky\":true,";
             payload << "\"mccBase\":" << static_cast<unsigned long long>(debug.mccBase) << ",";
             payload << "\"reachBase\":" << static_cast<unsigned long long>(debug.reachBase) << ",";
             payload << "\"attempts\":[";

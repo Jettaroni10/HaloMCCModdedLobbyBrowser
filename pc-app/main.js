@@ -56,6 +56,8 @@ let lastDebugSnapshot = "";
 let updaterInitialized = false;
 let updaterStatus = "Idle";
 let autoUpdater = null;
+let debugPanelPinned = false;
+let hideOverlayCssKey = null;
 
 function ensureAutoUpdaterLoaded() {
   if (autoUpdater) return true;
@@ -113,8 +115,8 @@ function debugLog(message) {
 
 function debugSnapshot() {
   if (!DEBUG_OVERLAY) return "";
-  return `enabled=${overlayEnabled} mccFocused=${mccFocused} overlayFocused=${overlayFocused} shouldShow=${
-    overlayEnabled && (mccFocused || overlayFocused)
+  return `enabled=${overlayEnabled} debugPinned=${debugPanelPinned} mccFocused=${mccFocused} overlayFocused=${overlayFocused} shouldShow=${
+    (overlayEnabled || debugPanelPinned) && (mccFocused || overlayFocused)
   }`;
 }
 
@@ -207,7 +209,7 @@ function hideOverlay() {
 
 function recomputeOverlayVisibility(reason) {
   if (!overlayWindow || overlayWindow.isDestroyed() || !overlayReady) return;
-  const shouldShow = overlayEnabled && (mccFocused || overlayFocused);
+  const shouldShow = (overlayEnabled || debugPanelPinned) && (mccFocused || overlayFocused);
 
   if (shouldShow && !overlayVisible) {
     debugLog(`show overlay (${reason})`);
@@ -221,11 +223,40 @@ function recomputeOverlayVisibility(reason) {
   }
 }
 
+function updateOverlayContentMode() {
+  if (!overlayWindow || overlayWindow.isDestroyed()) return;
+  const wc = overlayWindow.webContents;
+  if (!wc || wc.isDestroyed()) return;
+
+  const shouldHideMain =
+    Boolean(debugPanelPinned) && !overlayEnabled && (mccFocused || overlayFocused);
+
+  if (shouldHideMain) {
+    if (hideOverlayCssKey) return;
+    const css = `
+      /* Hide all site UI except the diagnostics panel when overlay is toggled off. */
+      body * { visibility: hidden !important; }
+      #hmcc-overlay-diagnostics, #hmcc-overlay-diagnostics * { visibility: visible !important; }
+    `;
+    wc.insertCSS(css).then((key) => {
+      hideOverlayCssKey = key;
+    }).catch(() => {});
+    return;
+  }
+
+  if (hideOverlayCssKey) {
+    const key = hideOverlayCssKey;
+    hideOverlayCssKey = null;
+    wc.removeInsertedCSS(key).catch(() => {});
+  }
+}
+
 function setMccFocused(nextValue, reason) {
   if (mccFocused === nextValue) return;
   mccFocused = nextValue;
   debugLog(`MCC focused: ${mccFocused ? "yes" : "no"}`);
   recomputeOverlayVisibility(reason);
+  updateOverlayContentMode();
 }
 
 function setOverlayFocused(nextValue, reason) {
@@ -233,12 +264,14 @@ function setOverlayFocused(nextValue, reason) {
   overlayFocused = nextValue;
   debugLog(`Overlay focused: ${overlayFocused ? "yes" : "no"}`);
   recomputeOverlayVisibility(reason);
+  updateOverlayContentMode();
 }
 
 function toggleOverlayEnabled() {
   overlayEnabled = !overlayEnabled;
   debugLog(`overlay enabled: ${overlayEnabled ? "on" : "off"}`);
   recomputeOverlayVisibility("toggle");
+  updateOverlayContentMode();
 }
 
 async function loadActiveWinGetter() {
@@ -731,6 +764,7 @@ function createOverlayWindow() {
     // Renderer reloads can miss the initial subscription; always push once on load.
     const payload = latestTelemetryState || buildTelemetryState();
     overlayWindow.webContents.send("hmcc:telemetry", payload);
+    updateOverlayContentMode();
   });
 
   applyOverlayEffects();
@@ -742,6 +776,7 @@ function createOverlayWindow() {
     overlayVisible = false;
     debugLog("overlay ready-to-show");
     recomputeOverlayVisibility("ready");
+    updateOverlayContentMode();
   });
 }
 
@@ -944,6 +979,12 @@ function setupIpc() {
     latestTelemetryState || buildTelemetryState()
   );
   ipcMain.handle("hmcc:getAppVersion", () => app.getVersion());
+  ipcMain.on("hmcc:setDebugPanelPinned", (_event, enabled) => {
+    debugPanelPinned = Boolean(enabled);
+    debugLog(`debug panel pinned: ${debugPanelPinned ? "on" : "off"}`);
+    recomputeOverlayVisibility("debug");
+    updateOverlayContentMode();
+  });
   ipcMain.handle("overlay:getState", () => buildTelemetryState());
   ipcMain.handle("overlay:getSettings", () => overlaySettings || loadOverlaySettings());
   ipcMain.handle("overlay:setSettings", (_event, patch) => {

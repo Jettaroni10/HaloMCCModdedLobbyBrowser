@@ -39,7 +39,12 @@ export default function OverlayDiagnostics() {
     const bridge = (window as unknown as { hmccOverlay?: unknown }).hmccOverlay;
     if (!bridge) return;
     const stored = localStorage.getItem(DEBUG_KEY);
-    setEnabled(stored === "1");
+    const nextEnabled = stored === "1";
+    setEnabled(nextEnabled);
+    const overlay = bridge as { setDebugPanelPinned?: (enabled: boolean) => void };
+    if (typeof overlay.setDebugPanelPinned === "function") {
+      overlay.setDebugPanelPinned(nextEnabled);
+    }
   }, []);
 
   useEffect(() => {
@@ -68,6 +73,10 @@ export default function OverlayDiagnostics() {
         onClick={() => {
           localStorage.setItem(DEBUG_KEY, "1");
           setEnabled(true);
+          const overlay = bridge as { setDebugPanelPinned?: (enabled: boolean) => void };
+          if (typeof overlay.setDebugPanelPinned === "function") {
+            overlay.setDebugPanelPinned(true);
+          }
         }}
         className="fixed bottom-2 left-3 z-50 rounded-sm border border-ink/20 bg-sand/70 px-2 py-1 text-[10px] font-semibold tracking-[0.12em] text-ink/65"
       >
@@ -77,7 +86,10 @@ export default function OverlayDiagnostics() {
   }
 
   return (
-    <div className="fixed bottom-2 left-3 z-50 w-[320px] rounded-sm border border-ink/20 bg-sand/80 p-2 text-[10px] font-semibold tracking-[0.12em] text-ink/70">
+    <div
+      id="hmcc-overlay-diagnostics"
+      className="fixed bottom-2 left-3 z-50 w-[320px] rounded-sm border border-ink/20 bg-sand/80 p-2 text-[10px] font-semibold tracking-[0.12em] text-ink/70"
+    >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span
@@ -92,6 +104,11 @@ export default function OverlayDiagnostics() {
           onClick={() => {
             localStorage.setItem(DEBUG_KEY, "0");
             setEnabled(false);
+            const bridge = (window as unknown as { hmccOverlay?: unknown }).hmccOverlay;
+            const overlay = bridge as { setDebugPanelPinned?: (enabled: boolean) => void };
+            if (typeof overlay.setDebugPanelPinned === "function") {
+              overlay.setDebugPanelPinned(false);
+            }
           }}
           className="rounded-sm border border-ink/20 bg-sand px-2 py-0.5 text-[10px] font-semibold text-ink/70"
         >

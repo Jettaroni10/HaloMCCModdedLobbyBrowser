@@ -35,6 +35,9 @@ contextBridge.exposeInMainWorld("hmccOverlay", {
     const version = await ipcRenderer.invoke("hmcc:getAppVersion");
     return typeof version === "string" ? version : "";
   },
+  setDebugPanelPinned: (enabled) => {
+    ipcRenderer.send("hmcc:setDebugPanelPinned", Boolean(enabled));
+  },
   getState: async () => {
     const data = await ipcRenderer.invoke("hmcc:getState");
     return sanitize(data);

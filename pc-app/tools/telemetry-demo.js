@@ -2,8 +2,10 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 
-const appData = process.env.APPDATA || path.join(process.env.USERPROFILE || "", "AppData", "Roaming");
-const outputPath = path.join(appData, "MCC", "customs_state.json");
+const { getCustomsStatePath } = require("../paths");
+
+const outputPath =
+  process.env.MCC_TELEMETRY_OUTPUT || getCustomsStatePath();
 
 const sessionId = crypto.randomUUID().replace(/-/g, "");
 let tick = 0;

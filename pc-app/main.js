@@ -16,6 +16,12 @@ const { AutoLobbyPopulator } = require("./populator");
 const { scanDefaultModPaths } = require("./modScanner");
 const { FileGameStateProvider } = require("./telemetryProvider");
 const { readConfig, writeConfig } = require("./config");
+const { ensureCustomsStateExists } = require("./customsState");
+const {
+  getCustomsStatePath,
+  getConfigPath,
+  getLobbyStorePath,
+} = require("./paths");
 
 let overlayWindow = null;
 let store = null;
@@ -106,11 +112,6 @@ function resolveTelemetryPath(inputPath) {
     const value = process.env[name];
     return typeof value === "string" ? value : `%${name}%`;
   });
-}
-
-function getDefaultTelemetryPath() {
-  const appData = app.getPath("appData");
-  return path.join(appData, "MCC", "customs_state.json");
 }
 
 function debugLog(message) {
@@ -985,6 +986,9 @@ function setupIpc() {
   ipcMain.handle("telemetry:setPath", (_event, filePath) => {
     telemetryPath = resolveTelemetryPath(filePath);
     saveConfig();
+    if (telemetryPath) {
+      ensureCustomsStateExists({ filePath: telemetryPath, logger: console });
+    }
     if (useTelemetry) {
       const telemetryProvider = new FileGameStateProvider({
         filePath: telemetryPath,
@@ -995,6 +999,9 @@ function setupIpc() {
     return getTelemetryStatus();
   });
   ipcMain.handle("telemetry:useTelemetry", () => {
+    if (telemetryPath) {
+      ensureCustomsStateExists({ filePath: telemetryPath, logger: console });
+    }
     const telemetryProvider = new FileGameStateProvider({
       filePath: telemetryPath,
     });
@@ -1018,6 +1025,9 @@ function setupIpc() {
     if (result.canceled || result.filePaths.length === 0) return null;
     telemetryPath = resolveTelemetryPath(result.filePaths[0]);
     saveConfig();
+    if (telemetryPath) {
+      ensureCustomsStateExists({ filePath: telemetryPath, logger: console });
+    }
     if (useTelemetry) {
       const telemetryProvider = new FileGameStateProvider({
         filePath: telemetryPath,
@@ -1097,12 +1107,14 @@ function setupIpc() {
 }
 
 app.whenReady().then(() => {
-  const dataFile = path.join(app.getPath("userData"), "halo-mcc-lobbies.json");
-  configPath = path.join(app.getPath("userData"), "halo-mcc-config.json");
+  const dataFile = getLobbyStorePath(app);
+  configPath = getConfigPath(app);
   config = readConfig(configPath);
   loadOverlaySettings();
-  telemetryPath = getDefaultTelemetryPath();
+  telemetryPath = getCustomsStatePath(app);
   useTelemetry = true;
+
+  ensureCustomsStateExists({ filePath: telemetryPath, logger: console });
 
   store = new LobbyStore(dataFile);
   populator = new AutoLobbyPopulator();

@@ -1,6 +1,7 @@
 const fs = require("fs");
 const http = require("http");
 const path = require("path");
+const { getCustomsStatePath } = require("../paths");
 const {
   DEFAULT_SCHEMA_VERSION,
   parseTelemetryDocument,
@@ -11,7 +12,7 @@ const PORT = Number(process.env.MCC_TELEMETRY_PORT || 4760);
 const HOST = process.env.MCC_TELEMETRY_HOST || "127.0.0.1";
 const outputPath =
   process.env.MCC_TELEMETRY_OUTPUT ||
-  path.join(process.env.APPDATA || "", "MCC", "customs_state.json");
+  getCustomsStatePath();
 
 let lastWriteAt = null;
 

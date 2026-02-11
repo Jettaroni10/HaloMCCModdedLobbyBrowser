@@ -1,36 +1,21 @@
 import { NextResponse } from "next/server";
-import { prisma, modPacksSupported } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import {
-  clampInt,
-  normalizeText,
-  parseBoolean,
-  parseEnum,
-  parseNumber,
-  parseStringArray,
-} from "@/lib/validation";
+import { prisma } from "@/lib/db";
+import { createLobbyFromPayload, LobbyCreateError } from "@/lib/lobby-create";
+import { findCurrentLobbyForUser, toCurrentLobbyPayload } from "@/lib/lobby-current";
 import { Games, Regions, Vibes, Voices } from "@/lib/types";
-import { isRateLimited, recordRateLimitEvent } from "@/lib/rate-limit";
-import { addXp } from "@/lib/xp";
+import { normalizeText, parseEnum, parseStringArray } from "@/lib/validation";
 import { absoluteUrl } from "@/lib/url";
 export const runtime = "nodejs";
 
-const LIMITS = {
-  title: 80,
-  mode: 60,
-  map: 60,
-  rules: 600,
-  tag: 24,
-  tagsMax: 10,
-  workshopUrl: 220,
-  modNotes: 600,
-};
+const TAG_LIMIT = 24;
+const TAGS_MAX = 10;
 
 function sanitizeTags(input: unknown) {
   return parseStringArray(input)
-    .map((tag) => normalizeText(tag, LIMITS.tag))
+    .map((tag) => normalizeText(tag, TAG_LIMIT))
     .filter(Boolean)
-    .slice(0, LIMITS.tagsMax);
+    .slice(0, TAGS_MAX);
 }
 
 export async function POST(request: Request) {
@@ -48,29 +33,13 @@ export async function POST(request: Request) {
     );
   }
 
-  const createLimited = await isRateLimited(
-    user.id,
-    "create_lobby",
-    3,
-    60 * 1000
-  );
-  if (createLimited) {
-    return NextResponse.json(
-      { error: "Too many lobbies created. Try again shortly." },
-      { status: 429 }
-    );
-  }
-
-  const existingActive = await prisma.lobby.findFirst({
-    where: { hostUserId: user.id, isActive: true, expiresAt: { gt: new Date() } },
-    select: { id: true, title: true },
-  });
-  if (existingActive) {
+  const currentLobby = await findCurrentLobbyForUser(user.id);
+  if (currentLobby) {
     return NextResponse.json(
       {
-        error: "You already have an active lobby. Close it before creating another.",
-        code: "HOST_ACTIVE_LOBBY",
-        lobby: existingActive,
+        error: "You are already in a lobby. Leave it before creating another.",
+        code: "ALREADY_IN_LOBBY",
+        currentLobby: toCurrentLobbyPayload(currentLobby),
       },
       { status: 409 }
     );
@@ -90,131 +59,18 @@ export async function POST(request: Request) {
     body = (await request.json()) as Record<string, unknown>;
   }
 
-  const title = normalizeText(body.title, LIMITS.title);
-  const mode = normalizeText(body.mode, LIMITS.mode);
-  const map = normalizeText(body.map, LIMITS.map);
-  const rulesNote = normalizeText(body.rulesNote, LIMITS.rules);
-  const game = parseEnum(body.game, Games);
-  const region = parseEnum(body.region, Regions);
-  const platform = "STEAM";
-  const voice = parseEnum(body.voice, Voices);
-  const vibe = parseEnum(body.vibe, Vibes);
-  const tags = sanitizeTags(body.tags);
-  const friendsOnly = parseBoolean(body.friendsOnly) ?? false;
-  const slotsTotalInput = clampInt(
-    parseNumber(body.maxPlayers ?? body.slotsTotal),
-    2,
-    16
-  );
-  const slotsTotal = slotsTotalInput ?? 16;
-  const isModded = parseBoolean(body.isModded) ?? false;
-  const workshopCollectionUrl = normalizeText(
-    body.workshopCollectionUrl,
-    LIMITS.workshopUrl
-  );
-  const modUrls = [
-    ...parseStringArray(body.modUrls),
-    ...parseStringArray(body.workshopItemUrls),
-  ]
-    .map((url) => normalizeText(url, LIMITS.workshopUrl))
-    .filter(Boolean);
-  const modNotes = normalizeText(body.modNotes, LIMITS.modNotes);
-  const modPackId =
-    isModded && modPacksSupported && typeof body.modPackId === "string"
-      ? body.modPackId.trim()
-      : "";
-
-  if (!title || !mode || !map || !rulesNote) {
-    return NextResponse.json(
-      { error: "Missing required fields." },
-      { status: 400 }
-    );
-  }
-  if (!game || !region || !voice || !vibe) {
-    return NextResponse.json(
-      { error: "Invalid enum value." },
-      { status: 400 }
-    );
-  }
-  let resolvedPackId: string | null = null;
-  if (modPacksSupported && modPackId) {
-    const pack = await prisma.modPack.findFirst({
-      where: {
-        id: modPackId,
-        OR: [{ isPublic: true }, { ownerUserId: user.id }],
-      },
-      select: { id: true },
-    });
-    if (!pack) {
+  let lobby;
+  try {
+    lobby = await createLobbyFromPayload({ user, body });
+  } catch (error) {
+    if (error instanceof LobbyCreateError) {
       return NextResponse.json(
-        { error: "Mod pack not found." },
-        { status: 404 }
+        { error: error.message, code: error.code },
+        { status: error.status }
       );
     }
-    resolvedPackId = pack.id;
+    throw error;
   }
-
-  const hasLegacyMods = Boolean(workshopCollectionUrl) || modUrls.length > 0;
-  if (isModded && !resolvedPackId && !hasLegacyMods) {
-    return NextResponse.json(
-      { error: "Select a mod pack or provide mod links." },
-      { status: 400 }
-    );
-  }
-  const now = new Date();
-  const expiresAt = new Date(now.getTime() + 30 * 60 * 1000);
-  const lobby = await prisma.$transaction(async (tx) => {
-    const created = await tx.lobby.create({
-      data: {
-        hostUserId: user.id,
-        title,
-        game,
-        mode,
-        map,
-        region,
-        platform,
-        voice,
-        vibe,
-        tags,
-        rulesNote,
-        friendsOnly,
-        slotsTotal,
-        isModded,
-        workshopCollectionUrl:
-          isModded && workshopCollectionUrl ? workshopCollectionUrl : null,
-        workshopItemUrls: isModded ? modUrls : [],
-        modNotes: isModded ? modNotes || null : null,
-        ...(modPacksSupported
-          ? { modPackId: isModded ? resolvedPackId : null }
-          : {}),
-        lastHeartbeatAt: now,
-        expiresAt,
-      },
-    });
-
-    await tx.lobbyMember.create({
-      data: {
-        lobbyId: created.id,
-        userId: user.id,
-        slotNumber: 1,
-      },
-    });
-
-    await tx.conversation.create({
-      data: {
-        type: "LOBBY",
-        lobbyId: created.id,
-        participants: {
-          create: { userId: user.id },
-        },
-      },
-    });
-
-    return created;
-  });
-
-  await recordRateLimitEvent(user.id, "create_lobby");
-  await addXp(user.id, 25, "HOST_LOBBY_CREATED", { lobbyId: lobby.id });
 
   const isJson = (request.headers.get("content-type") ?? "").includes(
     "application/json"

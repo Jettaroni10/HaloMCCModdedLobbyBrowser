@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { emitLobbyRosterUpdated } from "@/lib/lobby-events";
+import { prisma } from "@/lib/db";
+import { leaveLobbyMembership } from "@/lib/lobby-membership";
 
 export async function POST(
   _request: Request,
@@ -23,38 +23,13 @@ export async function POST(
     return NextResponse.json({ error: "Lobby not found." }, { status: 404 });
   }
 
-  const member = await prisma.lobbyMember.findUnique({
-    where: { lobbyId_userId: { lobbyId: lobby.id, userId: user.id } },
+  const result = await leaveLobbyMembership({
+    lobbyId: lobby.id,
+    userId: user.id,
   });
-  if (!member) {
-    return NextResponse.json({ error: "Not in roster." }, { status: 404 });
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error }, { status: result.status });
   }
-
-  await prisma.$transaction([
-    prisma.lobbyMember.delete({
-      where: { lobbyId_userId: { lobbyId: lobby.id, userId: user.id } },
-    }),
-    prisma.conversationParticipant.deleteMany({
-      where: {
-        userId: user.id,
-        conversation: { lobbyId: lobby.id, type: "LOBBY" },
-      },
-    }),
-    prisma.joinRequest.updateMany({
-      where: {
-        lobbyId: lobby.id,
-        requesterUserId: user.id,
-        status: "ACCEPTED",
-      },
-      data: {
-        status: "DECLINED",
-        decidedAt: new Date(),
-        decidedByUserId: null,
-      },
-    }),
-  ]);
-
-  emitLobbyRosterUpdated({ lobbyId: lobby.id });
 
   return NextResponse.json({ ok: true });
 }

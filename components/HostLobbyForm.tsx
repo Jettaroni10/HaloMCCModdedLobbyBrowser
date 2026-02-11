@@ -56,6 +56,14 @@ type HostLobbyFormProps = {
   enableTelemetryBinding?: boolean;
 };
 
+type CurrentLobbyInfo = {
+  id: string;
+  name: string;
+  rosterCount: number;
+  maxPlayers?: number | null;
+  status?: string | null;
+};
+
 export default function HostLobbyForm({
   defaultValues,
   submitLabel = "Publish lobby",
@@ -71,6 +79,16 @@ export default function HostLobbyForm({
   const localTelemetry = telemetryState.localTelemetry;
   const defaultTags = useMemo(() => defaultValues?.tags ?? [], [defaultValues]);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentLobby, setCurrentLobby] = useState<CurrentLobbyInfo | null>(
+    null
+  );
+  const [pendingCreate, setPendingCreate] = useState<{
+    payload: Record<string, unknown>;
+    modCount: number;
+  } | null>(null);
+  const [modalBusy, setModalBusy] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
   const [mapPreviewUrl, setMapPreviewUrl] = useState<string | null>(null);
   const [mapFile, setMapFile] = useState<File | null>(null);
   const [useCustomMapImage, setUseCustomMapImage] = useState(false);
@@ -285,8 +303,10 @@ export default function HostLobbyForm({
       onSubmit(event);
       return;
     }
+    if (isSubmitting) return;
     event.preventDefault();
     setSubmitError(null);
+    setIsSubmitting(true);
 
     const form = event.currentTarget;
     const formData = new FormData(form);
@@ -321,13 +341,32 @@ export default function HostLobbyForm({
 
     if (!response.ok) {
       let message = "Unable to publish lobby.";
+      let alreadyLobby: CurrentLobbyInfo | null = null;
       try {
-        const payload = (await response.json()) as { error?: string };
-        if (payload?.error) message = payload.error;
+        const errorPayload = (await response.json()) as {
+          error?: string;
+          code?: string;
+          currentLobby?: CurrentLobbyInfo;
+        };
+        if (errorPayload?.error) message = errorPayload.error;
+        if (
+          errorPayload?.code === "ALREADY_IN_LOBBY" &&
+          errorPayload.currentLobby
+        ) {
+          alreadyLobby = errorPayload.currentLobby;
+        }
       } catch {
         // ignore JSON parse errors
       }
+      if (alreadyLobby) {
+        setCurrentLobby(alreadyLobby);
+        setPendingCreate({ payload, modCount });
+        setModalError(null);
+        setIsSubmitting(false);
+        return;
+      }
       setSubmitError(message);
+      setIsSubmitting(false);
       return;
     }
 
@@ -347,6 +386,7 @@ export default function HostLobbyForm({
 
     if (uploadError && lobbyId) {
       setSubmitError(`${uploadError} You can re-upload from the host menu.`);
+      setIsSubmitting(false);
       router.push(`/host/lobbies/${lobbyId}/edit?uploadFailed=1`);
       return;
     }
@@ -360,17 +400,157 @@ export default function HostLobbyForm({
       });
     }
 
+    setIsSubmitting(false);
     router.push("/host");
   }
 
+  async function handleLeaveAndCreate() {
+    if (!pendingCreate || modalBusy) return;
+    setModalBusy(true);
+    setModalError(null);
+    try {
+      const response = await fetch("/api/lobbies/leave-and-create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(pendingCreate.payload),
+      });
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as
+          | { error?: string }
+          | null;
+        throw new Error(payload?.error ?? "Unable to create lobby.");
+      }
+
+      const created = (await response.json().catch(() => null)) as
+        | { newLobbyId?: string }
+        | null;
+      const lobbyId = created?.newLobbyId;
+      let uploadError: string | null = null;
+
+      if (enableMapImage && useCustomMapImage && mapFile && lobbyId) {
+        try {
+          await uploadMapImage(lobbyId, mapFile);
+        } catch (error) {
+          uploadError =
+            error instanceof Error ? error.message : "Upload failed.";
+        }
+      }
+
+      if (uploadError && lobbyId) {
+        setModalError(`${uploadError} You can re-upload from the host menu.`);
+        router.push(`/host/lobbies/${lobbyId}/edit?uploadFailed=1`);
+        return;
+      }
+
+      if (lobbyId) {
+        trackEvent("lobby_created", {
+          lobby_id: hashId(lobbyId),
+          game: String(pendingCreate.payload.game ?? ""),
+          is_modded: isModded,
+          mod_count: pendingCreate.modCount,
+        });
+      }
+
+      setCurrentLobby(null);
+      setPendingCreate(null);
+      router.push(lobbyId ? `/lobbies/${lobbyId}` : "/host");
+    } catch (error) {
+      setModalError(
+        error instanceof Error ? error.message : "Unable to create lobby."
+      );
+    } finally {
+      setModalBusy(false);
+    }
+  }
+
+  function handleGoToCurrent() {
+    if (!currentLobby) return;
+    setCurrentLobby(null);
+    setPendingCreate(null);
+    router.push(`/lobbies/${currentLobby.id}`);
+  }
+
+  const rosterSummary = currentLobby
+    ? typeof currentLobby.maxPlayers === "number" &&
+      Number.isFinite(currentLobby.maxPlayers)
+      ? `Players: ${currentLobby.rosterCount} / ${currentLobby.maxPlayers}`
+      : `Players: ${currentLobby.rosterCount}`
+    : "";
+
   return (
-    <form
-      action={action}
-      method={method}
-      encType="multipart/form-data"
-      onSubmit={handleSubmit}
-      className="mt-6 space-y-5 rounded-md border border-ink/10 bg-sand p-6"
-    >
+    <>
+      {currentLobby && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-md rounded-md border border-ink/20 bg-sand p-5 text-ink shadow-xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-ink/50">
+                  You&apos;re already in a lobby
+                </p>
+                <h2 className="mt-2 text-lg font-semibold text-ink">
+                  {currentLobby.name}
+                </h2>
+              </div>
+              {currentLobby.status && (
+                <span className="rounded-sm border border-ink/20 bg-mist px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-ink/70">
+                  {currentLobby.status}
+                </span>
+              )}
+            </div>
+
+            <div className="mt-3 text-sm text-ink/70">{rosterSummary}</div>
+
+            {modalError && (
+              <p className="mt-3 text-xs font-semibold text-clay">
+                {modalError}
+              </p>
+            )}
+
+            <div className="mt-5 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={handleLeaveAndCreate}
+                disabled={modalBusy}
+                className="w-full rounded-sm bg-ink px-4 py-2 text-sm font-semibold text-sand hover:bg-ink/90 disabled:cursor-not-allowed disabled:bg-ink/60"
+              >
+                {modalBusy
+                  ? "Leaving & creating..."
+                  : "Leave current lobby & Host new lobby"}
+              </button>
+              <div className="flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentLobby(null);
+                    setPendingCreate(null);
+                    setModalError(null);
+                  }}
+                  disabled={modalBusy}
+                  className="rounded-sm border border-ink/20 px-3 py-2 text-xs font-semibold text-ink/70 hover:border-ink/40 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleGoToCurrent}
+                  disabled={modalBusy}
+                  className="text-xs font-semibold text-clay hover:text-clay/80 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Go to current lobby
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <form
+        action={action}
+        method={method}
+        encType="multipart/form-data"
+        onSubmit={handleSubmit}
+        className="mt-6 space-y-5 rounded-md border border-ink/10 bg-sand p-6"
+      >
       {enableTelemetryBinding && (
         <div className="rounded-sm border border-ink/10 bg-mist p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -837,14 +1017,16 @@ export default function HostLobbyForm({
 
       <button
         type="submit"
+        disabled={isSubmitting}
         className="w-full rounded-sm bg-ink px-4 py-2 text-sm font-semibold text-sand hover:bg-ink/90"
       >
-        {submitLabel}
+        {isSubmitting ? "Publishing..." : submitLabel}
       </button>
       {submitError && (
         <p className="text-xs font-semibold text-clay">{submitError}</p>
       )}
-    </form>
+      </form>
+    </>
   );
 }
 

@@ -116,6 +116,10 @@ body.hmcc-overlay::before {
   outline: 1px solid transparent;
 }
 
+.no-drag {
+  -webkit-app-region: no-drag;
+}
+
 .hmcc-overlay-glass {
   position: fixed;
   inset: 0;

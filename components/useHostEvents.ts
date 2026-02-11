@@ -83,6 +83,14 @@ type HostToast = {
   message: string;
 };
 
+export type HostNotification = {
+  id: string;
+  message: string;
+  createdAt: string;
+  read: boolean;
+  kind: "request_created" | "lobby_expired" | "request_decided";
+};
+
 type UseHostEventsOptions = {
   enabled?: boolean;
   hostUserId?: string | null;
@@ -223,6 +231,7 @@ export function useHostEvents(options: UseHostEventsOptions = {}) {
   const { enabled = true, hostUserId } = options;
   const unreadKey = hostUserId ? `${UNREAD_KEY}:${hostUserId}` : UNREAD_KEY;
   const [toasts, setToasts] = useState<HostToast[]>([]);
+  const [notifications, setNotifications] = useState<HostNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [muted, setMuted] = useState(true);
   const [soundBlocked, setSoundBlocked] = useState(false);
@@ -306,6 +315,19 @@ export function useHostEvents(options: UseHostEventsOptions = {}) {
     }, 6000);
   }
 
+  function enqueueNotification(
+    message: string,
+    kind: HostNotification["kind"],
+    read = false
+  ) {
+    const id = makeId();
+    const createdAt = new Date().toISOString();
+    setNotifications((prev) => {
+      const next = [{ id, message, createdAt, read, kind }, ...prev];
+      return next.slice(0, 60);
+    });
+  }
+
   const playPing = useCallback(
     async (force = false) => {
       if (!force && mutedRef.current) return;
@@ -349,50 +371,53 @@ export function useHostEvents(options: UseHostEventsOptions = {}) {
     const channel = client.channels.get(`user:${hostUserId}:notifications`);
 
     const handleMessage = (message: { name?: string; data?: unknown }) => {
-      if (message.name === "request_created") {
-        const payload = normalizeRequestPayload(message.data);
-        if (!payload) return;
-        dispatchHostEvent("customs:hostRequestCreated", payload);
-        onRequestCreatedRef.current?.(payload);
-        incrementUnread();
+    if (message.name === "request_created") {
+      const payload = normalizeRequestPayload(message.data);
+      if (!payload) return;
+      dispatchHostEvent("customs:hostRequestCreated", payload);
+      onRequestCreatedRef.current?.(payload);
+      incrementUnread();
         trackEvent("notification_received", {
           notification_type: "request_created",
           source: "host_realtime",
         });
-        const name =
-          payload.requesterGamertag?.trim() ||
-          payload.requesterHandleText ||
-          "New requester";
-        enqueueToast(`New request from ${name}`);
-        void playPing();
-      }
+      const name =
+        payload.requesterGamertag?.trim() ||
+        payload.requesterHandleText ||
+        "New requester";
+      enqueueToast(`New request from ${name}`);
+      enqueueNotification(`New request from ${name}`, "request_created");
+      void playPing();
+    }
 
-      if (message.name === "lobby_expired") {
-        const payload = normalizeExpiredPayload(message.data);
+    if (message.name === "lobby_expired") {
+      const payload = normalizeExpiredPayload(message.data);
         if (!payload) return;
         dispatchHostEvent("customs:hostLobbyExpired", payload);
         onLobbyExpiredRef.current?.(payload);
         incrementUnread();
-        trackEvent("notification_received", {
-          notification_type: "lobby_expired",
-          source: "host_realtime",
-        });
-        enqueueToast("Lobby expired");
-        void playPing();
-      }
+      trackEvent("notification_received", {
+        notification_type: "lobby_expired",
+        source: "host_realtime",
+      });
+      enqueueToast("Lobby expired");
+      enqueueNotification("Lobby expired", "lobby_expired");
+      void playPing();
+    }
 
-      if (message.name === "request_decided") {
-        const payload = normalizeDecidedPayload(message.data);
-        if (!payload) return;
+    if (message.name === "request_decided") {
+      const payload = normalizeDecidedPayload(message.data);
+      if (!payload) return;
         dispatchHostEvent("customs:hostRequestDecided", payload);
         onRequestDecidedRef.current?.(payload);
         decrementUnread();
-        trackEvent("notification_received", {
-          notification_type: "request_decided",
-          source: "host_realtime",
-        });
-      }
-    };
+      trackEvent("notification_received", {
+        notification_type: "request_decided",
+        source: "host_realtime",
+      });
+      enqueueNotification("Request decided", "request_decided", true);
+    }
+  };
 
     try {
       const subscribeResult = channel.subscribe(handleMessage);
@@ -432,15 +457,30 @@ export function useHostEvents(options: UseHostEventsOptions = {}) {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   }
 
+  function dismissNotification(id: string) {
+    setNotifications((prev) => prev.filter((item) => item.id !== id));
+  }
+
   function markViewed() {
     setUnreadCount(0);
+    setNotifications((prev) =>
+      prev.map((item) => (item.read ? item : { ...item, read: true }))
+    );
+  }
+
+  function clearAll() {
+    setUnreadCount(0);
+    setNotifications([]);
   }
 
   return {
     toasts,
     dismissToast,
+    notifications,
+    dismissNotification,
     unreadCount,
     markViewed,
+    clearAll,
     muted,
     setMuted,
     soundBlocked,

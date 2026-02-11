@@ -15,6 +15,8 @@ import OverlayVersionLabel from "@/components/OverlayVersionLabel";
 import OverlayDiagnostics from "@/components/OverlayDiagnostics";
 import { OverlayTelemetryProvider } from "@/components/OverlayTelemetryProvider";
 import OverlayWindowControls from "@/components/OverlayWindowControls";
+import { NotificationsDrawerProvider } from "@/components/notifications/NotificationsDrawerContext";
+import NotificationsDrawer from "@/components/notifications/NotificationsDrawer";
 
 export const metadata: Metadata = {
   title: "Customs on the Ring",
@@ -38,24 +40,27 @@ export default async function RootLayout({
           <AnalyticsTracker />
         </Suspense>
         <OverlayTelemetryProvider>
-          <OverlayGlassShell />
-          <OverlayAutoRefresher />
-          <OverlayVersionLabel />
-          <OverlayDiagnostics />
-          <OverlayWindowControls />
-          <AuthProvider>
-            <Suspense fallback={null}>
-              <GamertagGate user={user} />
-            </Suspense>
-            <HostNotificationsProvider hostUserId={user?.id ?? null}>
-              <div className="relative z-10 flex min-h-screen flex-col">
-                <HeaderShell user={user} isAdmin={isAdmin} />
-                <main className="flex-1">
-                  <Suspense fallback={null}>{children}</Suspense>
-                </main>
-              </div>
-            </HostNotificationsProvider>
-          </AuthProvider>
+          <NotificationsDrawerProvider>
+            <OverlayGlassShell />
+            <OverlayAutoRefresher />
+            <OverlayVersionLabel />
+            <OverlayDiagnostics />
+            <OverlayWindowControls />
+            <AuthProvider>
+              <Suspense fallback={null}>
+                <GamertagGate user={user} />
+              </Suspense>
+              <HostNotificationsProvider hostUserId={user?.id ?? null}>
+                <NotificationsDrawer />
+                <div className="relative z-10 flex min-h-screen flex-col">
+                  <HeaderShell user={user} isAdmin={isAdmin} />
+                  <main className="flex-1">
+                    <Suspense fallback={null}>{children}</Suspense>
+                  </main>
+                </div>
+              </HostNotificationsProvider>
+            </AuthProvider>
+          </NotificationsDrawerProvider>
         </OverlayTelemetryProvider>
       </body>
     </html>

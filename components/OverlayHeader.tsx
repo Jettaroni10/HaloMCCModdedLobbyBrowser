@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { SessionUser } from "@/lib/auth";
 import HostNavLink from "@/components/HostNavLink";
 import HostNotificationToggle from "@/components/HostNotificationToggle";
+import NotificationsBellButton from "@/components/notifications/NotificationsBellButton";
 import SocialRankBadge from "@/components/rank/SocialRankBadge";
 import { clampRank } from "@/lib/ranks";
 import SignOutButton from "@/components/auth/SignOutButton";
@@ -42,6 +43,7 @@ export default function OverlayHeader({ user, isAdmin }: OverlayHeaderProps) {
             Browse
           </Link>
           <HostNavLink hostUserId={user?.id ?? null} />
+          <NotificationsBellButton userId={user?.id ?? null} />
           <HostNotificationToggle userId={user?.id ?? null} />
           {user && (
             <Link href="/friends" className="hover:text-ink">

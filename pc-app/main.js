@@ -377,9 +377,12 @@ function updateOverlayContentMode() {
   if (shouldHideMain) {
     if (hideOverlayCssKey) return;
     const css = `
-      /* Hide all site UI except the diagnostics panel when overlay is toggled off. */
+      /* Hide all site UI except the diagnostics panel + notifications drawer. */
       body * { visibility: hidden !important; }
-      #hmcc-overlay-diagnostics, #hmcc-overlay-diagnostics * { visibility: visible !important; }
+      #hmcc-overlay-diagnostics,
+      #hmcc-overlay-diagnostics *,
+      #hmcc-notifications-drawer,
+      #hmcc-notifications-drawer * { visibility: visible !important; }
     `;
     wc.insertCSS(css).then((key) => {
       hideOverlayCssKey = key;

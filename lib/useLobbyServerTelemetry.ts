@@ -125,7 +125,7 @@ export function useLobbyServerTelemetry(params: {
     setLastEventAt(null);
     setLastEventSeq(null);
     setLastError(null);
-  }, [lobbyId]);
+  }, [lobbyId, channelName, eventName]);
 
   useEffect(() => {
     if (!lobbyId) return;

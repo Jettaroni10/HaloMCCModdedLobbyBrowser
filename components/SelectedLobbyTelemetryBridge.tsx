@@ -16,6 +16,10 @@ type SelectedLobbyTelemetryBridgeProps = {
     map?: string | null;
     mode?: string | null;
     currentPlayers?: number | null;
+    status?: string | null;
+    seq?: number | null;
+    emittedAt?: string | null;
+    updatedAt?: string | null;
   } | null;
   initialServerTelemetry?: {
     map?: string | null;

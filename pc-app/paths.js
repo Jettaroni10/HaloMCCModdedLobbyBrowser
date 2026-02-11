@@ -3,7 +3,7 @@ const os = require("os");
 
 const PRODUCT_DIR = "HMCC Overlay";
 
-function getAppDataRoot(app) {
+function getDataRootDir(app) {
   if (app && typeof app.getPath === "function") {
     return app.getPath("appData");
   }
@@ -12,10 +12,7 @@ function getAppDataRoot(app) {
 }
 
 function getAppDataDir(app) {
-  if (app && typeof app.getPath === "function") {
-    return app.getPath("userData");
-  }
-  return path.join(getAppDataRoot(app), PRODUCT_DIR);
+  return path.join(getDataRootDir(app), PRODUCT_DIR);
 }
 
 function getCacheDir(app) {
@@ -35,7 +32,7 @@ function getLogsDir(app) {
 }
 
 function getCustomsStatePath(app) {
-  return path.join(getAppDataRoot(app), "MCC", "customs_state.json");
+  return path.join(getDataRootDir(app), "MCC", "customs_state.json");
 }
 
 function getConfigPath(app) {
@@ -47,6 +44,7 @@ function getLobbyStorePath(app) {
 }
 
 module.exports = {
+  getDataRootDir,
   getAppDataDir,
   getCacheDir,
   getLogsDir,

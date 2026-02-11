@@ -18,6 +18,8 @@ const { FileGameStateProvider } = require("./telemetryProvider");
 const { readConfig, writeConfig } = require("./config");
 const { ensureCustomsStateExists } = require("./customsState");
 const {
+  getDataRootDir,
+  getAppDataDir,
   getCustomsStatePath,
   getConfigPath,
   getLobbyStorePath,
@@ -1113,6 +1115,12 @@ app.whenReady().then(() => {
   loadOverlaySettings();
   telemetryPath = getCustomsStatePath(app);
   useTelemetry = true;
+
+  debugLog(
+    `paths: dataRoot=${getDataRootDir(app)} appDataDir=${getAppDataDir(
+      app
+    )} telemetry=${telemetryPath} config=${configPath} lobbies=${dataFile}`
+  );
 
   ensureCustomsStateExists({ filePath: telemetryPath, logger: console });
 

@@ -35,6 +35,9 @@ contextBridge.exposeInMainWorld("hmccOverlay", {
     const version = await ipcRenderer.invoke("hmcc:getAppVersion");
     return typeof version === "string" ? version : "";
   },
+  updateCheck: async () => ipcRenderer.invoke("hmcc:update_check"),
+  updateDownload: async () => ipcRenderer.invoke("hmcc:update_download"),
+  updateInstall: async () => ipcRenderer.invoke("hmcc:update_install"),
   hideOverlayWindow: async () => {
     const result = await ipcRenderer.invoke("hmcc:hideOverlayWindow");
     return Boolean(result?.ok);

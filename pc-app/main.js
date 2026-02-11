@@ -72,6 +72,14 @@ let lastDebugSnapshot = "";
 let updaterInitialized = false;
 let updaterStatus = "Idle";
 let autoUpdater = null;
+let updateState = {
+  status: "idle",
+  version: null,
+  releaseNotes: null,
+  progress: null,
+};
+let updateDownloadPromise = null;
+let updateInProgress = false;
 let debugPanelPinned = false;
 let hideOverlayCssKey = null;
 let debugPanelModeActive = false;
@@ -519,6 +527,9 @@ function startMccWatcher() {
       }
       mccMissingCount += 1;
       if (mccMissingCount >= MCC_MISSING_THRESHOLD) {
+        if (updateInProgress) {
+          return;
+        }
         debugLog("MCC closed; quitting overlay.");
         app.quit();
       }
@@ -543,6 +554,19 @@ function setUpdaterStatus(statusText) {
   updaterStatus = String(statusText || "Idle");
   debugLog(`Updater status: ${updaterStatus}`);
   buildApplicationMenu();
+}
+
+function normalizeReleaseNotes(notes) {
+  if (!notes) return null;
+  if (typeof notes === "string") return notes;
+  if (Array.isArray(notes)) {
+    const first = notes.find((entry) => typeof entry === "string");
+    if (first) return first;
+    const objectNote = notes.find((entry) => typeof entry?.note === "string");
+    return objectNote?.note || null;
+  }
+  if (typeof notes.note === "string") return notes.note;
+  return null;
 }
 
 async function triggerUpdateCheck(manual = false) {
@@ -615,40 +639,51 @@ function initAutoUpdater() {
     return;
   }
 
-  autoUpdater.autoDownload = true;
-  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = false;
 
   autoUpdater.on("checking-for-update", () => {
     setUpdaterStatus("Checking for updates...");
+    updateState = { status: "checking", version: null, releaseNotes: null, progress: null };
   });
   autoUpdater.on("update-available", (info) => {
     setUpdaterStatus(`Update available (${info?.version || "new version"})`);
+    updateState = {
+      status: "update-available",
+      version: info?.version || null,
+      releaseNotes: normalizeReleaseNotes(info?.releaseNotes),
+      progress: null,
+    };
   });
   autoUpdater.on("update-not-available", () => {
     setUpdaterStatus("Up to date");
+    updateState = { status: "no-update", version: app.getVersion(), releaseNotes: null, progress: null };
   });
   autoUpdater.on("error", (error) => {
     setUpdaterStatus(`Error: ${error?.message || String(error)}`);
+    updateState = { status: "error", version: null, releaseNotes: null, progress: null };
+    updateInProgress = false;
   });
   autoUpdater.on("download-progress", (progress) => {
     const percent = Number.isFinite(progress?.percent)
       ? Math.round(progress.percent)
       : 0;
     setUpdaterStatus(`Downloading update... ${percent}%`);
+    updateState = {
+      status: "downloading",
+      version: updateState.version,
+      releaseNotes: updateState.releaseNotes,
+      progress: percent,
+    };
   });
-  autoUpdater.on("update-downloaded", async (info) => {
+  autoUpdater.on("update-downloaded", (info) => {
     setUpdaterStatus(`Update downloaded (${info?.version || "new version"})`);
-    const result = await dialog.showMessageBox({
-      type: "question",
-      title: "Update Ready",
-      message: "An update has been downloaded. Restart now to install it?",
-      buttons: ["Later", "Restart now"],
-      defaultId: 1,
-      cancelId: 0,
-    });
-    if (result.response === 1) {
-      autoUpdater.quitAndInstall();
-    }
+    updateState = {
+      status: "downloaded",
+      version: info?.version || null,
+      releaseNotes: normalizeReleaseNotes(info?.releaseNotes),
+      progress: 100,
+    };
   });
 
   setUpdaterStatus("Checking for updates...");
@@ -1190,6 +1225,106 @@ function setupIpc() {
     latestTelemetryState || buildTelemetryState()
   );
   ipcMain.handle("hmcc:getAppVersion", () => app.getVersion());
+  ipcMain.handle("hmcc:update_check", async () => {
+    if (!app.isPackaged) {
+      return { ok: false, code: "DEV_MODE", message: "Updates disabled in development." };
+    }
+    if (!ensureAutoUpdaterLoaded()) {
+      return { ok: false, code: "UPDATER_MISSING", message: "Updater unavailable." };
+    }
+    if (updateState.status === "downloaded") {
+      return {
+        ok: true,
+        status: "downloaded",
+        version: updateState.version,
+        releaseNotes: updateState.releaseNotes,
+      };
+    }
+    if (updateState.status === "downloading") {
+      return {
+        ok: true,
+        status: "downloading",
+        progress: updateState.progress,
+      };
+    }
+    try {
+      updateState = { status: "checking", version: null, releaseNotes: null, progress: null };
+      const result = await autoUpdater.checkForUpdates();
+      const info = result?.updateInfo;
+      const version = info?.version || null;
+      const releaseNotes = normalizeReleaseNotes(info?.releaseNotes);
+      if (version && version !== app.getVersion()) {
+        updateState = { status: "update-available", version, releaseNotes, progress: null };
+        return { ok: true, status: "update-available", version, releaseNotes };
+      }
+      updateState = { status: "no-update", version: app.getVersion(), releaseNotes: null, progress: null };
+      return { ok: true, status: "no-update" };
+    } catch (error) {
+      const message = error?.message || String(error);
+      updateState = { status: "error", version: null, releaseNotes: null, progress: null };
+      return { ok: false, code: "CHECK_FAILED", message };
+    }
+  });
+  ipcMain.handle("hmcc:update_download", async () => {
+    if (!app.isPackaged) {
+      return { ok: false, code: "DEV_MODE", message: "Updates disabled in development." };
+    }
+    if (!ensureAutoUpdaterLoaded()) {
+      return { ok: false, code: "UPDATER_MISSING", message: "Updater unavailable." };
+    }
+    if (updateState.status === "downloaded") {
+      return {
+        ok: true,
+        status: "downloaded",
+        version: updateState.version,
+        releaseNotes: updateState.releaseNotes,
+      };
+    }
+    if (updateDownloadPromise) {
+      return updateDownloadPromise;
+    }
+    updateInProgress = true;
+    updateDownloadPromise = autoUpdater
+      .downloadUpdate()
+      .then((info) => {
+        const version = info?.version || updateState.version || null;
+        const releaseNotes = normalizeReleaseNotes(info?.releaseNotes);
+        updateState = {
+          status: "downloaded",
+          version,
+          releaseNotes,
+          progress: 100,
+        };
+        return { ok: true, status: "downloaded", version, releaseNotes };
+      })
+      .catch((error) => {
+        updateInProgress = false;
+        const message = error?.message || String(error);
+        updateState = { status: "error", version: null, releaseNotes: null, progress: null };
+        return { ok: false, code: "DOWNLOAD_FAILED", message };
+      })
+      .finally(() => {
+        updateDownloadPromise = null;
+      });
+    return updateDownloadPromise;
+  });
+  ipcMain.handle("hmcc:update_install", async () => {
+    if (!app.isPackaged) {
+      return { ok: false, code: "DEV_MODE", message: "Updates disabled in development." };
+    }
+    if (!ensureAutoUpdaterLoaded()) {
+      return { ok: false, code: "UPDATER_MISSING", message: "Updater unavailable." };
+    }
+    updateInProgress = true;
+    try {
+      autoUpdater.quitAndInstall();
+      return { ok: true };
+    } catch (error) {
+      updateInProgress = false;
+      const message = error?.message || String(error);
+      return { ok: false, code: "INSTALL_FAILED", message };
+    }
+  });
   ipcMain.handle("hmcc:hideOverlayWindow", () => {
     setOverlayManualHidden(true, "ipc-hide");
     return { ok: true };

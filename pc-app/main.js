@@ -88,6 +88,22 @@ let overlayFullBounds = null;
 const DEBUG_PANEL_SIZE = { width: 360, height: 260 };
 const DEBUG_PANEL_INSET = 12;
 
+function getAppIconPath() {
+  const candidates = [
+    path.join(__dirname, "assets", "icon.ico"),
+    path.join(process.resourcesPath || "", "assets", "icon.ico"),
+    path.join(process.resourcesPath || "", "app.asar", "assets", "icon.ico"),
+  ];
+  for (const candidate of candidates) {
+    try {
+      if (candidate && fs.existsSync(candidate)) return candidate;
+    } catch {
+      // ignore
+    }
+  }
+  return null;
+}
+
 function ensureAutoUpdaterLoaded() {
   if (autoUpdater) return true;
   try {
@@ -936,6 +952,7 @@ function createOverlayWindow() {
     hasShadow: false,
     skipTaskbar: true,
     backgroundColor: OVERLAY_BG_COLOR,
+    icon: getAppIconPath() || undefined,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,

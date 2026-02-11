@@ -46,10 +46,11 @@ export default async function HostPage() {
   }));
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-12">
+    <div className="mx-auto w-full max-w-[1200px] px-6 py-12 lg:px-8">
       <HostPageHeader />
 
       <HostDashboard
+        className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr,1fr]"
         lobbies={serializedLobbies}
         requests={serializedRequests}
         hostUserId={user.id}

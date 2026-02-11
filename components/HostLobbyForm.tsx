@@ -299,18 +299,22 @@ export default function HostLobbyForm({
   }, [overlaySessionMode, isConnected, localTelemetry?.status]);
 
   const sessionStatusTone = useMemo(() => {
-    if (!overlaySessionMode) return "border-ink/20 bg-mist text-ink";
-    if (!isConnected) return "border-ink/10 bg-ink/50 text-sand/70";
+    if (!overlaySessionMode) {
+      return "border-slate-700 bg-slate-900/60 text-slate-200";
+    }
+    if (!isConnected) {
+      return "border-slate-800 bg-slate-950/60 text-slate-400";
+    }
     if (localTelemetry?.status === "active") {
-      return "border-clay/50 bg-clay/20 text-sand";
+      return "border-emerald-500/40 bg-emerald-500/10 text-emerald-200";
     }
     if (localTelemetry?.status === "waiting") {
-      return "border-white/30 bg-white/10 text-sand";
+      return "border-slate-700 bg-slate-900/60 text-slate-200";
     }
     if (localTelemetry?.status === "stale") {
-      return "border-red-400/50 bg-red-500/20 text-red-100";
+      return "border-red-500/50 bg-red-500/10 text-red-200";
     }
-    return "border-ink/20 bg-mist text-ink";
+    return "border-slate-700 bg-slate-900/60 text-slate-200";
   }, [overlaySessionMode, isConnected, localTelemetry?.status]);
 
   const sessionLastUpdated = useMemo(() => {
@@ -917,70 +921,93 @@ export default function HostLobbyForm({
       )}
 
       {overlaySessionMode && (
-        <section className="rounded-md border border-ink/10 bg-sand p-6">
+        <section className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-ink/50">
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
                 My Session
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <h2 className="text-lg font-semibold text-ink">
-                  {isLive
-                    ? "Live session"
-                    : isMember
-                      ? "Currently in a lobby"
-                      : "Session offline"}
+                <h2 className="text-lg font-semibold text-slate-100">
+                  {sessionMap}
                 </h2>
+                {isLive && (
+                  <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-200">
+                    LIVE
+                  </span>
+                )}
                 {sessionState.status === "loading" && (
-                  <span className="text-xs font-semibold text-ink/50">
+                  <span className="text-xs font-semibold text-slate-500">
                     Checking status...
                   </span>
                 )}
               </div>
+              <p className="mt-1 text-xs text-slate-400">
+                {isLive
+                  ? "Live session"
+                  : isMember
+                    ? "Currently in a lobby"
+                    : "Session offline"}
+              </p>
               {sessionState.lobby?.name && (
-                <p className="mt-1 text-xs text-ink/60">
+                <p className="mt-1 text-xs text-slate-400">
                   Listing: {sessionState.lobby.name}
                 </p>
               )}
-              <p className="mt-1 text-xs text-ink/50">{sessionLastUpdated}</p>
+              <p className="mt-1 text-xs text-slate-500">{sessionLastUpdated}</p>
             </div>
             <span
-              className={`rounded-sm border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${sessionStatusTone}`}
+              className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${sessionStatusTone}`}
             >
               {sessionStatusLabel}
             </span>
           </div>
 
-          <div className="mt-4 grid gap-3 text-sm text-ink/70 md:grid-cols-4">
+          <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3">
             <div>
-              Map <span className="font-semibold text-ink">{sessionMap}</span>
+              <p className="text-[11px] uppercase tracking-wider text-slate-400">
+                Map
+              </p>
+              <p className="text-sm font-medium text-slate-100">
+                {sessionMap}
+              </p>
             </div>
             <div>
-              Mode{" "}
-              <span className="font-semibold text-ink">{sessionModeValue}</span>
+              <p className="text-[11px] uppercase tracking-wider text-slate-400">
+                Mode
+              </p>
+              <p className="text-sm font-medium text-slate-100">
+                {sessionModeValue}
+              </p>
             </div>
             <div>
-              Players{" "}
-              <span className="font-semibold text-ink">
+              <p className="text-[11px] uppercase tracking-wider text-slate-400">
+                Players
+              </p>
+              <p className="text-sm font-medium text-slate-100">
                 {sessionPlayers}
                 {sessionMaxPlayers ? ` / ${sessionMaxPlayers}` : ""}
-              </span>
+              </p>
             </div>
             <div>
-              Status{" "}
-              <span className="font-semibold text-ink">{sessionStatusLabel}</span>
+              <p className="text-[11px] uppercase tracking-wider text-slate-400">
+                Status
+              </p>
+              <p className="text-sm font-medium text-slate-100">
+                {sessionStatusLabel}
+              </p>
             </div>
           </div>
 
           {(!isConnected || !localTelemetry || overlayInMenus) && (
-            <div className="mt-4 rounded-sm border border-ink/10 bg-mist px-3 py-2 text-xs text-ink/60">
+            <div className="mt-4 rounded-md border border-slate-800 bg-slate-950/60 px-3 py-2 text-xs text-slate-300">
               No active session detected. Start MCC (EAC off) and enter Customs
               menus.
             </div>
           )}
 
           {isLive && (!localTelemetry || overlayInMenus || !isConnected) && (
-            <div className="mt-3 rounded-sm border border-clay/40 bg-clay/10 px-3 py-2 text-xs text-clay">
+            <div className="mt-3 rounded-md border border-clay/40 bg-clay/10 px-3 py-2 text-xs text-clay">
               Session details will populate once detected.
             </div>
           )}
@@ -992,31 +1019,35 @@ export default function HostLobbyForm({
           )}
 
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            {isLive ? (
-              <button
-                type="button"
-                onClick={handleStopLive}
-                disabled={sessionBusy}
-                className="rounded-sm border border-clay/50 px-4 py-2 text-xs font-semibold text-clay hover:border-clay/70 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {sessionBusy ? "Stopping..." : "Stop"}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleStartLive}
-                disabled={isSubmitting || sessionBusy}
-                className="rounded-sm bg-ink px-4 py-2 text-xs font-semibold text-sand hover:bg-ink/90 disabled:cursor-not-allowed disabled:bg-ink/60"
-              >
-                {isSubmitting ? "Going live..." : "Go Live"}
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-400">{syncStatusText}</span>
+            </div>
             {isMember && (
-              <p className="text-xs text-ink/60">
+              <p className="text-xs text-slate-400">
                 You&apos;re already in a lobby. Going live will leave it.
               </p>
             )}
-            <span className="text-xs text-ink/50">{syncStatusText}</span>
+            <div className="ml-auto flex items-center gap-2">
+              {isLive ? (
+                <button
+                  type="button"
+                  onClick={handleStopLive}
+                  disabled={sessionBusy}
+                  className="inline-flex items-center gap-2 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-200 hover:bg-red-500/15 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {sessionBusy ? "Stopping..." : "Stop"}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleStartLive}
+                  disabled={isSubmitting || sessionBusy}
+                  className="rounded-md bg-ink px-4 py-2 text-xs font-semibold text-sand hover:bg-ink/90 disabled:cursor-not-allowed disabled:bg-ink/60"
+                >
+                  {isSubmitting ? "Going live..." : "Go Live"}
+                </button>
+              )}
+            </div>
           </div>
         </section>
       )}
@@ -1027,16 +1058,24 @@ export default function HostLobbyForm({
         encType="multipart/form-data"
         onSubmit={handleSubmit}
         ref={formRef}
-        className="mt-6 space-y-5 rounded-md border border-ink/10 bg-sand p-6"
+        className="mt-6 rounded-xl border border-slate-800 bg-slate-950/40 p-4"
       >
       {overlaySessionMode && (
-        <button type="submit" className="hidden" aria-hidden="true">
-          Submit
-        </button>
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-sm font-semibold tracking-wider uppercase text-slate-200">
+            Session Details
+          </p>
+        </div>
       )}
+      <div className="space-y-3">
+        {overlaySessionMode && (
+          <button type="submit" className="hidden" aria-hidden="true">
+            Submit
+          </button>
+        )}
 
-      {!overlaySessionMode && enableTelemetryBinding && (
-        <div className="rounded-sm border border-ink/10 bg-mist p-4">
+        {!overlaySessionMode && enableTelemetryBinding && (
+          <div className="rounded-sm border border-ink/10 bg-mist p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-ink/50">
@@ -1106,19 +1145,19 @@ export default function HostLobbyForm({
         </div>
       )}
 
-      <label className="block text-sm font-semibold text-ink">
-        {overlaySessionMode ? "Headline (optional)" : "Title"}
-        <input
-          name="title"
-          required={!overlaySessionMode}
-          defaultValue={defaultValues?.title ?? ""}
-          className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
-        />
-      </label>
+        <label className="block text-sm font-semibold text-slate-100">
+          {overlaySessionMode ? "Headline (optional)" : "Title"}
+          <input
+            name="title"
+            required={!overlaySessionMode}
+            defaultValue={defaultValues?.title ?? ""}
+            className="mt-2 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-slate-500/40 focus:ring-2 focus:ring-slate-500/30"
+          />
+        </label>
 
-      {!overlaySessionMode && (
-        <div className="grid gap-4 md:grid-cols-2">
-          <label className="block text-sm font-semibold text-ink">
+        {!overlaySessionMode && (
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="block text-sm font-semibold text-slate-100">
             Mode
             <input
               name="mode"
@@ -1126,10 +1165,10 @@ export default function HostLobbyForm({
               value={modeValue}
               onChange={(event) => setModeValue(event.target.value)}
               readOnly={liveBindingEnabled}
-              className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
+              className="mt-2 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-slate-500/40 focus:ring-2 focus:ring-slate-500/30"
             />
           </label>
-          <label className="block text-sm font-semibold text-ink">
+            <label className="block text-sm font-semibold text-slate-100">
             Map
             <input
               name="map"
@@ -1137,20 +1176,20 @@ export default function HostLobbyForm({
               value={mapValue}
               onChange={(event) => setMapValue(event.target.value)}
               readOnly={liveBindingEnabled}
-              className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
+              className="mt-2 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-slate-500/40 focus:ring-2 focus:ring-slate-500/30"
             />
           </label>
-        </div>
+          </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-3">
-        {!overlaySessionMode && (
-          <label className="block text-sm font-semibold text-ink">
+        <div className="grid gap-4 md:grid-cols-3">
+          {!overlaySessionMode && (
+            <label className="block text-sm font-semibold text-slate-100">
             Game
             <select
               name="game"
               defaultValue={defaultValues?.game ?? Games[0]}
-              className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
+              className="mt-2 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 focus:border-slate-500/40 focus:ring-2 focus:ring-slate-500/30"
             >
               {Games.map((game) => (
                 <option key={game} value={game}>
@@ -1160,12 +1199,12 @@ export default function HostLobbyForm({
             </select>
           </label>
         )}
-        <label className="block text-sm font-semibold text-ink">
+          <label className="block text-sm font-semibold text-slate-100">
           {overlaySessionMode ? "Region (optional)" : "Region"}
           <select
             name="region"
             defaultValue={defaultValues?.region ?? Regions[0]}
-            className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
+            className="mt-2 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 focus:border-slate-500/40 focus:ring-2 focus:ring-slate-500/30"
           >
             {Regions.map((region) => (
               <option key={region} value={region}>
@@ -1174,16 +1213,16 @@ export default function HostLobbyForm({
             ))}
           </select>
         </label>
-      </div>
+        </div>
 
-      {!overlaySessionMode && (
-        <div className="grid gap-4 md:grid-cols-2">
-          <label className="block text-sm font-semibold text-ink">
+        {!overlaySessionMode && (
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="block text-sm font-semibold text-slate-100">
             Voice
             <select
               name="voice"
               defaultValue={defaultValues?.voice ?? Voices[0]}
-              className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
+              className="mt-2 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 focus:border-slate-500/40 focus:ring-2 focus:ring-slate-500/30"
             >
               {Voices.map((voice) => (
                 <option key={voice} value={voice}>
@@ -1192,12 +1231,12 @@ export default function HostLobbyForm({
               ))}
             </select>
           </label>
-          <label className="block text-sm font-semibold text-ink">
+            <label className="block text-sm font-semibold text-slate-100">
             Vibe
             <select
               name="vibe"
               defaultValue={defaultValues?.vibe ?? Vibes[0]}
-              className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
+              className="mt-2 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 focus:border-slate-500/40 focus:ring-2 focus:ring-slate-500/30"
             >
               {Vibes.map((vibe) => (
                 <option key={vibe} value={vibe}>
@@ -1206,22 +1245,22 @@ export default function HostLobbyForm({
               ))}
             </select>
           </label>
-        </div>
+          </div>
       )}
 
-      <label className="block text-sm font-semibold text-ink">
+        <label className="block text-sm font-semibold text-slate-100">
         Tags
         <TagsInput name="tags" defaultTags={defaultTags} />
       </label>
 
-      <label className="block text-sm font-semibold text-ink">
+        <label className="block text-sm font-semibold text-slate-100">
         {overlaySessionMode ? "Description (optional)" : "Rules note"}
         <textarea
           name="rulesNote"
           required={!overlaySessionMode}
           rows={3}
           defaultValue={defaultValues?.rulesNote ?? ""}
-          className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
+          className="mt-2 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-slate-500/40 focus:ring-2 focus:ring-slate-500/30"
         />
       </label>
 
@@ -1275,9 +1314,9 @@ export default function HostLobbyForm({
         </div>
       )}
 
-      {!overlaySessionMode && (
-        <div className="grid gap-4 md:grid-cols-2">
-          <label className="block text-sm font-semibold text-ink">
+        {!overlaySessionMode && (
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="block text-sm font-semibold text-slate-100">
             Max players
             <input
               name="maxPlayers"
@@ -1287,32 +1326,43 @@ export default function HostLobbyForm({
               value={slotsValue}
               onChange={(event) => setSlotsValue(event.target.value)}
               required
-              className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
+              className="mt-2 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-slate-500/40 focus:ring-2 focus:ring-slate-500/30"
             />
           </label>
-        </div>
+          </div>
       )}
 
-      <label className="flex items-center gap-3 text-sm font-semibold text-ink">
-        <input
-          name="friendsOnly"
-          type="checkbox"
-          defaultChecked={defaultValues?.friendsOnly ?? false}
-          className="h-4 w-4 rounded border-ink/20"
-        />
-        Friends only
-      </label>
-
-      <label className="flex items-center gap-3 text-sm font-semibold text-ink">
-        <input
-          name="isModded"
-          type="checkbox"
-          checked={isModded}
-          onChange={(event) => setIsModded(event.target.checked)}
-          className="h-4 w-4 rounded border-ink/20"
-        />
-        Mods required
-      </label>
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <label className="flex items-start gap-3 rounded-lg border border-slate-800 bg-slate-950/30 p-3">
+            <input
+              name="friendsOnly"
+              type="checkbox"
+              defaultChecked={defaultValues?.friendsOnly ?? false}
+              className="mt-0.5 h-4 w-4 rounded border-slate-600"
+            />
+            <div>
+              <p className="text-sm font-semibold text-slate-100">Friends only</p>
+              <p className="text-xs text-slate-400">
+                Only friends can request to join.
+              </p>
+            </div>
+          </label>
+          <label className="flex items-start gap-3 rounded-lg border border-slate-800 bg-slate-950/30 p-3">
+            <input
+              name="isModded"
+              type="checkbox"
+              checked={isModded}
+              onChange={(event) => setIsModded(event.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-slate-600"
+            />
+            <div>
+              <p className="text-sm font-semibold text-slate-100">Mods required</p>
+              <p className="text-xs text-slate-400">
+                Show mod requirements to players.
+              </p>
+            </div>
+          </label>
+        </div>
 
       {isModded && (
         <>
@@ -1522,6 +1572,7 @@ export default function HostLobbyForm({
       {submitError && (
         <p className="text-xs font-semibold text-clay">{submitError}</p>
       )}
+      </div>
       </form>
     </>
   );

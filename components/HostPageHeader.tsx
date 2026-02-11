@@ -13,32 +13,40 @@ export default function HostPageHeader() {
 
   if (isOverlayEnv) {
     return (
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold text-ink">My Session</h1>
-          <p className="mt-2 text-sm text-ink/70">
-            Go live to publish your current session. Details update
-            automatically.
-          </p>
+      <div className="border-b border-slate-800/80 pb-4 mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-semibold text-ink tracking-tight">
+              My Session
+            </h1>
+            <p className="mt-2 text-sm text-ink/70">
+              Go live to publish your current session. Details update
+              automatically.
+            </p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4">
-      <div>
-        <h1 className="text-3xl font-semibold text-ink">Host dashboard</h1>
-        <p className="mt-2 text-sm text-ink/70">
-          Publish opt-in listings and manage invite requests.
-        </p>
+    <div className="border-b border-slate-800/80 pb-4 mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold text-ink tracking-tight">
+            Host dashboard
+          </h1>
+          <p className="mt-2 text-sm text-ink/70">
+            Publish opt-in listings and manage invite requests.
+          </p>
+        </div>
+        <Link
+          href="/host/new"
+          className="rounded-sm bg-ink px-6 py-2 text-sm font-semibold text-sand hover:bg-ink/90"
+        >
+          Create lobby
+        </Link>
       </div>
-      <Link
-        href="/host/new"
-        className="rounded-sm bg-ink px-6 py-2 text-sm font-semibold text-sand hover:bg-ink/90"
-      >
-        Create lobby
-      </Link>
     </div>
   );
 }

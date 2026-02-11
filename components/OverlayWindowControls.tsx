@@ -32,12 +32,6 @@ type LobbyState =
   | { status: "member"; lobbyId: string }
   | { status: "host"; lobbyId: string };
 
-function getBridge(): OverlayBridge | null {
-  if (typeof window === "undefined") return null;
-  const candidate = (window as { hmccOverlay?: OverlayBridge }).hmccOverlay;
-  return candidate ?? null;
-}
-
 export default function OverlayWindowControls() {
   const [bridge, setBridge] = useState<OverlayBridge | null>(null);
   const [showDialog, setShowDialog] = useState(false);
@@ -53,10 +47,9 @@ export default function OverlayWindowControls() {
   );
 
   useEffect(() => {
-    const next = getBridge();
-    if (next) {
-      setBridge(next);
-    }
+    if (typeof window === "undefined") return;
+    const candidate = (window as { hmccOverlay?: OverlayBridge }).hmccOverlay;
+    if (candidate) setBridge(candidate);
   }, []);
 
   const isOverlay = Boolean(bridge);
@@ -92,7 +85,7 @@ export default function OverlayWindowControls() {
 
   const showToast = (message: string, tone: "info" | "error" = "info") => {
     setToast({ message, tone });
-    window.setTimeout(() => setToast(null), 2500);
+    setTimeout(() => setToast(null), 2500);
   };
 
   const handleOpenDialog = () => {

@@ -11,13 +11,10 @@ type HeaderShellProps = {
 };
 
 export default function HeaderShell({ user, isAdmin }: HeaderShellProps) {
-  const [isOverlayEnv, setIsOverlayEnv] = useState(() => {
-    if (typeof window === "undefined") return false;
-    const bridge = (window as unknown as { hmccOverlay?: unknown }).hmccOverlay;
-    return Boolean(bridge);
-  });
+  const [isOverlayEnv, setIsOverlayEnv] = useState(false);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
     const bridge = (window as unknown as { hmccOverlay?: unknown }).hmccOverlay;
     setIsOverlayEnv(Boolean(bridge));
   }, []);

@@ -209,7 +209,7 @@ export default function OverlayWindowControls() {
           type="button"
           onClick={handleCheckUpdates}
           disabled={checkingUpdates || updateBusy}
-          className="flex h-8 items-center justify-center gap-2 rounded-sm border border-white/10 bg-ink/60 px-3 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/70 transition hover:border-white/30 hover:text-white disabled:opacity-60"
+          className="flex h-8 items-center justify-center gap-2 rounded-sm border border-white/30 bg-ink/80 px-3 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/85 transition hover:border-white/60 hover:bg-white/10 hover:text-white disabled:opacity-60"
           aria-label="Check for updates"
         >
           {checkingUpdates ? "Checking…" : "Updates"}
@@ -217,7 +217,7 @@ export default function OverlayWindowControls() {
         <button
           type="button"
           onClick={() => bridge?.hideOverlayWindow?.()}
-          className="flex h-8 w-8 items-center justify-center rounded-sm border border-white/20 bg-ink/70 text-white/70 transition hover:border-white/40 hover:text-white"
+          className="flex h-8 w-8 items-center justify-center rounded-sm border border-white/30 bg-ink/80 text-white/85 transition hover:border-white/60 hover:bg-white/10 hover:text-white"
           aria-label="Minimize overlay"
         >
           <span className="block h-[2px] w-3 bg-current" />
@@ -225,7 +225,7 @@ export default function OverlayWindowControls() {
         <button
           type="button"
           onClick={handleOpenDialog}
-          className="flex h-8 w-8 items-center justify-center rounded-sm border border-red-400/50 bg-red-500/20 text-red-200 transition hover:border-red-300 hover:text-red-100"
+          className="flex h-8 w-8 items-center justify-center rounded-sm border border-red-300/70 bg-red-500/30 text-red-100 transition hover:border-red-200 hover:bg-red-400/40 hover:text-red-50"
           aria-label="Close overlay"
         >
           <span className="text-sm font-semibold">×</span>

@@ -72,40 +72,44 @@ body.hmcc-overlay::before {
   opacity: 0.2;
 }
 
-.overlay-env {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(80, 120, 180, 0.6) transparent;
+@supports selector(::-webkit-scrollbar) {
+  .overlay-env *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .overlay-env *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .overlay-env *::-webkit-scrollbar-thumb {
+    background: linear-gradient(
+      to bottom,
+      rgba(80, 120, 180, 0.6),
+      rgba(50, 80, 140, 0.6)
+    );
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .overlay-env *::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(
+      to bottom,
+      rgba(100, 150, 220, 0.8),
+      rgba(70, 110, 180, 0.8)
+    );
+  }
+
+  .overlay-env *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
 }
 
-.overlay-env ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-.overlay-env ::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.overlay-env ::-webkit-scrollbar-thumb {
-  background: linear-gradient(
-    to bottom,
-    rgba(80, 120, 180, 0.6),
-    rgba(50, 80, 140, 0.6)
-  );
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.overlay-env ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(
-    to bottom,
-    rgba(100, 150, 220, 0.8),
-    rgba(70, 110, 180, 0.8)
-  );
-}
-
-.overlay-env ::-webkit-scrollbar-corner {
-  background: transparent;
+@supports not selector(::-webkit-scrollbar) {
+  .overlay-env {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(80, 120, 180, 0.6) transparent;
+  }
 }
 
 .hmcc-overlay-glass {

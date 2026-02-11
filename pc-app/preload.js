@@ -35,6 +35,18 @@ contextBridge.exposeInMainWorld("hmccOverlay", {
     const version = await ipcRenderer.invoke("hmcc:getAppVersion");
     return typeof version === "string" ? version : "";
   },
+  hideOverlayWindow: async () => {
+    const result = await ipcRenderer.invoke("hmcc:hideOverlayWindow");
+    return Boolean(result?.ok);
+  },
+  showOverlayWindow: async () => {
+    const result = await ipcRenderer.invoke("hmcc:showOverlayWindow");
+    return Boolean(result?.ok);
+  },
+  requestQuit: async () => {
+    const result = await ipcRenderer.invoke("hmcc:requestQuit");
+    return Boolean(result?.ok);
+  },
   setDebugPanelPinned: (enabled) => {
     ipcRenderer.send("hmcc:setDebugPanelPinned", Boolean(enabled));
   },

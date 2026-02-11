@@ -40,6 +40,8 @@ let latestTelemetryState = null;
 let telemetrySeq = 0;
 let lastTelemetryEmitAt = 0;
 let telemetryEmitTimer = null;
+let miniToggleWindow = null;
+let overlayManuallyHidden = false;
 
 const OVERLAY_URL = String(
   process.env.HMCC_OVERLAY_URL || "https://halomoddedcustoms.com"
@@ -184,6 +186,68 @@ function animateOpacity(targetOpacity, durationMs, onComplete) {
   }, 16);
 }
 
+function getMiniToggleBounds() {
+  const display = screen.getPrimaryDisplay();
+  const work = display.workArea;
+  const size = 44;
+  const inset = 16;
+  return {
+    x: work.x + work.width - size - inset,
+    y: work.y + work.height - size - inset,
+    width: size,
+    height: size,
+  };
+}
+
+function createMiniToggleWindow() {
+  if (miniToggleWindow && !miniToggleWindow.isDestroyed()) {
+    return miniToggleWindow;
+  }
+  const bounds = getMiniToggleBounds();
+  miniToggleWindow = new BrowserWindow({
+    ...bounds,
+    show: false,
+    transparent: true,
+    frame: false,
+    resizable: false,
+    movable: false,
+    fullscreen: false,
+    fullscreenable: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    hasShadow: false,
+    backgroundColor: "#00000000",
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  miniToggleWindow.setAlwaysOnTop(true, "screen-saver");
+  miniToggleWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+
+  miniToggleWindow.on("closed", () => {
+    miniToggleWindow = null;
+  });
+
+  miniToggleWindow.loadFile(path.join(__dirname, "renderer", "mini-toggle.html")).catch(() => {});
+  return miniToggleWindow;
+}
+
+function showMiniToggleWindow() {
+  const win = createMiniToggleWindow();
+  if (!win || win.isDestroyed()) return;
+  if (!win.isVisible()) {
+    win.showInactive();
+  }
+}
+
+function hideMiniToggleWindow() {
+  if (!miniToggleWindow || miniToggleWindow.isDestroyed()) return;
+  miniToggleWindow.hide();
+}
+
 function showOverlay() {
   if (!overlayWindow || overlayWindow.isDestroyed()) return;
   if (!overlayWindow.isVisible()) {
@@ -217,6 +281,15 @@ function hideOverlay() {
 
 function recomputeOverlayVisibility(reason) {
   if (!overlayWindow || overlayWindow.isDestroyed() || !overlayReady) return;
+  if (overlayManuallyHidden) {
+    if (overlayVisible) {
+      debugLog(`manual hide overlay (${reason})`);
+      hideOverlay();
+    }
+    showMiniToggleWindow();
+    return;
+  }
+  hideMiniToggleWindow();
   const shouldShow = (overlayEnabled || debugPanelPinned) && (mccFocused || overlayFocused);
 
   if (shouldShow && !overlayVisible) {
@@ -315,6 +388,13 @@ function toggleOverlayEnabled() {
   debugLog(`overlay enabled: ${overlayEnabled ? "on" : "off"}`);
   recomputeOverlayVisibility("toggle");
   updateOverlayContentMode();
+}
+
+function setOverlayManualHidden(nextValue, reason) {
+  if (overlayManuallyHidden === nextValue) return;
+  overlayManuallyHidden = nextValue;
+  debugLog(`overlay manual hidden: ${overlayManuallyHidden ? "yes" : "no"}`);
+  recomputeOverlayVisibility(reason || "manual");
 }
 
 async function loadActiveWinGetter() {
@@ -794,6 +874,7 @@ function createOverlayWindow() {
     overlayVisible = false;
     setOverlayFocused(false, "window-closed");
     stopTelemetryEmitter();
+    hideMiniToggleWindow();
   });
 
   overlayWindow.webContents.on("did-finish-load", () => {
@@ -1044,6 +1125,25 @@ function setupIpc() {
     latestTelemetryState || buildTelemetryState()
   );
   ipcMain.handle("hmcc:getAppVersion", () => app.getVersion());
+  ipcMain.handle("hmcc:hideOverlayWindow", () => {
+    setOverlayManualHidden(true, "ipc-hide");
+    return { ok: true };
+  });
+  ipcMain.handle("hmcc:showOverlayWindow", () => {
+    setOverlayManualHidden(false, "ipc-show");
+    return { ok: true };
+  });
+  ipcMain.handle("hmcc:requestQuit", () => {
+    app.quit();
+    setTimeout(() => {
+      try {
+        app.exit(0);
+      } catch {
+        // ignore
+      }
+    }, 1500);
+    return { ok: true };
+  });
   ipcMain.on("hmcc:setDebugPanelPinned", (_event, enabled) => {
     debugPanelPinned = Boolean(enabled);
     debugLog(`debug panel pinned: ${debugPanelPinned ? "on" : "off"}`);

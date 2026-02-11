@@ -14,6 +14,7 @@ import OverlayAutoRefresher from "@/components/OverlayAutoRefresher";
 import OverlayVersionLabel from "@/components/OverlayVersionLabel";
 import OverlayDiagnostics from "@/components/OverlayDiagnostics";
 import { OverlayTelemetryProvider } from "@/components/OverlayTelemetryProvider";
+import OverlayWindowControls from "@/components/OverlayWindowControls";
 
 export const metadata: Metadata = {
   title: "Customs on the Ring",
@@ -41,6 +42,7 @@ export default async function RootLayout({
           <OverlayAutoRefresher />
           <OverlayVersionLabel />
           <OverlayDiagnostics />
+          <OverlayWindowControls />
           <AuthProvider>
             <Suspense fallback={null}>
               <GamertagGate user={user} />

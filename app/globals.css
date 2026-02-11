@@ -66,6 +66,9 @@ body::before {
 
 body.hmcc-overlay {
   background: rgb(var(--sand));
+  --overlay-scroll-track: rgb(var(--sand));
+  --overlay-scroll-thumb: rgb(var(--clay) / 0.6);
+  --overlay-scroll-thumb-hover: rgb(var(--clay) / 0.8);
 }
 
 body.hmcc-overlay::before {
@@ -73,42 +76,39 @@ body.hmcc-overlay::before {
 }
 
 @supports selector(::-webkit-scrollbar) {
+  .overlay-root::-webkit-scrollbar,
   .overlay-root *::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
 
+  .overlay-root::-webkit-scrollbar-track,
   .overlay-root *::-webkit-scrollbar-track {
-    background: transparent;
+    background: var(--overlay-scroll-track);
   }
 
+  .overlay-root::-webkit-scrollbar-thumb,
   .overlay-root *::-webkit-scrollbar-thumb {
-    background: linear-gradient(
-      to bottom,
-      rgb(var(--clay) / 0.6),
-      rgb(var(--moss) / 0.6)
-    );
+    background: var(--overlay-scroll-thumb);
     border-radius: 6px;
     border: 1px solid rgba(255, 255, 255, 0.05);
   }
 
+  .overlay-root::-webkit-scrollbar-thumb:hover,
   .overlay-root *::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(
-      to bottom,
-      rgb(var(--clay) / 0.8),
-      rgb(var(--moss) / 0.8)
-    );
+    background: var(--overlay-scroll-thumb-hover);
   }
 
+  .overlay-root::-webkit-scrollbar-corner,
   .overlay-root *::-webkit-scrollbar-corner {
-    background: transparent;
+    background: var(--overlay-scroll-track);
   }
 }
 
 @supports not selector(::-webkit-scrollbar) {
   .overlay-root {
     scrollbar-width: thin;
-    scrollbar-color: rgb(var(--clay) / 0.6) transparent;
+    scrollbar-color: var(--overlay-scroll-thumb) var(--overlay-scroll-track);
   }
 }
 

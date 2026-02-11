@@ -64,6 +64,8 @@ let overlayReady = false;
 let mccFocused = false;
 let overlayFocused = false;
 let fadeTimer = null;
+let overlayRefocusTimer = null;
+let suppressOverlayRefocus = false;
 let focusPollTimer = null;
 let focusPollInFlight = false;
 let activeWinGetter = null;
@@ -278,30 +280,61 @@ function hideMiniToggleWindow() {
   miniToggleWindow.hide();
 }
 
-function showOverlay() {
-  if (!overlayWindow || overlayWindow.isDestroyed()) return;
-  if (!overlayWindow.isVisible()) {
-    if (typeof overlayWindow.showInactive === "function") {
-      overlayWindow.showInactive();
-    } else {
-      overlayWindow.show();
+function shouldRefocusOverlay() {
+  if (!overlayWindow || overlayWindow.isDestroyed()) return false;
+  if (!overlayVisible || overlayManuallyHidden) return false;
+  if (overlaySettings?.clickThrough) return false;
+  if (suppressOverlayRefocus) return false;
+  return true;
+}
+
+function scheduleOverlayRefocus(reason) {
+  if (!shouldRefocusOverlay()) return;
+  if (overlayRefocusTimer) return;
+  overlayRefocusTimer = setTimeout(() => {
+    overlayRefocusTimer = null;
+    if (!shouldRefocusOverlay()) return;
+    try {
+      overlayWindow.focus();
+    } catch (error) {
+      if (DEBUG_OVERLAY) {
+        debugLog(`overlay refocus failed (${reason}): ${error?.message || error}`);
+      }
+    }
+  }, 80);
+}
+
+async function withOverlayFocusRestore(action, reason) {
+  const shouldRestore = overlayVisible && !overlayManuallyHidden;
+  suppressOverlayRefocus = true;
+  try {
+    return await action();
+  } finally {
+    suppressOverlayRefocus = false;
+    if (shouldRestore) {
+      showOverlay(reason || "restore");
     }
   }
+}
+
+function showOverlay() {
+  if (!overlayWindow || overlayWindow.isDestroyed()) return;
+  hideMiniToggleWindow();
+  overlayWindow.setSkipTaskbar(true);
   overlayWindow.setAlwaysOnTop(true, "screen-saver");
+  overlayWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  overlayWindow.show();
   applyOverlayEffects();
   overlayWindow.setOpacity(0);
   animateOpacity(OVERLAY_VISIBLE_OPACITY, OVERLAY_FADE_MS);
-  overlayWindow.blur();
-  setTimeout(() => {
-    if (!overlayWindow || overlayWindow.isDestroyed()) return;
-    overlayWindow.blur();
-  }, 0);
+  if (!overlaySettings?.clickThrough) {
+    overlayWindow.focus();
+  }
   overlayVisible = true;
 }
 
 function hideOverlay() {
   if (!overlayWindow || overlayWindow.isDestroyed()) return;
-  overlayWindow.setAlwaysOnTop(false);
   animateOpacity(0, OVERLAY_FADE_MS, () => {
     if (!overlayWindow || overlayWindow.isDestroyed()) return;
     overlayWindow.hide();
@@ -320,12 +353,11 @@ function recomputeOverlayVisibility(reason) {
     return;
   }
   hideMiniToggleWindow();
-  const shouldShow = (overlayEnabled || debugPanelPinned) && (mccFocused || overlayFocused);
+  const shouldShow = overlayEnabled || debugPanelPinned || overlayVisible;
 
   if (shouldShow && !overlayVisible) {
     debugLog(`show overlay (${reason})`);
     showOverlay();
-    return;
   }
 
   if (!shouldShow && overlayVisible) {
@@ -425,6 +457,15 @@ function setOverlayManualHidden(nextValue, reason) {
   overlayManuallyHidden = nextValue;
   debugLog(`overlay manual hidden: ${overlayManuallyHidden ? "yes" : "no"}`);
   recomputeOverlayVisibility(reason || "manual");
+}
+
+function toggleOverlayVisibility(reason) {
+  if (overlayVisible) {
+    setOverlayManualHidden(true, reason || "toggle-hide");
+    return;
+  }
+  setOverlayManualHidden(false, reason || "toggle-show");
+  showOverlay();
 }
 
 async function loadActiveWinGetter() {
@@ -984,6 +1025,22 @@ function createOverlayWindow() {
   });
   overlayWindow.on("blur", () => {
     setOverlayFocused(false, "window-blur");
+    scheduleOverlayRefocus("blur");
+  });
+  overlayWindow.on("show", () => {
+    overlayVisible = true;
+    hideMiniToggleWindow();
+  });
+  overlayWindow.on("hide", () => {
+    overlayVisible = false;
+    showMiniToggleWindow();
+  });
+  overlayWindow.on("minimize", () => {
+    setOverlayManualHidden(true, "minimize");
+  });
+  overlayWindow.on("restore", () => {
+    setOverlayManualHidden(false, "restore");
+    showOverlay();
   });
   overlayWindow.on("closed", () => {
     overlayWindow = null;
@@ -992,6 +1049,46 @@ function createOverlayWindow() {
     setOverlayFocused(false, "window-closed");
     stopTelemetryEmitter();
     hideMiniToggleWindow();
+  });
+
+  overlayWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (!url) {
+      return { action: "deny" };
+    }
+    suppressOverlayRefocus = true;
+    const child = new BrowserWindow({
+      width: 900,
+      height: 700,
+      show: true,
+      parent: overlayWindow,
+      modal: false,
+      autoHideMenuBar: true,
+      backgroundColor: OVERLAY_BG_COLOR,
+      icon: getAppIconPath() || undefined,
+      webPreferences: {
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true,
+      },
+    });
+
+    child.on("closed", () => {
+      suppressOverlayRefocus = false;
+      if (!overlayManuallyHidden) {
+        showOverlay("child-window-closed");
+      }
+    });
+
+    child.loadURL(url).catch(() => {
+      suppressOverlayRefocus = false;
+      try {
+        child.close();
+      } catch {
+        // ignore
+      }
+    });
+
+    return { action: "deny" };
   });
 
   overlayWindow.webContents.on("did-finish-load", () => {
@@ -1216,27 +1313,29 @@ function setupIpc() {
     saveConfig();
     return getTelemetryStatus();
   });
-  ipcMain.handle("telemetry:select", async () => {
-    const result = await dialog.showOpenDialog({
-      title: "Select MCC telemetry JSON",
-      properties: ["openFile"],
-      filters: [{ name: "JSON", extensions: ["json"] }],
-    });
-    if (result.canceled || result.filePaths.length === 0) return null;
-    telemetryPath = resolveTelemetryPath(result.filePaths[0]);
-    saveConfig();
-    if (telemetryPath) {
-      ensureCustomsStateExists({ filePath: telemetryPath, logger: console });
-    }
-    if (useTelemetry) {
-      const telemetryProvider = new FileGameStateProvider({
-        filePath: telemetryPath,
+  ipcMain.handle("telemetry:select", async () =>
+    withOverlayFocusRestore(async () => {
+      const result = await dialog.showOpenDialog({
+        title: "Select MCC telemetry JSON",
+        properties: ["openFile"],
+        filters: [{ name: "JSON", extensions: ["json"] }],
       });
-      setProvider(telemetryProvider, "telemetry");
-      monitor.start();
-    }
-    return telemetryPath;
-  });
+      if (result.canceled || result.filePaths.length === 0) return null;
+      telemetryPath = resolveTelemetryPath(result.filePaths[0]);
+      saveConfig();
+      if (telemetryPath) {
+        ensureCustomsStateExists({ filePath: telemetryPath, logger: console });
+      }
+      if (useTelemetry) {
+        const telemetryProvider = new FileGameStateProvider({
+          filePath: telemetryPath,
+        });
+        setProvider(telemetryProvider, "telemetry");
+        monitor.start();
+      }
+      return telemetryPath;
+    }, "telemetry-dialog")
+  );
 
   ipcMain.handle("hmcc:getState", () =>
     latestTelemetryState || buildTelemetryState()
@@ -1465,7 +1564,7 @@ app.whenReady().then(() => {
   startTelemetryEmitter();
 
   const shortcutRegistered = globalShortcut.register("Insert", () => {
-    toggleOverlayEnabled();
+    toggleOverlayVisibility("insert");
   });
   debugLog("Electron app ready");
   debugLog(`globalShortcut Insert registered: ${shortcutRegistered}`);

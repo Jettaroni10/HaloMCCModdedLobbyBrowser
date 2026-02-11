@@ -99,10 +99,3 @@ body.hmcc-overlay::before {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .lobby-bg-pan {
-    animation: none;
-    transform: translate3d(0, 0, 0) scale(1.2);
-  }
-}
-

@@ -80,6 +80,7 @@ export default function HostLobbyForm({
   const defaultTags = useMemo(() => defaultValues?.tags ?? [], [defaultValues]);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<string | null>(null);
   const [currentLobby, setCurrentLobby] = useState<CurrentLobbyInfo | null>(
     null
   );
@@ -306,6 +307,7 @@ export default function HostLobbyForm({
     if (isSubmitting) return;
     event.preventDefault();
     setSubmitError(null);
+    setSubmitStatus(null);
     setIsSubmitting(true);
 
     const form = event.currentTarget;
@@ -410,23 +412,31 @@ export default function HostLobbyForm({
     if (!pendingCreate || modalBusy) return;
     setModalBusy(true);
     setModalError(null);
+    setSubmitStatus(null);
     try {
       const response = await fetch("/api/lobbies/leave-and-create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(pendingCreate.payload),
       });
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as
-          | { error?: string }
-          | null;
-        throw new Error(payload?.error ?? "Unable to create lobby.");
+      const payload = (await response.json().catch(() => null)) as
+        | {
+            ok?: boolean;
+            lobbyId?: string;
+            reused?: boolean;
+            message?: string;
+            code?: string;
+          }
+        | null;
+
+      if (!response.ok || !payload?.ok || !payload.lobbyId) {
+        throw new Error(payload?.message ?? "Unable to create lobby.");
       }
 
-      const created = (await response.json().catch(() => null)) as
-        | { newLobbyId?: string }
-        | null;
-      const lobbyId = created?.newLobbyId;
+      const lobbyId = payload.lobbyId;
+      if (payload.reused) {
+        setSubmitStatus("Lobby already created — taking you there");
+      }
       let uploadError: string | null = null;
 
       if (enableMapImage && useCustomMapImage && mapFile && lobbyId) {
@@ -466,10 +476,36 @@ export default function HostLobbyForm({
   }
 
   function handleGoToCurrent() {
-    if (!currentLobby) return;
-    setCurrentLobby(null);
-    setPendingCreate(null);
-    router.push(`/lobbies/${currentLobby.id}`);
+    if (!currentLobby || modalBusy) return;
+    setModalBusy(true);
+    setModalError(null);
+    fetch("/api/lobbies/leave-and-create?check=1", { method: "POST" })
+      .then((response) =>
+        response
+          .json()
+          .catch(() => null)
+          .then((payload) => ({ response, payload }))
+      )
+      .then(({ response, payload }) => {
+        const ok = response.ok && payload?.ok && payload?.lobbyId;
+        if (!ok) {
+          setSubmitError("That lobby is no longer available.");
+          setCurrentLobby(null);
+          setPendingCreate(null);
+          return;
+        }
+        setCurrentLobby(null);
+        setPendingCreate(null);
+        router.push(`/lobbies/${payload.lobbyId}`);
+      })
+      .catch(() => {
+        setSubmitError("That lobby is no longer available.");
+        setCurrentLobby(null);
+        setPendingCreate(null);
+      })
+      .finally(() => {
+        setModalBusy(false);
+      });
   }
 
   const rosterSummary = currentLobby
@@ -1024,6 +1060,9 @@ export default function HostLobbyForm({
       >
         {isSubmitting ? "Publishing..." : submitLabel}
       </button>
+      {submitStatus && (
+        <p className="text-xs font-semibold text-moss">{submitStatus}</p>
+      )}
       {submitError && (
         <p className="text-xs font-semibold text-clay">{submitError}</p>
       )}

@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { createLobbyFromPayload, LobbyCreateError } from "@/lib/lobby-create";
-import { findRecentLobbyForUser } from "@/lib/lobby-current";
+import {
+  findCurrentLobbyForUser,
+  findRecentLobbyForUser,
+} from "@/lib/lobby-current";
 import { leaveLobbyForUser } from "@/lib/lobby-membership";
 
 async function readBody(request: Request) {
@@ -16,39 +19,82 @@ async function readBody(request: Request) {
 export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    return NextResponse.json(
+      { ok: false, code: "UNAUTHORIZED", message: "Unauthorized." },
+      { status: 401 }
+    );
   }
   if (user.isBanned) {
-    return NextResponse.json({ error: "Account is banned." }, { status: 403 });
+    return NextResponse.json(
+      { ok: false, code: "BANNED", message: "Account is banned." },
+      { status: 403 }
+    );
   }
   if (!user.gamertag || user.needsGamertag) {
     return NextResponse.json(
-      { error: "Gamertag required before creating a lobby." },
+      {
+        ok: false,
+        code: "GAMERTAG_REQUIRED",
+        message: "Gamertag required before creating a lobby.",
+      },
       { status: 403 }
     );
+  }
+
+  const { searchParams } = new URL(request.url);
+  const checkOnly = searchParams.get("check") === "1";
+  if (checkOnly) {
+    const current = await findCurrentLobbyForUser(user.id);
+    if (!current) {
+      return NextResponse.json(
+        {
+          ok: false,
+          code: "NO_CURRENT_LOBBY",
+          message: "No active lobby found.",
+        },
+        { status: 404 }
+      );
+    }
+    return NextResponse.json({
+      ok: true,
+      lobbyId: current.lobby.id,
+      reused: true,
+    });
   }
 
   const body = (await readBody(request)) as Record<string, unknown>;
   const leaveResult = await leaveLobbyForUser({ userId: user.id });
   if (!leaveResult.ok) {
     return NextResponse.json(
-      { error: leaveResult.error },
+      {
+        ok: false,
+        code: "LEAVE_FAILED",
+        message: leaveResult.error,
+      },
       { status: leaveResult.status }
     );
   }
 
   const recentLobby = await findRecentLobbyForUser(user.id);
   if (recentLobby) {
-    return NextResponse.json({ newLobbyId: recentLobby.id });
+    return NextResponse.json({
+      ok: true,
+      lobbyId: recentLobby.id,
+      reused: true,
+    });
   }
 
   try {
     const lobby = await createLobbyFromPayload({ user, body });
-    return NextResponse.json({ newLobbyId: lobby.id });
+    return NextResponse.json({ ok: true, lobbyId: lobby.id, reused: false });
   } catch (error) {
     if (error instanceof LobbyCreateError) {
       return NextResponse.json(
-        { error: error.message, code: error.code },
+        {
+          ok: false,
+          code: error.code ?? "CREATE_FAILED",
+          message: error.message,
+        },
         { status: error.status }
       );
     }

@@ -142,6 +142,8 @@ export default function HostLobbyForm({
   }>({ status: "none", lobby: null });
   const [sessionBusy, setSessionBusy] = useState(false);
   const [sessionError, setSessionError] = useState<string | null>(null);
+  const [lastSyncAt, setLastSyncAt] = useState<number | null>(null);
+  const [syncNow, setSyncNow] = useState(Date.now());
   const lastPublishAtRef = useRef<number | null>(null);
   const lastPublishedSeqRef = useRef<number | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
@@ -334,6 +336,41 @@ export default function HostLobbyForm({
   const isLive = overlaySessionMode && sessionState.status === "host";
   const isMember = overlaySessionMode && sessionState.status === "member";
 
+  const syncStatusText = useMemo(() => {
+    if (!overlaySessionMode) return "";
+    if (!isLive) return "Offline";
+    if (!isConnected || !localTelemetry || overlayInMenus) {
+      return "Live - Waiting for session...";
+    }
+    if (!lastSyncAt) return "Live - Syncing...";
+    const ageMs = Math.max(0, syncNow - lastSyncAt);
+    const seconds = Math.floor(ageMs / 1000);
+    return `Live - Last sync ${seconds}s ago`;
+  }, [
+    overlaySessionMode,
+    isLive,
+    isConnected,
+    localTelemetry,
+    overlayInMenus,
+    lastSyncAt,
+    syncNow,
+  ]);
+
+  useEffect(() => {
+    if (!overlaySessionMode || !isLive) {
+      setLastSyncAt(null);
+      return;
+    }
+  }, [overlaySessionMode, isLive]);
+
+  useEffect(() => {
+    if (!overlaySessionMode || !isLive) return;
+    const interval = setInterval(() => {
+      setSyncNow(Date.now());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [overlaySessionMode, isLive]);
+
   useEffect(() => {
     if (!overlaySessionMode || !isLive || !sessionState.lobby?.id) return;
     if (!isConnected || !localTelemetry) return;
@@ -355,11 +392,27 @@ export default function HostLobbyForm({
       seq,
       emittedAt: localTelemetry.emittedAt ?? null,
     };
-    fetch(`/api/lobbies/${sessionState.lobby.id}/telemetry`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    }).catch(() => {});
+    let active = true;
+    (async () => {
+      try {
+        const response = await fetch(
+          `/api/lobbies/${sessionState.lobby.id}/telemetry`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          }
+        );
+        if (response.ok && active) {
+          setLastSyncAt(Date.now());
+        }
+      } catch {
+        // ignore publish errors for UI
+      }
+    })();
+    return () => {
+      active = false;
+    };
   }, [
     overlaySessionMode,
     isLive,
@@ -961,6 +1014,7 @@ export default function HostLobbyForm({
                 You&apos;re already in a lobby. Going live will leave it.
               </p>
             )}
+            <span className="text-xs text-ink/50">{syncStatusText}</span>
           </div>
         </section>
       )}

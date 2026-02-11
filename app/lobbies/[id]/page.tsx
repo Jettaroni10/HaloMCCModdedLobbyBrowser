@@ -10,7 +10,7 @@ import LobbyRosterLive from "@/components/LobbyRosterLive";
 import ReportForm from "@/components/ReportForm";
 import HostLobbyNotifications from "@/components/HostLobbyNotifications";
 import LobbyChat from "@/components/LobbyChat";
-import LobbyBackground from "@/components/LobbyBackground";
+import LobbyBackgroundPan from "@/components/LobbyBackgroundPan";
 import Nametag from "@/components/user/Nametag";
 import LobbyViewTracker from "@/components/analytics/LobbyViewTracker";
 import OverlayLobbyTelemetryLine from "@/components/OverlayLobbyTelemetryLine";
@@ -240,7 +240,12 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
   });
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
+    <LobbyBackgroundPan
+      lobbyId={lobby.id}
+      hasRealImage={Boolean(lobby.mapImagePath)}
+      fallbackMapName={telemetryMapName}
+      selected
+    >
       <SelectedLobbyTelemetryBridge
         lobbyId={lobby.id}
         hostUserId={lobby.hostUserId}
@@ -253,12 +258,6 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
         game={lobby.game}
         isModded={lobby.isModded}
         modCount={requiredModCount}
-      />
-      <LobbyBackground
-        lobbyId={lobby.id}
-        hasRealImage={Boolean(lobby.mapImagePath)}
-        fallbackMapName={telemetryMapName}
-        selected
       />
       <div className="relative z-10">
         <div className="fixed left-4 top-24 z-20 w-[min(92vw,640px)] lg:left-10 lg:top-24">
@@ -382,7 +381,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
           </div>
         )}
       </div>
-    </div>
+    </LobbyBackgroundPan>
   );
 }
 

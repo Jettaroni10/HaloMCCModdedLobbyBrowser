@@ -27,6 +27,12 @@
     height: 0;
     display: none;
   }
+
+  .lobby-bg-pan {
+    animation: lobby-bg-pan 48s ease-in-out infinite;
+    transform: translate3d(-3%, -1.5%, 0) scale(1.2);
+    will-change: transform;
+  }
 }
 
 :root {
@@ -80,6 +86,23 @@ body.hmcc-overlay::before {
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+}
+
+@keyframes lobby-bg-pan {
+  0%,
+  100% {
+    transform: translate3d(-3%, -1.5%, 0) scale(1.2);
+  }
+  50% {
+    transform: translate3d(3%, 1.5%, 0) scale(1.2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lobby-bg-pan {
+    animation: none;
+    transform: translate3d(0, 0, 0) scale(1.2);
   }
 }
 

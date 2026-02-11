@@ -17,6 +17,9 @@ jobs:
   migrate:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
 
     steps:
       - name: Checkout
@@ -35,7 +38,5 @@ jobs:
         run: npx prisma generate
 
       - name: Prisma migrate deploy
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          DIRECT_URL: ${{ secrets.DIRECT_URL }}
         run: npx prisma migrate deploy
+

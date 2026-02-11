@@ -8,7 +8,7 @@ const {
   Menu,
 } = require("electron");
 const path = require("path");
-const { spawn } = require("child_process");
+const { spawn, exec } = require("child_process");
 const fs = require("fs");
 const { LobbyStore } = require("./store");
 const { GameSessionMonitor, SimulatedGameStateProvider } = require("./monitor");
@@ -42,6 +42,10 @@ let lastTelemetryEmitAt = 0;
 let telemetryEmitTimer = null;
 let miniToggleWindow = null;
 let overlayManuallyHidden = false;
+let mccWatchTimer = null;
+let mccWatchInFlight = false;
+let mccMissingCount = 0;
+let mccSeen = false;
 
 const OVERLAY_URL = String(
   process.env.HMCC_OVERLAY_URL || "https://halomoddedcustoms.com"
@@ -51,6 +55,8 @@ const OVERLAY_VISIBLE_OPACITY = 1.0;
 const OVERLAY_TRANSPARENT = false;
 const OVERLAY_BG_COLOR = "#070c12";
 const ACTIVE_WIN_POLL_MS = 140;
+const MCC_WATCH_INTERVAL_MS = 2000;
+const MCC_MISSING_THRESHOLD = 3;
 const DEBUG_OVERLAY = String(process.env.HMCC_OVERLAY_DEBUG || "") === "1";
 let overlayVisible = false;
 let overlayEnabled = true;
@@ -471,6 +477,65 @@ function stopFocusWatcher() {
   if (focusPollTimer) {
     clearInterval(focusPollTimer);
     focusPollTimer = null;
+  }
+}
+
+function isMccProcessRunning() {
+  if (process.platform !== "win32") {
+    return Promise.resolve(true);
+  }
+  return new Promise((resolve) => {
+    exec(
+      'tasklist /FI "IMAGENAME eq MCC-Win64-Shipping.exe"',
+      { windowsHide: true },
+      (error, stdout) => {
+        if (error) {
+          resolve(true);
+          return;
+        }
+        resolve(/MCC-Win64-Shipping\.exe/i.test(stdout || ""));
+      }
+    );
+  });
+}
+
+function startMccWatcher() {
+  if (mccWatchTimer) return;
+  mccWatchTimer = setInterval(async () => {
+    if (mccWatchInFlight) return;
+    mccWatchInFlight = true;
+    try {
+      const running = await isMccProcessRunning();
+      if (running) {
+        if (!mccSeen) {
+          debugLog("MCC detected; watcher armed.");
+        }
+        mccSeen = true;
+        mccMissingCount = 0;
+        return;
+      }
+      if (!mccSeen) {
+        return;
+      }
+      mccMissingCount += 1;
+      if (mccMissingCount >= MCC_MISSING_THRESHOLD) {
+        debugLog("MCC closed; quitting overlay.");
+        app.quit();
+      }
+    } catch (error) {
+      if (DEBUG_OVERLAY) {
+        console.warn("MCC watcher failed:", error?.message || error);
+      }
+    } finally {
+      mccWatchInFlight = false;
+    }
+  }, MCC_WATCH_INTERVAL_MS);
+}
+
+function stopMccWatcher() {
+  if (mccWatchTimer) {
+    clearInterval(mccWatchTimer);
+    mccWatchTimer = null;
   }
 }
 
@@ -1255,6 +1320,7 @@ app.whenReady().then(() => {
   debugLog("overlay window created");
   debugLog(`initial ${debugSnapshot()}`);
   startFocusWatcher();
+  startMccWatcher();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -1267,6 +1333,7 @@ app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     stopReaderProcess();
     stopFocusWatcher();
+    stopMccWatcher();
     stopTelemetryEmitter();
     app.quit();
   }
@@ -1276,5 +1343,6 @@ app.on("before-quit", () => {
   globalShortcut.unregisterAll();
   stopReaderProcess();
   stopFocusWatcher();
+  stopMccWatcher();
   stopTelemetryEmitter();
 });

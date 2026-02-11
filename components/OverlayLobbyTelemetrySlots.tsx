@@ -21,9 +21,7 @@ export default function OverlayLobbyTelemetrySlots({
   const useContextTelemetry =
     selected && lobbyId && telemetryState.selectedLobbyId === lobbyId;
   const displayTelemetry = useContextTelemetry
-    ? telemetryState.telemetrySource === "local"
-      ? telemetryState.localTelemetry
-      : telemetryState.serverTelemetry
+    ? telemetryState.displayTelemetry
     : null;
   const liveCurrent =
     displayTelemetry && typeof displayTelemetry.currentPlayers === "number"

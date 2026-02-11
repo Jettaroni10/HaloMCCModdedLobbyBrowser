@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useOverlayTelemetry } from "@/lib/useOverlayTelemetry";
 import { useOverlayTelemetryContext } from "@/components/OverlayTelemetryProvider";
 
 const DEBUG_KEY = "hmcc_overlay_debug";
@@ -31,11 +30,6 @@ function formatCarry(flag: boolean | null | undefined) {
 }
 
 export default function OverlayDiagnostics() {
-  const { isConnected, localTelemetry, receiveCount, lastReceiveAt } =
-    useOverlayTelemetry() as ReturnType<typeof useOverlayTelemetry> & {
-      receiveCount: number;
-      lastReceiveAt: number | null;
-    };
   const { state: telemetryState } = useOverlayTelemetryContext();
 
   const [enabled, setEnabled] = useState(false);
@@ -60,20 +54,24 @@ export default function OverlayDiagnostics() {
   }, [enabled]);
 
   const ageMs = useMemo(() => {
-    if (!lastReceiveAt) return null;
-    return Math.max(0, now - lastReceiveAt);
-  }, [lastReceiveAt, now]);
+    if (!telemetryState.localLastReceiveAt) return null;
+    return Math.max(0, now - telemetryState.localLastReceiveAt);
+  }, [telemetryState.localLastReceiveAt, now]);
 
   const serverAgeMs = useMemo(() => {
     if (!telemetryState.serverLastUpdateAt) return null;
     return Math.max(0, now - telemetryState.serverLastUpdateAt);
   }, [telemetryState.serverLastUpdateAt, now]);
 
+  const isHost =
+    Boolean(telemetryState.currentUserId) &&
+    telemetryState.currentUserId === telemetryState.selectedLobbyHostId;
+
   const stale = useMemo(() => {
-    if (!isConnected) return true;
+    if (!telemetryState.overlayConnected) return true;
     if (ageMs === null) return true;
     return ageMs > STALE_MS;
-  }, [ageMs, isConnected]);
+  }, [ageMs, telemetryState.overlayConnected]);
 
   if (!enabled) {
     const bridge = (window as unknown as { hmccOverlay?: unknown }).hmccOverlay;
@@ -129,56 +127,85 @@ export default function OverlayDiagnostics() {
 
       <div className="mt-2 space-y-1 text-ink/70">
         <div>Selected lobby: {telemetryState.selectedLobbyId ?? "none"}</div>
-        <div>Telemetry source: {telemetryState.telemetrySource ?? "server"}</div>
-        <div>Connected: {isConnected ? "yes" : "no"}</div>
-        <div>IPC recv: {receiveCount}</div>
+        <div>Current user: {telemetryState.currentUserId ?? "none"}</div>
+        <div>Lobby host: {telemetryState.selectedLobbyHostId ?? "none"}</div>
         <div>
-          Seq: {Number(localTelemetry?.seq || 0)} · Server seq:{" "}
-          {Number(telemetryState.serverTelemetry?.seq || 0)}
+          Telemetry source: {telemetryState.telemetrySource ?? "server"}
+        </div>
+        <div>Connected: {telemetryState.overlayConnected ? "yes" : "no"}</div>
+        <div>
+          Local seq: {Number(telemetryState.localTelemetry?.seq || 0)} · Server
+          seq: {Number(telemetryState.serverTelemetry?.seq || 0)}
         </div>
         <div>
           Local age: {formatAge(ageMs)} · Server age: {formatAge(serverAgeMs)}
         </div>
-        <div>Status: {localTelemetry?.status || "unknown"}</div>
+        <div>Status: {telemetryState.localTelemetry?.status || "unknown"}</div>
         <div>
           Parse OK:{" "}
-          {localTelemetry?.parseOk === null ||
-          localTelemetry?.parseOk === undefined
+          {telemetryState.localTelemetry?.parseOk === null ||
+          telemetryState.localTelemetry?.parseOk === undefined
             ? "n/a"
-            : localTelemetry.parseOk
+            : telemetryState.localTelemetry.parseOk
               ? "yes"
               : "no"}
         </div>
         <div>
           Consecutive parse errors:{" "}
-          {formatNullableNumber(localTelemetry?.consecutiveParseErrors)}
+          {formatNullableNumber(
+            telemetryState.localTelemetry?.consecutiveParseErrors
+          )}
         </div>
         <div>
-          Last good age: {formatNullableNumber(localTelemetry?.lastGoodAgeMs)}ms
+          Last good age:{" "}
+          {formatNullableNumber(telemetryState.localTelemetry?.lastGoodAgeMs)}ms
         </div>
         <div>
-          File mtime: {formatNullableNumber(localTelemetry?.telemetryFileMtimeMs)}ms
+          File mtime:{" "}
+          {formatNullableNumber(
+            telemetryState.localTelemetry?.telemetryFileMtimeMs
+          )}
+          ms
         </div>
-        <div>Last parse error: {trimError(localTelemetry?.lastParseError)}</div>
         <div>
-          Map: {localTelemetry?.map || "Unknown"}
-          {formatCarry(localTelemetry?.mapUpdatedThisTick)}
+          Last parse error: {trimError(telemetryState.localTelemetry?.lastParseError)}
         </div>
         <div>
-          Mode: {localTelemetry?.mode || "Unknown"}
-          {formatCarry(localTelemetry?.modeUpdatedThisTick)}
+          Map: {telemetryState.localTelemetry?.map || "Unknown"}
+          {formatCarry(telemetryState.localTelemetry?.mapUpdatedThisTick)}
+        </div>
+        <div>
+          Mode: {telemetryState.localTelemetry?.mode || "Unknown"}
+          {formatCarry(telemetryState.localTelemetry?.modeUpdatedThisTick)}
         </div>
         <div>
           Players:{" "}
-          {Number.isFinite(Number(localTelemetry?.currentPlayers))
-            ? Number(localTelemetry?.currentPlayers)
+          {Number.isFinite(Number(telemetryState.localTelemetry?.currentPlayers))
+            ? Number(telemetryState.localTelemetry?.currentPlayers)
             : 0}
-          {formatCarry(localTelemetry?.playersUpdatedThisTick)}
+          {formatCarry(telemetryState.localTelemetry?.playersUpdatedThisTick)}
         </div>
-        {localTelemetry?.debug ? (
+        {telemetryState.localTelemetry?.debug ? (
           <div>Reader debug: present</div>
         ) : (
           <div>Reader debug: none</div>
+        )}
+        {isHost && (
+          <div>
+            Last publish:{" "}
+            {telemetryState.lastPublishStatus?.statusCode !== null &&
+            telemetryState.lastPublishStatus?.statusCode !== undefined
+              ? telemetryState.lastPublishStatus.statusCode
+              : telemetryState.lastPublishStatus
+                ? "error"
+                : "n/a"}{" "}
+            ·{" "}
+            {formatAge(
+              telemetryState.lastPublishStatus?.at
+                ? now - telemetryState.lastPublishStatus.at
+                : null
+            )}
+          </div>
         )}
       </div>
     </div>

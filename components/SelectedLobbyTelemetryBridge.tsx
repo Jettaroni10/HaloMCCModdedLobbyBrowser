@@ -5,7 +5,6 @@ import {
   DEFAULT_OVERLAY_TELEMETRY_STATE,
   useOverlayTelemetryContext,
 } from "@/components/OverlayTelemetryProvider";
-import { useOverlayTelemetry } from "@/lib/useOverlayTelemetry";
 import { useLiveBindingPreference } from "@/lib/useLiveBindingPreference";
 import { useLobbyServerTelemetry } from "@/lib/useLobbyServerTelemetry";
 
@@ -72,8 +71,7 @@ export default function SelectedLobbyTelemetryBridge({
   manualTelemetry,
   initialServerTelemetry,
 }: SelectedLobbyTelemetryBridgeProps) {
-  const { setState } = useOverlayTelemetryContext();
-  const { isConnected, localTelemetry, lastReceiveAt } = useOverlayTelemetry();
+  const { state: telemetryState, setState } = useOverlayTelemetryContext();
   const { liveBindingPreference } = useLiveBindingPreference(true);
   const normalizedInitial = useMemo(
     () => normalizeTelemetryInput(initialServerTelemetry ?? null),
@@ -89,39 +87,59 @@ export default function SelectedLobbyTelemetryBridge({
   });
 
   const isHost = Boolean(viewerUserId && viewerUserId === hostUserId);
-  const liveBindingEnabled = isHost && isConnected && liveBindingPreference;
-  const telemetrySource = liveBindingEnabled ? "local" : "server";
-  const resolvedServerTelemetry =
-    !liveBindingEnabled && isHost && normalizedManual
-      ? normalizedManual
-      : serverTelemetry;
+  const liveBindingEnabled =
+    isHost && telemetryState.overlayConnected && liveBindingPreference;
+  const telemetrySource = !isHost
+    ? "server"
+    : liveBindingEnabled
+      ? "local"
+      : "manual";
+  const displayTelemetry = !isHost
+    ? serverTelemetry
+    : liveBindingEnabled
+      ? telemetryState.localTelemetry
+      : normalizedManual;
 
   useEffect(() => {
-    setState({
+    setState((prev) => ({
+      ...prev,
       selectedLobbyId: lobbyId,
+      currentUserId: viewerUserId ?? null,
+      selectedLobbyHostId: hostUserId,
       telemetrySource,
       liveBindingEnabled,
-      localTelemetry,
-      serverTelemetry: resolvedServerTelemetry,
-      localLastReceiveAt: lastReceiveAt,
+      serverTelemetry,
+      manualTelemetry: normalizedManual,
+      displayTelemetry,
       serverLastUpdateAt: lastUpdateAt,
-    });
+      lastPublishStatus: isHost ? prev.lastPublishStatus : null,
+    }));
   }, [
     lobbyId,
+    viewerUserId,
+    hostUserId,
+    isHost,
     telemetrySource,
     liveBindingEnabled,
-    localTelemetry,
-    resolvedServerTelemetry,
-    lastReceiveAt,
+    serverTelemetry,
+    normalizedManual,
+    displayTelemetry,
     lastUpdateAt,
     setState,
   ]);
 
   useEffect(() => {
     return () => {
-      setState((prev) =>
-        prev.selectedLobbyId === lobbyId ? DEFAULT_OVERLAY_TELEMETRY_STATE : prev
-      );
+      setState((prev) => {
+        if (prev.selectedLobbyId !== lobbyId) return prev;
+        return {
+          ...DEFAULT_OVERLAY_TELEMETRY_STATE,
+          overlayConnected: prev.overlayConnected,
+          localTelemetry: prev.localTelemetry,
+          localLastReceiveAt: prev.localLastReceiveAt,
+          lastPublishStatus: prev.lastPublishStatus,
+        };
+      });
     };
   }, [lobbyId, setState]);
 
@@ -134,10 +152,11 @@ export default function SelectedLobbyTelemetryBridge({
   }, [liveBindingEnabled]);
 
   useEffect(() => {
-    if (!isHost || !liveBindingEnabled || !localTelemetry) return;
+    if (!isHost || !liveBindingEnabled || !telemetryState.localTelemetry) return;
     const seq =
-      Number.isFinite(Number(localTelemetry.seq)) && localTelemetry.seq !== undefined
-        ? Number(localTelemetry.seq)
+      Number.isFinite(Number(telemetryState.localTelemetry.seq)) &&
+      telemetryState.localTelemetry.seq !== undefined
+        ? Number(telemetryState.localTelemetry.seq)
         : null;
     if (seq !== null && lastPublishedSeqRef.current === seq) return;
     if (seq !== null) {
@@ -145,23 +164,49 @@ export default function SelectedLobbyTelemetryBridge({
     }
 
     const payload = {
-      mapName: localTelemetry.map ?? null,
-      modeName: localTelemetry.mode ?? null,
+      mapName: telemetryState.localTelemetry.map ?? null,
+      modeName: telemetryState.localTelemetry.mode ?? null,
       playerCount:
-        typeof localTelemetry.currentPlayers === "number"
-          ? localTelemetry.currentPlayers
+        typeof telemetryState.localTelemetry.currentPlayers === "number"
+          ? telemetryState.localTelemetry.currentPlayers
           : null,
-      status: localTelemetry.status ?? null,
+      status: telemetryState.localTelemetry.status ?? null,
       seq,
-      emittedAt: localTelemetry.emittedAt ?? null,
+      emittedAt: telemetryState.localTelemetry.emittedAt ?? null,
     };
 
     fetch(`/api/lobbies/${lobbyId}/telemetry`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
-    }).catch(() => {});
-  }, [isHost, liveBindingEnabled, localTelemetry, lobbyId]);
+    })
+      .then((response) => {
+        setState((prev) => ({
+          ...prev,
+          lastPublishStatus: {
+            statusCode: response.status,
+            ok: response.ok,
+            at: Date.now(),
+          },
+        }));
+      })
+      .catch(() => {
+        setState((prev) => ({
+          ...prev,
+          lastPublishStatus: {
+            statusCode: null,
+            ok: false,
+            at: Date.now(),
+          },
+        }));
+      });
+  }, [
+    isHost,
+    liveBindingEnabled,
+    telemetryState.localTelemetry,
+    lobbyId,
+    setState,
+  ]);
 
   return null;
 }

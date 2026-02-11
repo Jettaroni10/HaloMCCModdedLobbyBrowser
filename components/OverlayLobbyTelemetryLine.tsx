@@ -25,9 +25,7 @@ export default function OverlayLobbyTelemetryLine({
   const useContextTelemetry =
     selected && lobbyId && telemetryState.selectedLobbyId === lobbyId;
   const displayTelemetry = useContextTelemetry
-    ? telemetryState.telemetrySource === "local"
-      ? telemetryState.localTelemetry
-      : telemetryState.serverTelemetry
+    ? telemetryState.displayTelemetry
     : null;
   const hasLiveTelemetry = Boolean(useContextTelemetry && displayTelemetry);
   const liveMode = displayTelemetry?.mode ?? fallbackMode;

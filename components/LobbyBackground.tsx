@@ -25,9 +25,7 @@ export default function LobbyBackground({
   const useContextTelemetry =
     selected && telemetryState.selectedLobbyId === lobbyId;
   const displayTelemetry = useContextTelemetry
-    ? telemetryState.telemetrySource === "local"
-      ? telemetryState.localTelemetry
-      : telemetryState.serverTelemetry
+    ? telemetryState.displayTelemetry
     : null;
   const telemetryMapName = displayTelemetry?.map ?? null;
   const resolvedFallback = useMemo(

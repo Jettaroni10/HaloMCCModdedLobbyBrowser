@@ -2,26 +2,38 @@
 
 import { useEffect, useMemo, useState } from "react";
 import FadeInImage from "./FadeInImage";
+import { useOverlayTelemetryContext } from "@/components/OverlayTelemetryProvider";
 import { getLobbyBgImage } from "@/lib/maps/reachMapImages";
 
 type LobbyCardBackgroundProps = {
   imageUrl?: string | null;
   fallbackMapName?: string | null;
+  lobbyId?: string;
+  selected?: boolean;
 };
 
 export default function LobbyCardBackground({
   imageUrl,
   fallbackMapName,
+  lobbyId,
+  selected = false,
 }: LobbyCardBackgroundProps) {
   const [failed, setFailed] = useState(false);
+  const { state: telemetryState } = useOverlayTelemetryContext();
+  const useContextTelemetry =
+    selected && lobbyId && telemetryState.selectedLobbyId === lobbyId;
+  const displayTelemetry = useContextTelemetry
+    ? telemetryState.displayTelemetry
+    : null;
+  const resolvedFallbackMap = displayTelemetry?.map ?? fallbackMapName ?? null;
   const fallbackUrl = useMemo(
     () =>
       getLobbyBgImage({
         customImageUrl: imageUrl ?? null,
-        telemetryMapName: fallbackMapName ?? null,
+        telemetryMapName: resolvedFallbackMap,
         fallbackMapName,
       }),
-    [imageUrl, fallbackMapName]
+    [imageUrl, resolvedFallbackMap, fallbackMapName]
   );
 
   useEffect(() => {

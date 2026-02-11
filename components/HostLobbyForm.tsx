@@ -8,7 +8,7 @@ import { downscaleImageFile } from "@/lib/image-client";
 import MapPreview from "./MapPreview";
 import ImageCropUpload from "@/components/ImageCropUpload";
 import { hashId, trackEvent, trackFeatureUsed } from "@/lib/analytics";
-import { useOverlayTelemetry } from "@/lib/useOverlayTelemetry";
+import { useOverlayTelemetryContext } from "@/components/OverlayTelemetryProvider";
 import { useLiveBindingPreference } from "@/lib/useLiveBindingPreference";
 
 type ModPackSummary = {
@@ -66,7 +66,9 @@ export default function HostLobbyForm({
   enableTelemetryBinding = false,
 }: HostLobbyFormProps) {
   const router = useRouter();
-  const { isConnected, localTelemetry } = useOverlayTelemetry();
+  const { state: telemetryState } = useOverlayTelemetryContext();
+  const isConnected = telemetryState.overlayConnected;
+  const localTelemetry = telemetryState.localTelemetry;
   const defaultTags = useMemo(() => defaultValues?.tags ?? [], [defaultValues]);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [mapPreviewUrl, setMapPreviewUrl] = useState<string | null>(null);

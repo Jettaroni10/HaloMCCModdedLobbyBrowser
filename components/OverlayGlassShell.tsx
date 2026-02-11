@@ -12,10 +12,12 @@ export default function OverlayGlassShell() {
     if (enabled) {
       document.body.classList.add("hmcc-overlay");
       document.body.classList.add("overlay-env");
+      document.body.classList.add("overlay-root");
     }
     return () => {
       document.body.classList.remove("hmcc-overlay");
       document.body.classList.remove("overlay-env");
+      document.body.classList.remove("overlay-root");
     };
   }, []);
 

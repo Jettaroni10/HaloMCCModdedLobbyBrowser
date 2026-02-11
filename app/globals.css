@@ -73,43 +73,47 @@ body.hmcc-overlay::before {
 }
 
 @supports selector(::-webkit-scrollbar) {
-  .overlay-env *::-webkit-scrollbar {
+  .overlay-root *::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
 
-  .overlay-env *::-webkit-scrollbar-track {
+  .overlay-root *::-webkit-scrollbar-track {
     background: transparent;
   }
 
-  .overlay-env *::-webkit-scrollbar-thumb {
+  .overlay-root *::-webkit-scrollbar-thumb {
     background: linear-gradient(
       to bottom,
-      rgba(80, 120, 180, 0.6),
-      rgba(50, 80, 140, 0.6)
+      rgb(var(--clay) / 0.6),
+      rgb(var(--moss) / 0.6)
     );
     border-radius: 6px;
     border: 1px solid rgba(255, 255, 255, 0.05);
   }
 
-  .overlay-env *::-webkit-scrollbar-thumb:hover {
+  .overlay-root *::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(
       to bottom,
-      rgba(100, 150, 220, 0.8),
-      rgba(70, 110, 180, 0.8)
+      rgb(var(--clay) / 0.8),
+      rgb(var(--moss) / 0.8)
     );
   }
 
-  .overlay-env *::-webkit-scrollbar-corner {
+  .overlay-root *::-webkit-scrollbar-corner {
     background: transparent;
   }
 }
 
 @supports not selector(::-webkit-scrollbar) {
-  .overlay-env {
+  .overlay-root {
     scrollbar-width: thin;
-    scrollbar-color: rgba(80, 120, 180, 0.6) transparent;
+    scrollbar-color: rgb(var(--clay) / 0.6) transparent;
   }
+}
+
+.overlay-style-sentinel {
+  outline: 1px solid transparent;
 }
 
 .hmcc-overlay-glass {

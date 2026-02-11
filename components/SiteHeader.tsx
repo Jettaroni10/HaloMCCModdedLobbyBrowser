@@ -13,7 +13,7 @@ type SiteHeaderProps = {
 
 export default function SiteHeader({ user, isAdmin }: SiteHeaderProps) {
   return (
-    <header className="border-b border-ink/10 bg-sand/80 backdrop-blur">
+    <header className="overlay-style-sentinel border-b border-ink/10 bg-sand/80 backdrop-blur">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-mist/80 border border-ink/15">

@@ -33,8 +33,16 @@ export type OverlayTelemetrySnapshot = {
   displayTelemetry: DisplayTelemetryState | null;
   localLastReceiveAt: number | null;
   serverLastUpdateAt: number | null;
-  lastPublishStatus: number | null;
+  serverChannelName: string | null;
+  serverEventName: string | null;
+  serverLastEventAt: number | null;
+  serverLastEventSeq: number | null;
+  serverLastError: string | null;
+  lastPublishStatusCode: number | null;
   lastPublishAt: number | null;
+  lastPublishError: string | null;
+  lastPublishedSeq: number | null;
+  publishTargetLobbyId: string | null;
 };
 
 export const DEFAULT_OVERLAY_TELEMETRY_STATE: OverlayTelemetrySnapshot = {
@@ -50,8 +58,16 @@ export const DEFAULT_OVERLAY_TELEMETRY_STATE: OverlayTelemetrySnapshot = {
   displayTelemetry: null,
   localLastReceiveAt: null,
   serverLastUpdateAt: null,
-  lastPublishStatus: null,
+  serverChannelName: null,
+  serverEventName: null,
+  serverLastEventAt: null,
+  serverLastEventSeq: null,
+  serverLastError: null,
+  lastPublishStatusCode: null,
   lastPublishAt: null,
+  lastPublishError: null,
+  lastPublishedSeq: null,
+  publishTargetLobbyId: null,
 };
 
 type OverlayTelemetryContextValue = {

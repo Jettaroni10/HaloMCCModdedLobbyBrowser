@@ -18,6 +18,12 @@ function normalizeNumber(value: unknown) {
   return Number.isFinite(n) ? n : null;
 }
 
+function formatError(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  return String(error);
+}
+
 function normalizeServerTelemetry(payload: unknown): ServerTelemetryState | null {
   if (!payload || typeof payload !== "object") return null;
   const data = payload as Record<string, unknown>;
@@ -88,6 +94,8 @@ export function useLobbyServerTelemetry(params: {
   initialTelemetry?: ServerTelemetryState | null;
 }) {
   const { lobbyId, initialTelemetry } = params;
+  const channelName = lobbyId ? `lobby:${lobbyId}` : null;
+  const eventName = "lobby:telemetry";
   const [serverTelemetry, setServerTelemetry] =
     useState<ServerTelemetryState | null>(initialTelemetry ?? null);
   const [receiveCount, setReceiveCount] = useState(0);
@@ -96,6 +104,9 @@ export function useLobbyServerTelemetry(params: {
     const parsed = Date.parse(initialTelemetry.updatedAt);
     return Number.isNaN(parsed) ? null : parsed;
   });
+  const [lastEventAt, setLastEventAt] = useState<number | null>(null);
+  const [lastEventSeq, setLastEventSeq] = useState<number | null>(null);
+  const [lastError, setLastError] = useState<string | null>(null);
   const clientRef = useRef<ReturnType<typeof createLobbyRealtimeClient> | null>(
     null
   );
@@ -111,6 +122,12 @@ export function useLobbyServerTelemetry(params: {
   }, [initialTelemetry, lobbyId]);
 
   useEffect(() => {
+    setLastEventAt(null);
+    setLastEventSeq(null);
+    setLastError(null);
+  }, [lobbyId]);
+
+  useEffect(() => {
     if (!lobbyId) return;
     let cancelled = false;
     const controller = new AbortController();
@@ -122,6 +139,10 @@ export function useLobbyServerTelemetry(params: {
         const normalized = normalizeServerTelemetry(data);
         if (!normalized) return;
         setServerTelemetry(normalized);
+        setLastEventAt(Date.now());
+        setLastEventSeq(
+          typeof normalized.seq === "number" ? normalized.seq : null
+        );
         const nextUpdatedAt = normalized.updatedAt
           ? Date.parse(normalized.updatedAt)
           : Date.now();
@@ -139,14 +160,26 @@ export function useLobbyServerTelemetry(params: {
     if (!lobbyId) return;
     const client = createLobbyRealtimeClient(lobbyId);
     clientRef.current = client;
-    const channel = client.channels.get(`lobby:${lobbyId}`);
+    if (channelName) {
+      console.debug("Ably subscribe", {
+        lobbyId,
+        channel: channelName,
+        event: eventName,
+      });
+    }
+    const channel = client.channels.get(channelName ?? `lobby:${lobbyId}`);
 
     const handleMessage = (message: { name?: string; data?: unknown }) => {
-      if (message.name !== "lobby:telemetry") return;
+      if (message.name && message.name !== eventName) return;
       const normalized = normalizeServerTelemetry(message.data);
       if (!normalized) return;
       setReceiveCount((prev) => prev + 1);
       setServerTelemetry(normalized);
+      setLastEventAt(Date.now());
+      setLastEventSeq(
+        typeof normalized.seq === "number" ? normalized.seq : null
+      );
+      setLastError(null);
       const nextUpdatedAt = normalized.updatedAt
         ? Date.parse(normalized.updatedAt)
         : Date.now();
@@ -161,23 +194,25 @@ export function useLobbyServerTelemetry(params: {
         const result = fn();
         if (result && typeof (result as Promise<unknown>).catch === "function") {
           (result as Promise<unknown>).catch((error) => {
+            setLastError(formatError(error));
             console.warn("Ably subscribe failed", {
               lobbyId,
               label,
-              error: error instanceof Error ? error.message : String(error),
+              error: formatError(error),
             });
           });
         }
       } catch (error) {
+        setLastError(formatError(error));
         console.warn("Ably subscribe failed", {
           lobbyId,
           label,
-          error: error instanceof Error ? error.message : String(error),
+          error: formatError(error),
         });
       }
     };
 
-    safeSubscribe(() => channel.subscribe(handleMessage), "lobby:telemetry");
+    safeSubscribe(() => channel.subscribe(eventName, handleMessage), eventName);
 
     return () => {
       try {
@@ -197,7 +232,21 @@ export function useLobbyServerTelemetry(params: {
       serverTelemetry,
       receiveCount,
       lastUpdateAt,
+      channelName,
+      eventName,
+      lastEventAt,
+      lastEventSeq,
+      lastError,
     }),
-    [serverTelemetry, receiveCount, lastUpdateAt]
+    [
+      serverTelemetry,
+      receiveCount,
+      lastUpdateAt,
+      channelName,
+      eventName,
+      lastEventAt,
+      lastEventSeq,
+      lastError,
+    ]
   );
 }

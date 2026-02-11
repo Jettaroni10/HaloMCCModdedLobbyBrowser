@@ -104,11 +104,28 @@ export async function POST(
       : null,
   };
 
-  await publishLobbyEvent({
+  const channelName = `lobby:${updated.id}`;
+  const eventName = "lobby:telemetry";
+
+  console.info("Publish lobby telemetry", {
     lobbyId: updated.id,
-    event: "lobby:telemetry",
-    payload,
+    channel: channelName,
+    event: eventName,
   });
 
-  return NextResponse.json(payload);
+  await publishLobbyEvent({
+    lobbyId: updated.id,
+    event: eventName,
+    payload: {
+      ...payload,
+      channelName,
+      eventName,
+    },
+  });
+
+  return NextResponse.json({
+    ...payload,
+    channelName,
+    eventName,
+  });
 }

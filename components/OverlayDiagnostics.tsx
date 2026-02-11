@@ -28,6 +28,17 @@ function formatCarry(flag: boolean | null | undefined) {
   return flag === false ? " (carried)" : "";
 }
 
+function parseTimestamp(value: unknown) {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+  if (typeof value === "string") {
+    const parsed = Date.parse(value);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+  return null;
+}
+
 export default function OverlayDiagnostics() {
   const { state: telemetryState } = useOverlayTelemetryContext();
 
@@ -52,12 +63,12 @@ export default function OverlayDiagnostics() {
     return () => clearInterval(t);
   }, [enabled]);
 
-  const ageMs = useMemo(() => {
+  const localReceiveAgeMs = useMemo(() => {
     if (!telemetryState.localLastReceiveAt) return null;
     return Math.max(0, now - telemetryState.localLastReceiveAt);
   }, [telemetryState.localLastReceiveAt, now]);
 
-  const serverAgeMs = useMemo(() => {
+  const serverUpdateAgeMs = useMemo(() => {
     if (!telemetryState.serverLastUpdateAt) return null;
     return Math.max(0, now - telemetryState.serverLastUpdateAt);
   }, [telemetryState.serverLastUpdateAt, now]);
@@ -68,9 +79,34 @@ export default function OverlayDiagnostics() {
 
   const stale = useMemo(() => {
     if (!telemetryState.overlayConnected) return true;
-    if (ageMs === null) return true;
-    return ageMs > STALE_MS;
-  }, [ageMs, telemetryState.overlayConnected]);
+    if (localReceiveAgeMs === null) return true;
+    return localReceiveAgeMs > STALE_MS;
+  }, [localReceiveAgeMs, telemetryState.overlayConnected]);
+
+  const displayTimestampMs = useMemo(() => {
+    const source =
+      telemetryState.displayTelemetry?.emittedAt ??
+      telemetryState.displayTelemetry?.updatedAt;
+    return parseTimestamp(source);
+  }, [telemetryState.displayTelemetry?.emittedAt, telemetryState.displayTelemetry?.updatedAt]);
+
+  const displayAgeMs = useMemo(() => {
+    if (displayTimestampMs === null) return null;
+    return Math.max(0, now - displayTimestampMs);
+  }, [displayTimestampMs, now]);
+
+  const serverEmittedAtMs = useMemo(() => {
+    return parseTimestamp(telemetryState.serverTelemetry?.emittedAt);
+  }, [telemetryState.serverTelemetry?.emittedAt]);
+
+  const serverAgeMs = useMemo(() => {
+    if (serverEmittedAtMs === null) return null;
+    return Math.max(0, now - serverEmittedAtMs);
+  }, [serverEmittedAtMs, now]);
+
+  const localEmittedAtMs = useMemo(() => {
+    return parseTimestamp(telemetryState.localTelemetry?.emittedAt);
+  }, [telemetryState.localTelemetry?.emittedAt]);
 
   if (!enabled) {
     const bridge = (window as unknown as { hmccOverlay?: unknown }).hmccOverlay;
@@ -125,11 +161,101 @@ export default function OverlayDiagnostics() {
       </div>
 
       <div className="mt-2 space-y-1 text-ink/70">
+        <div className="text-ink/80">Lobby Telemetry Debug</div>
         <div>Selected lobby: {telemetryState.selectedLobbyId ?? "none"}</div>
         <div>Current user: {telemetryState.currentUserId ?? "none"}</div>
         <div>Lobby host: {telemetryState.selectedLobbyHostId ?? "none"}</div>
+        <div>Is host: {isHost ? "yes" : "no"}</div>
+        <div>
+          Live binding: {telemetryState.liveBindingEnabled ? "on" : "off"}
+        </div>
         <div>
           Telemetry source: {telemetryState.telemetrySource ?? "server"}
+        </div>
+        <div>
+          Display map: {telemetryState.displayTelemetry?.map ?? "n/a"} · mode:{" "}
+          {telemetryState.displayTelemetry?.mode ?? "n/a"} · players:{" "}
+          {formatNullableNumber(
+            telemetryState.displayTelemetry?.currentPlayers
+          )}
+        </div>
+        <div>
+          Display status: {telemetryState.displayTelemetry?.status ?? "n/a"} ·
+          seq: {formatNullableNumber(telemetryState.displayTelemetry?.seq)} ·
+          age: {formatAge(displayAgeMs)}
+        </div>
+        <div>
+          Server map: {telemetryState.serverTelemetry?.map ?? "n/a"} · mode:{" "}
+          {telemetryState.serverTelemetry?.mode ?? "n/a"} · players:{" "}
+          {formatNullableNumber(
+            telemetryState.serverTelemetry?.currentPlayers
+          )}
+        </div>
+        <div>
+          Server status: {telemetryState.serverTelemetry?.status ?? "n/a"} · seq:{" "}
+          {formatNullableNumber(telemetryState.serverTelemetry?.seq)}
+        </div>
+        <div>
+          Server emittedAt: {telemetryState.serverTelemetry?.emittedAt ?? "n/a"} ·
+          age: {formatAge(serverAgeMs)}
+        </div>
+        <div>
+          Server last event:{" "}
+          {telemetryState.serverLastEventAt
+            ? new Date(telemetryState.serverLastEventAt).toISOString()
+            : "n/a"}{" "}
+          · seq: {formatNullableNumber(telemetryState.serverLastEventSeq)}
+        </div>
+        <div>
+          Server channel: {telemetryState.serverChannelName ?? "n/a"} · event:{" "}
+          {telemetryState.serverEventName ?? "n/a"}
+        </div>
+        <div>Server last error: {trimError(telemetryState.serverLastError)}</div>
+        <div>
+          Local map: {telemetryState.localTelemetry?.map ?? "n/a"} · mode:{" "}
+          {telemetryState.localTelemetry?.mode ?? "n/a"} · players:{" "}
+          {formatNullableNumber(telemetryState.localTelemetry?.currentPlayers)}
+        </div>
+        <div>
+          Local status: {telemetryState.localTelemetry?.status ?? "n/a"} · seq:{" "}
+          {formatNullableNumber(telemetryState.localTelemetry?.seq)} · emittedAt:{" "}
+          {telemetryState.localTelemetry?.emittedAt ?? "n/a"}
+        </div>
+        <div>
+          Publish target:{" "}
+          {isHost ? telemetryState.publishTargetLobbyId ?? "n/a" : "n/a"}
+        </div>
+        <div>
+          Last publish status:{" "}
+          {isHost
+            ? formatNullableNumber(telemetryState.lastPublishStatusCode)
+            : "n/a"}{" "}
+          · at:{" "}
+          {isHost && telemetryState.lastPublishAt
+            ? new Date(telemetryState.lastPublishAt).toISOString()
+            : "n/a"}{" "}
+          · age:{" "}
+          {isHost
+            ? formatAge(
+                telemetryState.lastPublishAt
+                  ? now - telemetryState.lastPublishAt
+                  : null
+              )
+            : "n/a"}
+        </div>
+        <div>
+          Last publish seq:{" "}
+          {isHost
+            ? formatNullableNumber(telemetryState.lastPublishedSeq)
+            : "n/a"}
+        </div>
+        <div>
+          Last publish error:{" "}
+          {isHost ? trimError(telemetryState.lastPublishError) : "n/a"}
+        </div>
+
+        <div className="mt-2 border-t border-ink/10 pt-2 text-ink/80">
+          Local Telemetry (Reader)
         </div>
         <div>Connected: {telemetryState.overlayConnected ? "yes" : "no"}</div>
         <div>
@@ -137,7 +263,8 @@ export default function OverlayDiagnostics() {
           seq: {Number(telemetryState.serverTelemetry?.seq || 0)}
         </div>
         <div>
-          Local age: {formatAge(ageMs)} · Server age: {formatAge(serverAgeMs)}
+          Local age: {formatAge(localReceiveAgeMs)} · Server update age:{" "}
+          {formatAge(serverUpdateAgeMs)}
         </div>
         <div>Status: {telemetryState.localTelemetry?.status || "unknown"}</div>
         <div>
@@ -189,17 +316,14 @@ export default function OverlayDiagnostics() {
         ) : (
           <div>Reader debug: none</div>
         )}
-        {isHost && (
-          <div>
-            Last publish:{" "}
-            {telemetryState.lastPublishStatus !== null
-              ? telemetryState.lastPublishStatus
-              : telemetryState.lastPublishAt
-                ? "error"
-                : "n/a"}{" "}
-            · {formatAge(telemetryState.lastPublishAt ? now - telemetryState.lastPublishAt : null)}
-          </div>
-        )}
+        <div>
+          Local emitted age:{" "}
+          {formatAge(
+            localEmittedAtMs === null
+              ? null
+              : Math.max(0, now - localEmittedAtMs)
+          )}
+        </div>
       </div>
     </div>
   );

@@ -82,7 +82,15 @@ export default function SelectedLobbyTelemetryBridge({
     () => normalizeTelemetryInput(manualTelemetry ?? null),
     [manualTelemetry]
   );
-  const { serverTelemetry, lastUpdateAt } = useLobbyServerTelemetry({
+  const {
+    serverTelemetry,
+    lastUpdateAt,
+    channelName,
+    eventName,
+    lastEventAt,
+    lastEventSeq,
+    lastError,
+  } = useLobbyServerTelemetry({
     lobbyId,
     initialTelemetry: normalizedInitial,
   });
@@ -90,6 +98,7 @@ export default function SelectedLobbyTelemetryBridge({
   const isHost = Boolean(viewerUserId && viewerUserId === hostUserId);
   const liveBindingEnabled =
     isHost && telemetryState.overlayConnected && liveBindingPreference;
+  const publishEnabled = isHost && liveBindingEnabled;
   const telemetrySource = !isHost
     ? "server"
     : liveBindingEnabled
@@ -113,20 +122,34 @@ export default function SelectedLobbyTelemetryBridge({
       manualTelemetry: normalizedManual,
       displayTelemetry,
       serverLastUpdateAt: lastUpdateAt,
-      lastPublishStatus: isHost ? prev.lastPublishStatus : null,
-      lastPublishAt: isHost ? prev.lastPublishAt : null,
+      serverChannelName: channelName ?? null,
+      serverEventName: eventName ?? null,
+      serverLastEventAt: lastEventAt ?? null,
+      serverLastEventSeq: lastEventSeq ?? null,
+      serverLastError: lastError ?? null,
+      lastPublishStatusCode: publishEnabled ? prev.lastPublishStatusCode : null,
+      lastPublishAt: publishEnabled ? prev.lastPublishAt : null,
+      lastPublishError: publishEnabled ? prev.lastPublishError : null,
+      lastPublishedSeq: publishEnabled ? prev.lastPublishedSeq : null,
+      publishTargetLobbyId: publishEnabled ? lobbyId : null,
     }));
   }, [
     lobbyId,
     viewerUserId,
     hostUserId,
     isHost,
+    publishEnabled,
     telemetrySource,
     liveBindingEnabled,
     serverTelemetry,
     normalizedManual,
     displayTelemetry,
     lastUpdateAt,
+    channelName,
+    eventName,
+    lastEventAt,
+    lastEventSeq,
+    lastError,
     setState,
   ]);
 
@@ -139,8 +162,6 @@ export default function SelectedLobbyTelemetryBridge({
           overlayConnected: prev.overlayConnected,
           localTelemetry: prev.localTelemetry,
           localLastReceiveAt: prev.localLastReceiveAt,
-          lastPublishStatus: prev.lastPublishStatus,
-          lastPublishAt: prev.lastPublishAt,
         };
       });
     };
@@ -193,15 +214,22 @@ export default function SelectedLobbyTelemetryBridge({
       .then((response) => {
         setState((prev) => ({
           ...prev,
-          lastPublishStatus: response.status,
+          lastPublishStatusCode: response.status,
           lastPublishAt: Date.now(),
+          lastPublishError: response.ok ? null : `HTTP ${response.status}`,
+          lastPublishedSeq: seq,
+          publishTargetLobbyId: lobbyId,
         }));
       })
-      .catch(() => {
+      .catch((error) => {
         setState((prev) => ({
           ...prev,
-          lastPublishStatus: null,
+          lastPublishStatusCode: null,
           lastPublishAt: Date.now(),
+          lastPublishError:
+            error instanceof Error ? error.message : String(error),
+          lastPublishedSeq: seq,
+          publishTargetLobbyId: lobbyId,
         }));
       });
   }, [

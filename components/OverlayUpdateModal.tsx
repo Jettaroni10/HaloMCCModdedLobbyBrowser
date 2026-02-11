@@ -1,6 +1,7 @@
 "use client";
 
 import OverlayModal from "@/components/OverlayModal";
+import { OverlayThemeClasses } from "@/components/OverlayThemeClasses";
 
 type LobbyState =
   | { status: "loading" }
@@ -46,7 +47,7 @@ export default function OverlayUpdateModal({
             type="button"
             onClick={onCancel}
             disabled={updateBusy}
-            className="rounded-sm border border-ink/25 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-ink/70 transition hover:border-ink/50 hover:text-ink disabled:opacity-60"
+            className={`rounded-sm px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] transition disabled:opacity-60 ${OverlayThemeClasses.buttonGhost} ${OverlayThemeClasses.focusRing}`}
           >
             Cancel
           </button>
@@ -54,7 +55,7 @@ export default function OverlayUpdateModal({
             type="button"
             onClick={onConfirm}
             disabled={updateBusy || lobbyState.status === "loading"}
-            className="rounded-sm border border-clay/50 bg-clay/20 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-ink transition hover:border-clay/80 hover:bg-clay/35 disabled:opacity-60"
+            className={`rounded-sm px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] transition disabled:opacity-60 ${OverlayThemeClasses.buttonPrimary} ${OverlayThemeClasses.focusRing}`}
           >
             {updateBusy ? "Updating..." : "Update & Restart"}
           </button>
@@ -72,7 +73,9 @@ export default function OverlayUpdateModal({
         {lobbyState.status === "loading" && "Checking lobby status..."}
       </p>
       {updateInfo?.status === "downloading" && (
-        <p className="mt-3 text-xs text-ink/60">Downloading update...</p>
+        <p className={`mt-3 text-xs ${OverlayThemeClasses.mutedText}`}>
+          Downloading update...
+        </p>
       )}
       {updateError && (
         <p className="mt-3 text-xs font-semibold text-clay">{updateError}</p>

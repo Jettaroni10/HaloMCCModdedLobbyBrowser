@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { OverlayThemeClasses } from "@/components/OverlayThemeClasses";
 
 type OverlayModalProps = {
   open: boolean;
@@ -31,9 +32,15 @@ export default function OverlayModal({
         }
       }}
     >
-      <div className="w-full max-w-md rounded-md border border-ink/15 bg-mist/90 p-6 text-ink shadow-2xl">
-        <h2 className="text-lg font-semibold text-ink">{title}</h2>
-        <div className="mt-2 text-sm text-ink/70">{children}</div>
+      <div
+        className={`w-full max-w-md rounded-md border p-6 shadow-2xl ${OverlayThemeClasses.surfaceStrong} ${OverlayThemeClasses.border}`}
+      >
+        <h2 className={`text-lg font-semibold ${OverlayThemeClasses.text}`}>
+          {title}
+        </h2>
+        <div className={`mt-2 text-sm ${OverlayThemeClasses.mutedText}`}>
+          {children}
+        </div>
         <div className="mt-6 flex items-center justify-end gap-3">
           {actions}
         </div>

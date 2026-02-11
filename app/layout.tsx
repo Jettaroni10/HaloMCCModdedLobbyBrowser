@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import "./globals.css";
 import "@/lib/env";
 import { getCurrentUser, isAdminUser } from "@/lib/auth";
-import SiteHeader from "@/components/SiteHeader";
+import HeaderShell from "@/components/HeaderShell";
 import HostNotificationsProvider from "@/components/HostNotificationsProvider";
 import AnalyticsLoader from "@/components/analytics/AnalyticsLoader";
 import AnalyticsTracker from "@/components/analytics/AnalyticsTracker";
@@ -49,7 +49,7 @@ export default async function RootLayout({
             </Suspense>
             <HostNotificationsProvider hostUserId={user?.id ?? null}>
               <div className="relative z-10 flex min-h-screen flex-col">
-                <SiteHeader user={user} isAdmin={isAdmin} />
+                <HeaderShell user={user} isAdmin={isAdmin} />
                 <main className="flex-1">
                   <Suspense fallback={null}>{children}</Suspense>
                 </main>

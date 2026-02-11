@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import OverlayHeaderControls from "@/components/OverlayHeaderControls";
 import OverlayModal from "@/components/OverlayModal";
 import OverlayUpdateModal from "@/components/OverlayUpdateModal";
+import { OverlayThemeClasses } from "@/components/OverlayThemeClasses";
 
 type OverlayBridge = {
   hideOverlayWindow?: () => Promise<boolean> | void;
@@ -216,7 +217,9 @@ export default function OverlayWindowControls() {
       />
 
       {toast && (
-        <div className="pointer-events-none fixed right-4 top-14 z-[70] rounded-sm border border-ink/20 bg-mist/80 px-3 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-ink/80">
+        <div
+          className={`pointer-events-none fixed right-4 top-14 z-[70] rounded-sm px-3 py-2 text-xs font-semibold uppercase tracking-[0.25em] ${OverlayThemeClasses.toast}`}
+        >
           <span className={toast.tone === "error" ? "text-clay" : ""}>
             {toast.message}
           </span>
@@ -233,7 +236,7 @@ export default function OverlayWindowControls() {
               type="button"
               onClick={() => setShowDialog(false)}
               disabled={busy}
-              className="rounded-sm border border-ink/25 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-ink/70 transition hover:border-ink/50 hover:text-ink disabled:opacity-60"
+              className={`rounded-sm px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] transition disabled:opacity-60 ${OverlayThemeClasses.buttonGhost} ${OverlayThemeClasses.focusRing}`}
             >
               Cancel
             </button>
@@ -241,7 +244,7 @@ export default function OverlayWindowControls() {
               type="button"
               onClick={handleConfirmClose}
               disabled={busy || lobbyState.status === "loading"}
-              className="rounded-sm border border-red-400/60 bg-red-500/30 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-red-100 transition hover:border-red-300 hover:bg-red-500/50 disabled:opacity-60"
+              className={`rounded-sm px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] transition disabled:opacity-60 ${OverlayThemeClasses.buttonDanger} ${OverlayThemeClasses.focusRing}`}
             >
               {busy ? "Closing..." : "Close Overlay"}
             </button>

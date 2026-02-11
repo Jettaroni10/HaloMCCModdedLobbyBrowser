@@ -154,7 +154,7 @@ export function useLobbyServerTelemetry(params: {
       cancelled = true;
       controller.abort();
     };
-  }, [lobbyId]);
+  }, [lobbyId, channelName, eventName]);
 
   useEffect(() => {
     if (!lobbyId) return;
@@ -225,7 +225,7 @@ export function useLobbyServerTelemetry(params: {
         .catch(() => {});
       clientRef.current = null;
     };
-  }, [lobbyId]);
+  }, [lobbyId, channelName, eventName]);
 
   return useMemo(
     () => ({

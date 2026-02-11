@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { normalizeText, parseNumber, clampInt } from "@/lib/validation";
-import { publishLobbyEvent } from "@/lib/realtime/ablyServer";
+import {
+  publishBrowseTelemetryEvent,
+  publishLobbyEvent,
+} from "@/lib/realtime/ablyServer";
 
 export const runtime = "nodejs";
 
@@ -119,6 +122,15 @@ export async function POST(
     payload: {
       ...payload,
       channelName,
+      eventName,
+    },
+  });
+
+  await publishBrowseTelemetryEvent({
+    event: eventName,
+    payload: {
+      ...payload,
+      channelName: "lobbies:telemetry",
       eventName,
     },
   });

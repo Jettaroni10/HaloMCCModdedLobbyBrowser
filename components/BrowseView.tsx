@@ -1,18 +1,10 @@
 import type { Prisma } from "@prisma/client";
 import { prisma, modPacksSupported } from "@/lib/db";
-import { formatEnum } from "@/lib/format";
-import { formatMinutesAgo } from "@/lib/time";
 import { parseEnum, parseStringArray } from "@/lib/validation";
 import { Games, Regions, Vibes, Voices } from "@/lib/types";
-import LobbyCardBackground from "@/components/LobbyCardBackground";
-import GamertagLink from "@/components/GamertagLink";
-import SocialRankBadge from "@/components/rank/SocialRankBadge";
 import { getSignedReadUrl } from "@/lib/lobby-images";
 import { getCurrentUser } from "@/lib/auth";
-import BrowseAnalyticsTracker from "@/components/analytics/BrowseAnalyticsTracker";
-import TrackedLobbyLink from "@/components/analytics/TrackedLobbyLink";
-import OverlayLobbyTelemetryLine from "@/components/OverlayLobbyTelemetryLine";
-import OverlayLobbyTelemetrySlots from "@/components/OverlayLobbyTelemetrySlots";
+import BrowseViewClient from "@/components/BrowseViewClient";
 
 type BrowseViewProps = {
   searchParams?: Record<string, string | string[] | undefined>;
@@ -133,228 +125,57 @@ export default async function BrowseView({ searchParams = {} }: BrowseViewProps)
     };
   });
 
+  const serializedLobbies = decoratedLobbies.map((lobby) => ({
+    id: lobby.id,
+    title: lobby.title,
+    game: lobby.game,
+    region: lobby.region,
+    voice: lobby.voice,
+    vibe: lobby.vibe,
+    isModded: lobby.isModded,
+    modCount: lobby.modCount,
+    map: lobby.map,
+    mode: lobby.mode,
+    slotsTotal: lobby.slotsTotal,
+    memberCount: lobby.memberCount,
+    lastHeartbeatAt: lobby.lastHeartbeatAt.toISOString(),
+    mapImageUrl: lobby.mapImageUrl,
+    isHosting: lobby.isHosting,
+    isMember: lobby.isMember,
+    telemetryMapName: lobby.telemetryMapName ?? null,
+    telemetryModeName: lobby.telemetryModeName ?? null,
+    telemetryPlayerCount:
+      typeof lobby.telemetryPlayerCount === "number"
+        ? lobby.telemetryPlayerCount
+        : null,
+    telemetryStatus: lobby.telemetryStatus ?? null,
+    telemetrySeq:
+      typeof lobby.telemetrySeq === "number" ? lobby.telemetrySeq : null,
+    telemetryEmittedAt: lobby.telemetryEmittedAt
+      ? lobby.telemetryEmittedAt.toISOString()
+      : null,
+    telemetryUpdatedAt: lobby.telemetryUpdatedAt
+      ? lobby.telemetryUpdatedAt.toISOString()
+      : null,
+    host: {
+      gamertag: lobby.host.gamertag,
+      srLevel: lobby.host.srLevel ?? null,
+    },
+  }));
+
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-12">
-      <BrowseAnalyticsTracker />
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold text-ink">Browse lobbies</h1>
-          <p className="mt-2 text-sm text-ink/70">
-            Filters are opt-in. Only host-published lobbies appear here.
-          </p>
-        </div>
-      </div>
-
-      <div className="rounded-sm border border-ink/10 bg-mist p-4 text-sm text-ink/70">
-        <p className="font-semibold text-ink">
-          Not affiliated with Microsoft, Xbox, 343 Industries, or Halo.
-        </p>
-        <p className="mt-1">
-          This app coordinates opt-in invites only and does not interact with
-          MCC networking or game state.
-        </p>
-      </div>
-
-      <form className="grid gap-4 rounded-md border border-ink/10 bg-sand p-5 md:grid-cols-5">
-        <label className="text-xs font-semibold uppercase tracking-[0.3em] text-ink/60">
-          Game
-          <select
-            name="game"
-            defaultValue={game ?? ""}
-            className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm text-ink"
-          >
-            <option value="">All</option>
-            {Games.map((value) => (
-              <option key={value} value={value}>
-                {formatEnum(value)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="text-xs font-semibold uppercase tracking-[0.3em] text-ink/60">
-          Region
-          <select
-            name="region"
-            defaultValue={region ?? ""}
-            className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm text-ink"
-          >
-            <option value="">All</option>
-            {Regions.map((value) => (
-              <option key={value} value={value}>
-                {formatEnum(value)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="text-xs font-semibold uppercase tracking-[0.3em] text-ink/60">
-          Mic
-          <select
-            name="voice"
-            defaultValue={voice ?? ""}
-            className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm text-ink"
-          >
-            <option value="">All</option>
-            {Voices.map((value) => (
-              <option key={value} value={value}>
-                {formatEnum(value)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="text-xs font-semibold uppercase tracking-[0.3em] text-ink/60">
-          Vibe
-          <select
-            name="vibe"
-            defaultValue={vibe ?? ""}
-            className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm text-ink"
-          >
-            <option value="">All</option>
-            {Vibes.map((value) => (
-              <option key={value} value={value}>
-                {formatEnum(value)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="text-xs font-semibold uppercase tracking-[0.3em] text-ink/60">
-          Tags
-          <input
-            name="tags"
-            defaultValue={getParam(searchParams.tags) ?? ""}
-            placeholder="chill, co-op"
-            className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm text-ink"
-          />
-        </label>
-        <div className="md:col-span-5">
-          <button
-            type="submit"
-            className="w-full rounded-sm bg-ink px-4 py-2 text-sm font-semibold text-sand hover:bg-ink/90"
-          >
-            Apply filters
-          </button>
-        </div>
-      </form>
-
-      {!dbReady && (
-        <div className="rounded-sm border border-ink/10 bg-mist p-4 text-sm text-ink/70">
-          Configure <code className="font-semibold">DATABASE_URL</code> to load
-          live listings. Until then, the browse view stays empty.
-        </div>
-      )}
-
-      <div className="flex flex-col gap-5">
-        {decoratedLobbies.map((lobby, index) => (
-          <TrackedLobbyLink
-            key={lobby.id}
-            href={`/lobbies/${lobby.id}`}
-            lobbyId={lobby.id}
-            game={lobby.game}
-            isModded={lobby.isModded}
-            modCount={lobby.modCount}
-            position={index + 1}
-            className={`relative min-h-[140px] overflow-hidden rounded-xl border border-ink/10 bg-transparent p-5 transition-transform duration-150 ease-out hover:scale-[1.01] hover:shadow-xl ${
-              lobby.isHosting
-                ? "ring-2 ring-clay/80 shadow-[0_0_22px_rgba(74,163,255,0.35)]"
-                : lobby.isMember
-                ? "ring-2 ring-[rgba(181,155,58,0.85)] shadow-[0_0_22px_rgba(181,155,58,0.35)]"
-                : ""
-            }`}
-          >
-            <LobbyCardBackground
-              imageUrl={lobby.mapImageUrl}
-              fallbackMapName={lobby.telemetryMapName ?? lobby.map}
-            />
-            <div
-              className="relative z-20"
-              style={{ textShadow: "0 4px 16px rgba(0,0,0,0.95)" }}
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-xl font-semibold text-white">
-                    {lobby.title}
-                  </h2>
-                  <OverlayLobbyTelemetryLine
-                    fallbackMode={lobby.telemetryModeName ?? lobby.mode}
-                    fallbackMap={lobby.telemetryMapName ?? lobby.map}
-                    lobbyId={lobby.id}
-                    className="text-sm text-white/70"
-                    as="p"
-                    prefix={formatEnum(lobby.game)}
-                  />
-                  <p className="text-xs uppercase tracking-[0.3em] text-white/60">
-                    {formatEnum(lobby.region)}
-                  </p>
-                </div>
-                <div className="flex flex-col items-end gap-2 text-xs">
-                  {lobby.isHosting && (
-                    <span className="rounded-sm border border-clay/60 bg-clay/40 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-white shadow-[0_0_14px_rgba(74,163,255,0.5)]">
-                      Hosting
-                    </span>
-                  )}
-                  {!lobby.isHosting && lobby.isMember && (
-                    <span className="rounded-sm border border-[rgba(181,155,58,0.9)] bg-[rgba(181,155,58,0.35)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-white shadow-[0_0_14px_rgba(181,155,58,0.55)]">
-                      In lobby
-                    </span>
-                  )}
-                  {lobby.isModded && (
-                    <span className="rounded-sm bg-white/10 px-3 py-1 font-semibold text-white">
-                      Modded
-                    </span>
-                  )}
-                  {lobby.isModded && lobby.modCount > 0 && (
-                    <span className="rounded-sm border border-white/30 bg-white/10 px-3 py-1 font-semibold text-white">
-                      Get Ready ({lobby.modCount} mods)
-                    </span>
-                  )}
-                  {lobby.voice === "MIC_REQUIRED" && (
-                    <span className="rounded-sm bg-white/10 px-3 py-1 font-semibold text-white">
-                      Mic required
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-white/70">
-                <span>{formatEnum(lobby.vibe)}</span>
-                {lobby.slotsTotal !== null && (
-                  <>
-                    <span>•</span>
-                    <OverlayLobbyTelemetrySlots
-                      fallbackCurrentPlayers={lobby.telemetryPlayerCount ?? lobby.memberCount}
-                      fallbackMaxPlayers={lobby.slotsTotal ?? 16}
-                      lobbyId={lobby.id}
-                    />
-                  </>
-                )}
-              </div>
-              <div className="mt-3 flex items-center gap-2 text-xs text-white/70">
-                <span className="uppercase tracking-[0.2em] text-white/50">
-                  Host
-                </span>
-                <SocialRankBadge rank={lobby.host.srLevel ?? 1} size={16} />
-                <GamertagLink
-                  gamertag={lobby.host.gamertag}
-                  className="font-semibold"
-                  asSpan
-                />
-              </div>
-              <div className="mt-3 flex items-center justify-between text-xs text-white/70">
-                <span>{formatMinutesAgo(lobby.lastHeartbeatAt, now)}</span>
-                <span className="rounded-sm border border-white/30 px-4 py-1.5 text-xs font-semibold text-white hover:border-white/60">
-                  View lobby
-                </span>
-              </div>
-            </div>
-          </TrackedLobbyLink>
-        ))}
-      </div>
-
-      {lobbies.length === 0 && dbReady && (
-        <div className="rounded-sm border border-ink/10 bg-mist p-6 text-sm text-ink/70">
-          No lobbies match those filters. Try clearing filters or check back
-          soon.
-        </div>
-      )}
-    </div>
+    <BrowseViewClient
+      initialLobbies={serializedLobbies}
+      dbReady={dbReady}
+      initialNow={now.toISOString()}
+      filters={{
+        game: game ?? "",
+        region: region ?? "",
+        voice: voice ?? "",
+        vibe: vibe ?? "",
+        tags: getParam(searchParams.tags) ?? "",
+      }}
+    />
   );
 }
 

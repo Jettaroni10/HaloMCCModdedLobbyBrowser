@@ -16,6 +16,7 @@ export async function createRealtimeTokenRequest(params: {
   clientId: string;
   lobbyId?: string;
   dmId?: string;
+  browseTelemetry?: boolean;
 }) {
   const rest = getRestClient();
   const capability: Record<string, ("publish" | "subscribe")[]> = {
@@ -33,6 +34,10 @@ export async function createRealtimeTokenRequest(params: {
   if (params.dmId) {
     capability[`dm:${params.dmId}`] = ["subscribe"];
     capability[`dm:${params.dmId}:typing`] = ["publish", "subscribe"];
+  }
+
+  if (params.browseTelemetry) {
+    capability["lobbies:telemetry"] = ["subscribe"];
   }
 
   return rest.auth.createTokenRequest({
@@ -54,6 +59,23 @@ export async function publishLobbyEvent(params: {
   } catch (error) {
     console.error("Ably publish failed", {
       lobbyId: params.lobbyId,
+      event: params.event,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+export async function publishBrowseTelemetryEvent(params: {
+  event: string;
+  payload: unknown;
+}) {
+  try {
+    const rest = getRestClient();
+    await rest.channels
+      .get("lobbies:telemetry")
+      .publish(params.event, params.payload);
+  } catch (error) {
+    console.error("Ably browse telemetry publish failed", {
       event: params.event,
       error: error instanceof Error ? error.message : String(error),
     });

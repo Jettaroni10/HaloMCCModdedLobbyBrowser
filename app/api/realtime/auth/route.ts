@@ -21,6 +21,12 @@ function getDmId(request: Request) {
   return dmId ?? "";
 }
 
+function getBrowseTelemetry(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const raw = searchParams.get("browseTelemetry") ?? "";
+  return raw === "1" || raw.toLowerCase() === "true";
+}
+
 export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user || user.isBanned) {
@@ -42,6 +48,7 @@ export async function POST(request: Request) {
 
   const lobbyId = getLobbyId(request);
   const dmId = getDmId(request);
+  const browseTelemetry = getBrowseTelemetry(request);
   if (lobbyId) {
     if (!LOBBY_ID_PATTERN.test(lobbyId)) {
       const response = NextResponse.json(
@@ -87,6 +94,7 @@ export async function POST(request: Request) {
     lobbyId: lobbyId || undefined,
     dmId: dmId || undefined,
     clientId: user.id,
+    browseTelemetry,
   });
   const response = NextResponse.json(tokenRequest);
   response.headers.set("Cache-Control", "no-store");

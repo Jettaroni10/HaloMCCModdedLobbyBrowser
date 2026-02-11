@@ -9,6 +9,13 @@ export function createLobbyRealtimeClient(lobbyId: string) {
   });
 }
 
+export function createBrowseRealtimeClient() {
+  return new Ably.Realtime({
+    authUrl: "/api/realtime/auth?browseTelemetry=1",
+    authMethod: "POST",
+  });
+}
+
 export function createHostRealtimeClient() {
   return new Ably.Realtime({
     authUrl: `/api/realtime/auth`,

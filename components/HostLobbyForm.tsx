@@ -372,8 +372,10 @@ export default function HostLobbyForm({
   }, [overlaySessionMode, isLive]);
 
   useEffect(() => {
-    if (!overlaySessionMode || !isLive || !sessionState.lobby?.id) return;
+    if (!overlaySessionMode || !isLive) return;
     if (!isConnected || !localTelemetry) return;
+    const lobbyId = sessionState?.lobby?.id;
+    if (!lobbyId) return;
     const seq = Number.isFinite(Number(localTelemetry.seq))
       ? Number(localTelemetry.seq)
       : null;
@@ -396,7 +398,7 @@ export default function HostLobbyForm({
     (async () => {
       try {
         const response = await fetch(
-          `/api/lobbies/${sessionState.lobby.id}/telemetry`,
+          `/api/lobbies/${lobbyId}/telemetry`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },

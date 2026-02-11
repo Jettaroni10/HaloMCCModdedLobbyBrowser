@@ -72,7 +72,7 @@ export default function OverlayUpdateModal({
           "Install update and restart HMCC Overlay?"}
         {lobbyState.status === "loading" && "Checking lobby status..."}
       </p>
-      {updateInfo?.status === "downloading" && (
+      {updateInfo?.ok && updateInfo.status === "downloading" && (
         <p className={`mt-3 text-xs ${OverlayThemeClasses.mutedText}`}>
           Downloading update...
         </p>

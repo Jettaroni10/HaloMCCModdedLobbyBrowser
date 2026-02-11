@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { emitLobbyRosterUpdated } from "@/lib/lobby-events";
 import { findCurrentLobbyForUser } from "@/lib/lobby-current";
 

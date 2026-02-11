@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { isValidGamertag, normalizeHandleText } from "@/lib/validation";
 import { isReachColor } from "@/lib/reach-colors";
 import { absoluteUrl } from "@/lib/url";
 import { HALO_GAMES } from "@/data/haloGames";
 import { HALO_WEAPONS } from "@/data/haloWeapons";
+export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();

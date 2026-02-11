@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { createSessionToken, getSessionCookieName } from "@/lib/auth";
 import { normalizeHandleText } from "@/lib/validation";
 import { hashPassword } from "@/lib/password";
 import { DEFAULT_NAMETAG_COLOR } from "@/lib/reach-colors";
 import { absoluteUrl } from "@/lib/url";
+export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   const contentType = request.headers.get("content-type") ?? "";

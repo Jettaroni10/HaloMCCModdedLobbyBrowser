@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { parseBoolean } from "@/lib/validation";
 import { isRateLimited, recordRateLimitEvent } from "@/lib/rate-limit";
@@ -8,6 +8,7 @@ import { emitLobbyRequestCreated, emitLobbyRosterUpdated } from "@/lib/lobby-eve
 import { addXp, hasXpEvent } from "@/lib/xp";
 import { logPerf } from "@/lib/perf";
 import { absoluteUrl } from "@/lib/url";
+export const dynamic = "force-dynamic";
 
 async function readBody(request: Request) {
   const contentType = request.headers.get("content-type") ?? "";

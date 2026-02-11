@@ -1,6 +1,7 @@
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 import { formatEnum } from "@/lib/format";
+export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
   await requireAdmin();

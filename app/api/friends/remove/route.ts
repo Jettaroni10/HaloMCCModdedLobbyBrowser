@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+export const dynamic = "force-dynamic";
 
 function normalizePair(a: string, b: string) {
   return a < b ? [a, b] : [b, a];

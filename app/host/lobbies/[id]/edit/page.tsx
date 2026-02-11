@@ -1,7 +1,8 @@
 import { notFound, redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 import HostLobbyEditForm from "@/components/HostLobbyEditForm";
+export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: { id: string };

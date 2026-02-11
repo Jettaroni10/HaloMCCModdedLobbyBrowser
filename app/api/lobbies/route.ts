@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { createLobbyFromPayload, LobbyCreateError } from "@/lib/lobby-create";
 import { findCurrentLobbyForUser, toCurrentLobbyPayload } from "@/lib/lobby-current";
 import { Games, Regions, Vibes, Voices } from "@/lib/types";
 import { normalizeText, parseEnum, parseStringArray } from "@/lib/validation";
 import { absoluteUrl } from "@/lib/url";
+export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const TAG_LIMIT = 24;

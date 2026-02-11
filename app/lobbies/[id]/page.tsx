@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Prisma } from "@prisma/client";
-import { prisma, modPacksSupported } from "@/lib/db";
+import { prisma, modPacksSupported } from "@/lib/prisma";
 import { formatEnum } from "@/lib/format";
 import { getCurrentUser } from "@/lib/auth";
 import { logPerf } from "@/lib/perf";
@@ -16,6 +16,7 @@ import LobbyViewTracker from "@/components/analytics/LobbyViewTracker";
 import OverlayLobbyTelemetryLine from "@/components/OverlayLobbyTelemetryLine";
 import OverlayLobbyTelemetrySlots from "@/components/OverlayLobbyTelemetrySlots";
 import SelectedLobbyTelemetryBridge from "@/components/SelectedLobbyTelemetryBridge";
+export const dynamic = "force-dynamic";
 
 type LobbyPageProps = {
   params: { id: string };

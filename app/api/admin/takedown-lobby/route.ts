@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { getCurrentUser, isAdminUser } from "@/lib/auth";
 import { normalizeText } from "@/lib/validation";
 import { absoluteUrl } from "@/lib/url";
 import { deleteLobbyImage } from "@/lib/lobby-images";
+export const dynamic = "force-dynamic";
 
 async function readBody(request: Request) {
   const contentType = request.headers.get("content-type") ?? "";

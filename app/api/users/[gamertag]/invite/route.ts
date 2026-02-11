@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { publishDmEvent } from "@/lib/realtime/ablyServer";
 import { absoluteUrl } from "@/lib/url";
+export const dynamic = "force-dynamic";
 
 function normalizePair(a: string, b: string) {
   return a < b ? [a, b] : [b, a];

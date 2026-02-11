@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma, modPacksSupported } from "@/lib/db";
+import { prisma, modPacksSupported } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import {
   clampInt,
@@ -10,6 +10,7 @@ import {
   parseStringArray,
 } from "@/lib/validation";
 import { Games, Regions, Vibes, Voices } from "@/lib/types";
+export const dynamic = "force-dynamic";
 
 const LIMITS = {
   title: 80,

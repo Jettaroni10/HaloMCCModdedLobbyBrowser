@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { emitRequestDecided } from "@/lib/host-events";
+export const dynamic = "force-dynamic";
 
 export async function POST(
   _request: Request,

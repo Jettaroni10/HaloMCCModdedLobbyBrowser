@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { normalizeText, parseEnum } from "@/lib/validation";
+export const dynamic = "force-dynamic";
 
 const TARGET_TYPES = ["USER", "LOBBY", "REQUEST"] as const;
 const CATEGORIES = ["SPAM", "HARASSMENT", "IMPERSONATION", "OTHER"] as const;

@@ -1,7 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import DmChat from "@/components/DmChat";
+export const dynamic = "force-dynamic";
 
 function normalizePair(a: string, b: string) {
   return a < b ? [a, b] : [b, a];

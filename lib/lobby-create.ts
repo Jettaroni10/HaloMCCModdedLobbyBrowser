@@ -1,5 +1,5 @@
 import type { Lobby } from "@prisma/client";
-import { prisma, modPacksSupported } from "@/lib/db";
+import { prisma, modPacksSupported } from "@/lib/prisma";
 import type { SessionUser } from "@/lib/auth";
 import {
   clampInt,

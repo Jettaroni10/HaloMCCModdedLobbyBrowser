@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { addXp, countXpEvents } from "@/lib/xp";
 import { emitLobbyMessageCreated } from "@/lib/lobby-events";
@@ -7,6 +7,7 @@ import { publishLobbyEvent } from "@/lib/realtime/ablyServer";
 import { ensureLobbyChatAccess } from "@/lib/lobby-access";
 import { logPerf } from "@/lib/perf";
 import { filterProfanity } from "@/lib/profanity";
+export const dynamic = "force-dynamic";
 
 const MESSAGE_LIMIT = 500;
 

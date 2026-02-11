@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { deleteLobbyImage } from "@/lib/lobby-images";
+export const dynamic = "force-dynamic";
 
 export const runtime = "nodejs";
 

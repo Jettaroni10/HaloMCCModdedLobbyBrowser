@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { normalizeText, parseNumber, clampInt } from "@/lib/validation";
 import {
   publishBrowseTelemetryEvent,
   publishLobbyEvent,
 } from "@/lib/realtime/ablyServer";
 
+export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const LIMITS = {

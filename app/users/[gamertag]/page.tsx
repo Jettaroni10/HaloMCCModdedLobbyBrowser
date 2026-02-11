@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import SocialRankBadge from "@/components/rank/SocialRankBadge";
 import SpartanPortrait from "@/components/SpartanPortrait";
@@ -9,6 +9,7 @@ import { HALO_WEAPONS } from "@/data/haloWeapons";
 import { clampRank } from "@/lib/ranks";
 import { getSignedUserReadUrl } from "@/lib/user-images";
 import ProfileViewTracker from "@/components/analytics/ProfileViewTracker";
+export const dynamic = "force-dynamic";
 
 export default async function UserProfilePage({
   params,

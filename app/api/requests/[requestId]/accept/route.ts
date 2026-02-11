@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { addXp } from "@/lib/xp";
 import { emitLobbyRosterUpdated } from "@/lib/lobby-events";
 import { emitRequestDecided } from "@/lib/host-events";
+export const dynamic = "force-dynamic";
 
 function buildInviteChecklist(request: {
   requesterHandleText: string;

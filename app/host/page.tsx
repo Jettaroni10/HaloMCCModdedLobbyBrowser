@@ -1,8 +1,9 @@
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 import HostDashboard from "@/components/HostDashboard";
 import { logPerf } from "@/lib/perf";
 import HostPageHeader from "@/components/HostPageHeader";
+export const dynamic = "force-dynamic";
 
 export default async function HostPage() {
   const user = await requireAuth();

@@ -1,5 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import { prisma, modPacksSupported } from "@/lib/db";
+import { prisma, modPacksSupported } from "@/lib/prisma";
 import { parseEnum, parseStringArray } from "@/lib/validation";
 import { Games, Regions, Vibes, Voices } from "@/lib/types";
 import { getSignedReadUrl } from "@/lib/lobby-images";

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { prisma, modPacksSupported } from "@/lib/db";
+import { prisma, modPacksSupported } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { normalizeText } from "@/lib/validation";
 import { normalizeModName, normalizeWorkshopUrl } from "@/lib/mods";
+export const dynamic = "force-dynamic";
 
 const LIMITS = {
   name: 80,

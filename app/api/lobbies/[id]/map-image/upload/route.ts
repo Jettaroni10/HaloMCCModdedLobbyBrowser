@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import {
   buildLobbyImagePath,
@@ -10,6 +10,7 @@ import {
 } from "@/lib/lobby-images";
 import { getBucket, getBucketName } from "@/lib/firebaseAdmin";
 import { checkImageBufferSafe } from "@/lib/vision";
+export const dynamic = "force-dynamic";
 
 export const runtime = "nodejs";
 

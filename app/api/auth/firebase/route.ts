@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { createSessionToken, getSessionCookieName } from "@/lib/auth";
 import { hashPassword } from "@/lib/password";
 import { isValidGamertag, normalizeText } from "@/lib/validation";
 import { getAdminAuth } from "@/lib/firebaseAdmin";
+export const dynamic = "force-dynamic";
 
 export const runtime = "nodejs";
 

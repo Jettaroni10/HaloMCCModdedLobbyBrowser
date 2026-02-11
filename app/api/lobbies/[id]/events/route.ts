@@ -1,6 +1,7 @@
 import { getCurrentUser } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { lobbyEvents } from "@/lib/lobby-events";
+export const dynamic = "force-dynamic";
 
 export const runtime = "nodejs";
 

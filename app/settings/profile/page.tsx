@@ -1,5 +1,5 @@
 import { requireAuth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { xpRequired } from "@/lib/xp";
 import SocialRankBadge from "@/components/rank/SocialRankBadge";
 import { clampRank } from "@/lib/ranks";
@@ -8,6 +8,7 @@ import { HALO_WEAPONS } from "@/data/haloWeapons";
 import SpartanImageUploader from "@/components/SpartanImageUploader";
 import { getSignedUserReadUrl } from "@/lib/user-images";
 import ProfileSettingsForm from "@/components/profile/ProfileSettingsForm";
+export const dynamic = "force-dynamic";
 
 type ProfilePageProps = {
   searchParams?: Record<string, string | string[] | undefined>;

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import {
   buildLobbyImagePath,
@@ -7,6 +7,7 @@ import {
   validateLobbyImageMeta,
 } from "@/lib/lobby-images";
 
+export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const EXT_BY_TYPE: Record<string, string[]> = {

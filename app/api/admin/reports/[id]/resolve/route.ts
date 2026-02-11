@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { getCurrentUser, isAdminUser } from "@/lib/auth";
 import { absoluteUrl } from "@/lib/url";
+export const dynamic = "force-dynamic";
 
 export async function POST(
   request: Request,

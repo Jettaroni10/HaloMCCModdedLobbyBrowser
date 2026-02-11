@@ -5,10 +5,9 @@ const PRODUCT_DIR = "HMCC Overlay";
 
 function getDataRootDir(app) {
   if (app && typeof app.getPath === "function") {
-    return app.getPath("appData");
+    return app.getPath("userData");
   }
-  if (process.env.APPDATA) return process.env.APPDATA;
-  return path.join(os.homedir(), "AppData", "Roaming");
+  return path.join(os.homedir(), "AppData", "Roaming", PRODUCT_DIR);
 }
 
 function getAppDataDir(app) {
@@ -32,7 +31,7 @@ function getLogsDir(app) {
 }
 
 function getCustomsStatePath(app) {
-  return path.join(getDataRootDir(app), "MCC", "customs_state.json");
+  return path.join(getDataRootDir(app), "customs_state.json");
 }
 
 function getConfigPath(app) {

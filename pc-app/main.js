@@ -1116,10 +1116,11 @@ app.whenReady().then(() => {
   telemetryPath = getCustomsStatePath(app);
   useTelemetry = true;
 
+  const userDataPath = app.getPath("userData");
   debugLog(
-    `paths: dataRoot=${getDataRootDir(app)} appDataDir=${getAppDataDir(
+    `paths: userData=${userDataPath} dataRoot=${getDataRootDir(
       app
-    )} telemetry=${telemetryPath} config=${configPath} lobbies=${dataFile}`
+    )} appDataDir=${getAppDataDir(app)} telemetry=${telemetryPath} config=${configPath} lobbies=${dataFile}`
   );
 
   ensureCustomsStateExists({ filePath: telemetryPath, logger: console });

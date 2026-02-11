@@ -11,7 +11,7 @@ function getDataRootDir(app) {
 }
 
 function getAppDataDir(app) {
-  return path.join(getDataRootDir(app), PRODUCT_DIR);
+  return getDataRootDir(app);
 }
 
 function getCacheDir(app) {

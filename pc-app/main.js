@@ -1120,7 +1120,7 @@ app.whenReady().then(() => {
   debugLog(
     `paths: userData=${userDataPath} dataRoot=${getDataRootDir(
       app
-    )} appDataDir=${getAppDataDir(app)} telemetry=${telemetryPath} config=${configPath} lobbies=${dataFile}`
+    )} dataDir=${getAppDataDir(app)} telemetry=${telemetryPath} config=${configPath} lobbies=${dataFile}`
   );
 
   ensureCustomsStateExists({ filePath: telemetryPath, logger: console });

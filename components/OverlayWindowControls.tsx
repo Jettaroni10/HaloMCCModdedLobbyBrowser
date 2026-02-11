@@ -133,6 +133,7 @@ export default function OverlayWindowControls() {
           method: "POST",
         }).catch(() => {});
       }
+      await fetch("/api/presence/shutdown", { method: "POST" }).catch(() => {});
     } finally {
       await Promise.resolve(bridge.requestQuit?.());
     }
@@ -153,6 +154,7 @@ export default function OverlayWindowControls() {
           return;
         }
       }
+      await fetch("/api/presence/shutdown", { method: "POST" }).catch(() => {});
       if (!updateInfo) {
         setUpdateError("Update details missing.");
         setUpdateBusy(false);

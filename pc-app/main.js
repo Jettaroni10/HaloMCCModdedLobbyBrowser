@@ -46,6 +46,8 @@ let mccWatchTimer = null;
 let mccWatchInFlight = false;
 let mccMissingCount = 0;
 let mccSeen = false;
+let mccRunning = null;
+let shutdownRequested = false;
 
 const OVERLAY_URL = String(
   process.env.HMCC_OVERLAY_URL || "https://halomoddedcustoms.com"
@@ -471,6 +473,25 @@ function toggleOverlayVisibility(reason) {
   showOverlay();
 }
 
+function notifyRendererShutdown(reason) {
+  if (overlayWindow && !overlayWindow.isDestroyed() && overlayWindow.webContents) {
+    overlayWindow.webContents.send("hmcc:shutdown", { reason });
+  }
+}
+
+function requestOverlayShutdown(reason) {
+  if (shutdownRequested) return;
+  shutdownRequested = true;
+  notifyRendererShutdown(reason);
+  setTimeout(() => {
+    try {
+      app.quit();
+    } catch {
+      // ignore
+    }
+  }, 1500);
+}
+
 async function loadActiveWinGetter() {
   if (activeWinGetter) return activeWinGetter;
   try {
@@ -574,6 +595,7 @@ function startMccWatcher() {
     mccWatchInFlight = true;
     try {
       const running = await isMccProcessRunning();
+      mccRunning = Boolean(running);
       if (running) {
         if (!mccSeen) {
           debugLog("MCC detected; watcher armed.");
@@ -590,8 +612,8 @@ function startMccWatcher() {
         if (updateInProgress) {
           return;
         }
-        debugLog("MCC closed; quitting overlay.");
-        app.quit();
+        debugLog("MCC closed; shutting down overlay.");
+        requestOverlayShutdown("mcc-closed");
       }
     } catch (error) {
       if (DEBUG_OVERLAY) {
@@ -1344,6 +1366,9 @@ function setupIpc() {
     latestTelemetryState || buildTelemetryState()
   );
   ipcMain.handle("hmcc:getAppVersion", () => app.getVersion());
+  ipcMain.handle("hmcc:isHaloRunning", () =>
+    mccRunning === null ? true : Boolean(mccRunning)
+  );
   ipcMain.handle("hmcc:update_check", async () => {
     if (!app.isPackaged) {
       return { ok: false, code: "DEV_MODE", message: "Updates disabled in development." };
@@ -1594,9 +1619,16 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", () => {
+  notifyRendererShutdown("app-quit");
   globalShortcut.unregisterAll();
   stopReaderProcess();
   stopFocusWatcher();
   stopMccWatcher();
   stopTelemetryEmitter();
+});
+
+["SIGINT", "SIGTERM"].forEach((signal) => {
+  process.on(signal, () => {
+    requestOverlayShutdown(`signal:${signal}`);
+  });
 });

@@ -42,8 +42,7 @@ export default function OverlayHeader({ user, isAdmin }: OverlayHeaderProps) {
           <Link href="/" className="hover:text-ink">
             Browse
           </Link>
-          <HostNavLink hostUserId={user?.id ?? null} />
-          <NotificationsBellButton userId={user?.id ?? null} />
+          <HostNavLink />
           <HostNotificationToggle userId={user?.id ?? null} />
           {user && (
             <Link href="/friends" className="hover:text-ink">
@@ -72,6 +71,7 @@ export default function OverlayHeader({ user, isAdmin }: OverlayHeaderProps) {
                   sr{clampRank(user.srLevel)}
                 </span>
               </Link>
+              <NotificationsBellButton userId={user?.id ?? null} />
               <SignOutButton />
             </>
           ) : (

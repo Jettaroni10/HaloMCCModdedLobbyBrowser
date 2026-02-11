@@ -58,8 +58,9 @@ export default function NotificationsDrawer() {
       if (event.key === "Escape") close();
     };
     window.addEventListener("keydown", handleKey);
+    markViewed();
     return () => window.removeEventListener("keydown", handleKey);
-  }, [isOpen, close]);
+  }, [isOpen, close, markViewed]);
 
   const panelTransform = useMemo(() => {
     if (isOpen) return "translateX(0)";
@@ -79,7 +80,7 @@ export default function NotificationsDrawer() {
       )}
       <aside
         id="hmcc-notifications-drawer"
-        className={`no-drag fixed right-0 top-0 z-[9999] flex h-full w-[360px] max-w-[80vw] flex-col border-l shadow-2xl transition-transform duration-200 ease-out md:w-[400px] ${OverlayThemeClasses.surface} ${OverlayThemeClasses.border}`}
+        className={`no-drag fixed right-0 top-0 z-[9999] flex h-full w-[360px] max-w-[80vw] flex-col border-l bg-sand text-ink shadow-2xl transition-transform duration-200 ease-out md:w-[400px] ${OverlayThemeClasses.border}`}
         style={{ transform: panelTransform }}
         aria-hidden={!isOpen}
       >

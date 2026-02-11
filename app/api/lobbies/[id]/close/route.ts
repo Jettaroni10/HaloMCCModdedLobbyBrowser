@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { closeHostedLobby } from "@/lib/lobby-membership";
 export const dynamic = "force-dynamic";
 
 export async function POST(
@@ -15,19 +15,11 @@ export async function POST(
     return NextResponse.json({ error: "Account is banned." }, { status: 403 });
   }
 
-  const lobby = await prisma.lobby.findUnique({ where: { id: params.id } });
-  if (!lobby) {
-    return NextResponse.json({ error: "Lobby not found." }, { status: 404 });
-  }
-  if (lobby.hostUserId !== user.id) {
-    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+  const result = await closeHostedLobby({ lobbyId: params.id, userId: user.id });
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error }, { status: result.status });
   }
 
-  const updated = await prisma.lobby.update({
-    where: { id: params.id },
-    data: { isActive: false },
-  });
-
-  return NextResponse.json(updated);
+  return NextResponse.json({ ok: true });
 }
 

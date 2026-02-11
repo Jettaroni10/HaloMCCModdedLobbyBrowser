@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { emitLobbyExpired } from "@/lib/host-events";
+import { cleanupStalePresence } from "@/lib/presence";
 export const dynamic = "force-dynamic";
 
 export const runtime = "nodejs";
@@ -69,10 +70,13 @@ async function runCleanup(request: Request) {
     where: { createdAt: { lt: purgeBefore } },
   });
 
+  const presenceResult = await cleanupStalePresence();
+
   return NextResponse.json({
     expiredLobbies: lobbyCount,
     declinedRequests: requestCount,
     purgedRateLimitEvents: rateLimitResult.count,
+    cleanedPresence: presenceResult.cleaned,
   });
 }
 

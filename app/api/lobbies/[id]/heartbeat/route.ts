@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { addXp, hasXpEvent } from "@/lib/xp";
+import { touchLobbyHeartbeat } from "@/lib/presence";
 export const dynamic = "force-dynamic";
 
 export async function POST(
@@ -25,15 +26,7 @@ export async function POST(
   }
 
   const now = new Date();
-  const expiresAt = new Date(now.getTime() + 30 * 60 * 1000);
-
-  const updated = await prisma.lobby.update({
-    where: { id: params.id },
-    data: {
-      lastHeartbeatAt: now,
-      expiresAt,
-    },
-  });
+  const updated = await touchLobbyHeartbeat(params.id, now);
 
   const activeMinutes = (now.getTime() - lobby.createdAt.getTime()) / 60000;
   if (activeMinutes >= 20) {

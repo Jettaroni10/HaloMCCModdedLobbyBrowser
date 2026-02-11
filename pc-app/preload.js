@@ -50,6 +50,18 @@ contextBridge.exposeInMainWorld("hmccOverlay", {
     const result = await ipcRenderer.invoke("hmcc:requestQuit");
     return Boolean(result?.ok);
   },
+  isHaloRunning: async () => {
+    const result = await ipcRenderer.invoke("hmcc:isHaloRunning");
+    return Boolean(result);
+  },
+  onShutdown: (handler) => {
+    if (typeof handler !== "function") return () => {};
+    const listener = (_event, payload) => handler(payload);
+    ipcRenderer.on("hmcc:shutdown", listener);
+    return () => {
+      ipcRenderer.off("hmcc:shutdown", listener);
+    };
+  },
   setDebugPanelPinned: (enabled) => {
     ipcRenderer.send("hmcc:setDebugPanelPinned", Boolean(enabled));
   },

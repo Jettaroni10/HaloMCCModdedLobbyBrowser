@@ -402,38 +402,40 @@ export default function HostDashboard({
               key={request.id}
               className="rounded-sm border border-ink/10 bg-mist p-4 text-sm"
             >
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <Nametag
-                    gamertag={request.requesterHandleText}
-                    rank={request.requesterSrLevel ?? 1}
-                    nametagColor={request.requesterNametagColor}
-                    className="bg-mist"
-                  />
-                  <p className="text-xs text-ink/60">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0 flex-1">
+                  <div className="min-w-[180px] max-w-full">
+                    <Nametag
+                      gamertag={request.requesterHandleText}
+                      rank={request.requesterSrLevel ?? 1}
+                      nametagColor={request.requesterNametagColor}
+                      className="bg-mist"
+                    />
+                  </div>
+                  <p className="mt-1 truncate text-xs text-ink/60">
                     Lobby: {request.lobby.title}
                   </p>
                 </div>
                 {request.status === "PENDING" && (
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                     <button
                       type="button"
                       onClick={() => actOnRequest(request.id, "accept")}
-                      className="rounded-sm bg-ink px-3 py-1 text-xs font-semibold text-sand"
+                      className="h-8 rounded-sm bg-ink px-3 text-xs font-semibold text-sand"
                     >
                       Accept
                     </button>
                     <button
                       type="button"
                       onClick={() => actOnRequest(request.id, "decline")}
-                      className="rounded-sm border border-ink/20 px-3 py-1 text-xs font-semibold text-ink"
+                      className="h-8 rounded-sm border border-ink/20 px-3 text-xs font-semibold text-ink"
                     >
                       Decline
                     </button>
                     <button
                       type="button"
                       onClick={() => actOnRequest(request.id, "block")}
-                      className="rounded-sm border border-clay/40 px-3 py-1 text-xs font-semibold text-clay"
+                      className="h-8 rounded-sm border border-clay/40 px-3 text-xs font-semibold text-clay"
                     >
                       Block
                     </button>

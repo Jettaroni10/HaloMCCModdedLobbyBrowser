@@ -15,6 +15,7 @@ import OverlayVersionLabel from "@/components/OverlayVersionLabel";
 import OverlayDiagnostics from "@/components/OverlayDiagnostics";
 import { OverlayTelemetryProvider } from "@/components/OverlayTelemetryProvider";
 import OverlayWindowControls from "@/components/OverlayWindowControls";
+import OverlayPresenceHeartbeat from "@/components/OverlayPresenceHeartbeat";
 import { NotificationsDrawerProvider } from "@/components/notifications/NotificationsDrawerContext";
 import NotificationsDrawer from "@/components/notifications/NotificationsDrawer";
 
@@ -46,6 +47,7 @@ export default async function RootLayout({
             <OverlayVersionLabel />
             <OverlayDiagnostics />
             <OverlayWindowControls />
+            <OverlayPresenceHeartbeat />
             <AuthProvider>
               <Suspense fallback={null}>
                 <GamertagGate user={user} />

@@ -56,10 +56,23 @@ export async function closeHostedLobby(params: {
     return { ok: false as const, status: 403, error: "Forbidden." };
   }
 
-  await prisma.lobby.update({
-    where: { id: lobbyId },
-    data: { isActive: false },
-  });
+  const now = new Date();
+  await prisma.$transaction([
+    prisma.lobby.update({
+      where: { id: lobbyId },
+      data: { isActive: false },
+    }),
+    prisma.joinRequest.updateMany({
+      where: { lobbyId, status: "PENDING" },
+      data: { status: "DECLINED", decidedAt: now, decidedByUserId: null },
+    }),
+    prisma.lobbyMember.deleteMany({ where: { lobbyId } }),
+    prisma.conversationParticipant.deleteMany({
+      where: { conversation: { lobbyId, type: "LOBBY" } },
+    }),
+  ]);
+
+  emitLobbyRosterUpdated({ lobbyId });
 
   return { ok: true as const };
 }

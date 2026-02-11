@@ -103,8 +103,12 @@ export default function OverlayWindowControls() {
     setUpdateError(null);
     try {
       const result = await Promise.resolve(bridge.updateCheck?.());
-      if (!result || result.ok === false) {
-        showToast(result?.message || "Update check failed.", "error");
+      if (!result) {
+        showToast("Update check failed.", "error");
+        return;
+      }
+      if (result.ok === false) {
+        showToast(result.message || "Update check failed.", "error");
         return;
       }
       if (result.status === "no-update") {
@@ -152,17 +156,37 @@ export default function OverlayWindowControls() {
           return;
         }
       }
-      if (updateInfo?.status !== "downloaded") {
+      if (!updateInfo) {
+        setUpdateError("Update details missing.");
+        setUpdateBusy(false);
+        return;
+      }
+      if (updateInfo.ok === false) {
+        setUpdateError(updateInfo.message || "Update details invalid.");
+        setUpdateBusy(false);
+        return;
+      }
+      if (updateInfo.status !== "downloaded") {
         const downloadResult = await Promise.resolve(bridge.updateDownload?.());
-        if (!downloadResult || downloadResult.ok === false) {
-          setUpdateError(downloadResult?.message || "Update download failed.");
+        if (!downloadResult) {
+          setUpdateError("Update download failed.");
+          setUpdateBusy(false);
+          return;
+        }
+        if (downloadResult.ok === false) {
+          setUpdateError(downloadResult.message || "Update download failed.");
           setUpdateBusy(false);
           return;
         }
         setUpdateInfo(downloadResult);
       }
       const installResult = await Promise.resolve(bridge.updateInstall?.());
-      if (installResult && installResult.ok === false) {
+      if (!installResult) {
+        setUpdateError("Update install failed.");
+        setUpdateBusy(false);
+        return;
+      }
+      if (installResult.ok === false) {
         setUpdateError(installResult.message || "Update install failed.");
         setUpdateBusy(false);
       }

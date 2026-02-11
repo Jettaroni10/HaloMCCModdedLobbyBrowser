@@ -6,7 +6,9 @@ on:
     paths:
       - "prisma/**"
       - "prisma/schema.prisma"
+      - "prisma.config.ts"
       - "package.json"
+      - "package-lock.json"
   workflow_dispatch:
 
 concurrency:
@@ -39,4 +41,3 @@ jobs:
 
       - name: Prisma migrate deploy
         run: npx prisma migrate deploy
-

@@ -485,7 +485,7 @@ export default function HostDashboard({
             </ul>
 
             <p className="mt-3 text-xs text-ink/60">
-              You can invite via Steam overlay, Xbox app, or in-game roster.
+              You can invite via Steam overlay or in-game roster.
             </p>
           </div>
         </div>

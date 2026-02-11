@@ -419,16 +419,6 @@ export default function BrowseViewClient({
         </div>
       </div>
 
-      <div className="rounded-sm border border-ink/10 bg-mist p-4 text-sm text-ink/70">
-        <p className="font-semibold text-ink">
-          Not affiliated with Microsoft, Xbox, 343 Industries, or Halo.
-        </p>
-        <p className="mt-1">
-          This app coordinates opt-in invites only and does not interact with
-          MCC networking or game state.
-        </p>
-      </div>
-
       <form className="grid gap-4 rounded-md border border-ink/10 bg-sand p-5 md:grid-cols-5">
         <label className="text-xs font-semibold uppercase tracking-[0.3em] text-ink/60">
           Game

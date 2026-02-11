@@ -47,7 +47,7 @@ function buildInviteChecklist(request: {
       requesterGamertag: request.requesterHandleText,
       inviteMessage,
       steamInstructions:
-        "Invite the player using their gamertag via Steam overlay, Xbox app, or in-game roster.",
+        "Invite the player using their gamertag via Steam overlay or in-game roster.",
     },
   };
 

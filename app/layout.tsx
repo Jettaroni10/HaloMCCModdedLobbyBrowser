@@ -4,7 +4,6 @@ import "./globals.css";
 import "@/lib/env";
 import { getCurrentUser, isAdminUser } from "@/lib/auth";
 import SiteHeader from "@/components/SiteHeader";
-import SiteFooter from "@/components/SiteFooter";
 import HostNotificationsProvider from "@/components/HostNotificationsProvider";
 import AnalyticsLoader from "@/components/analytics/AnalyticsLoader";
 import AnalyticsTracker from "@/components/analytics/AnalyticsTracker";
@@ -52,7 +51,6 @@ export default async function RootLayout({
                 <main className="flex-1">
                   <Suspense fallback={null}>{children}</Suspense>
                 </main>
-                <SiteFooter />
               </div>
             </HostNotificationsProvider>
           </AuthProvider>

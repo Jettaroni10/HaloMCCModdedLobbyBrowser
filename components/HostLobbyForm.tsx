@@ -76,6 +76,14 @@ export default function HostLobbyForm({
   sessionMode = false,
 }: HostLobbyFormProps) {
   const router = useRouter();
+  const panelBase =
+    "rounded-none border border-[#1b2a3a] bg-[#07111c] ring-1 ring-white/5";
+  const panelInner =
+    "rounded-none border border-[#1b2a3a] bg-[#091827] ring-1 ring-white/5";
+  const inputBase =
+    "rounded-none border border-[#1b2a3a] bg-[#0b1a2a] text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-white/10 focus:border-white/20";
+  const sectionTitle =
+    "text-sm font-semibold tracking-wider uppercase text-slate-200";
   const { state: telemetryState } = useOverlayTelemetryContext();
   const isConnected = telemetryState.overlayConnected;
   const localTelemetry = telemetryState.localTelemetry;
@@ -300,21 +308,21 @@ export default function HostLobbyForm({
 
   const sessionStatusTone = useMemo(() => {
     if (!overlaySessionMode) {
-      return "border-slate-700 bg-slate-900/60 text-slate-200";
+      return "border-[#1b2a3a] bg-[#091827] text-slate-200";
     }
     if (!isConnected) {
-      return "border-slate-800 bg-slate-950/60 text-slate-400";
+      return "border-[#1b2a3a] bg-[#050b12] text-slate-400";
     }
     if (localTelemetry?.status === "active") {
-      return "border-emerald-500/40 bg-emerald-500/10 text-emerald-200";
+      return "border-[#2a7a5b] bg-[#0a1b14] text-[#7ef0c0]";
     }
     if (localTelemetry?.status === "waiting") {
-      return "border-slate-700 bg-slate-900/60 text-slate-200";
+      return "border-[#1b2a3a] bg-[#0b1a2a] text-slate-200";
     }
     if (localTelemetry?.status === "stale") {
-      return "border-red-500/50 bg-red-500/10 text-red-200";
+      return "border-[#5a2328] bg-[#2a0f13] text-[#ff9aa2]";
     }
-    return "border-slate-700 bg-slate-900/60 text-slate-200";
+    return "border-[#1b2a3a] bg-[#0b1a2a] text-slate-200";
   }, [overlaySessionMode, isConnected, localTelemetry?.status]);
 
   const sessionLastUpdated = useMemo(() => {
@@ -857,27 +865,27 @@ export default function HostLobbyForm({
     <>
       {currentLobby && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-          <div className="w-full max-w-md rounded-md border border-ink/20 bg-sand p-5 text-ink shadow-xl">
+          <div className={`w-full max-w-md p-5 text-slate-100 ${panelBase}`}>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-ink/50">
+                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
                   You&apos;re already in a lobby
                 </p>
-                <h2 className="mt-2 text-lg font-semibold text-ink">
+                <h2 className="mt-2 text-lg font-semibold text-slate-100">
                   {currentLobby.name}
                 </h2>
               </div>
               {currentLobby.status && (
-                <span className="rounded-sm border border-ink/20 bg-mist px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-ink/70">
+                <span className="border border-[#1b2a3a] bg-[#0b1a2a] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
                   {currentLobby.status}
                 </span>
               )}
             </div>
 
-            <div className="mt-3 text-sm text-ink/70">{rosterSummary}</div>
+            <div className="mt-3 text-sm text-slate-400">{rosterSummary}</div>
 
             {modalError && (
-              <p className="mt-3 text-xs font-semibold text-clay">
+              <p className="mt-3 text-xs font-semibold text-[#ff9aa2]">
                 {modalError}
               </p>
             )}
@@ -887,7 +895,7 @@ export default function HostLobbyForm({
                 type="button"
                 onClick={handleLeaveAndCreate}
                 disabled={modalBusy}
-                className="w-full rounded-sm bg-ink px-4 py-2 text-sm font-semibold text-sand hover:bg-ink/90 disabled:cursor-not-allowed disabled:bg-ink/60"
+                className="w-full border border-[#1b2a3a] bg-[#0b1a2a] px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-[#0f2236] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {modalBusy
                   ? "Leaving & creating..."
@@ -902,7 +910,7 @@ export default function HostLobbyForm({
                     setModalError(null);
                   }}
                   disabled={modalBusy}
-                  className="rounded-sm border border-ink/20 px-3 py-2 text-xs font-semibold text-ink/70 hover:border-ink/40 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="border border-[#1b2a3a] px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-[#0b1a2a] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Cancel
                 </button>
@@ -910,7 +918,7 @@ export default function HostLobbyForm({
                   type="button"
                   onClick={handleGoToCurrent}
                   disabled={modalBusy}
-                  className="text-xs font-semibold text-clay hover:text-clay/80 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="text-xs font-semibold text-slate-400 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Go to current lobby
                 </button>
@@ -921,7 +929,7 @@ export default function HostLobbyForm({
       )}
 
       {overlaySessionMode && (
-        <section className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+        <section className={`${panelBase} p-4`}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
@@ -932,7 +940,7 @@ export default function HostLobbyForm({
                   {sessionMap}
                 </h2>
                 {isLive && (
-                  <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-200">
+                  <span className="inline-flex items-center border border-[#2a7a5b] bg-[#0a1b14] px-2 py-0.5 text-[11px] font-semibold text-[#7ef0c0]">
                     LIVE
                   </span>
                 )}
@@ -957,7 +965,7 @@ export default function HostLobbyForm({
               <p className="mt-1 text-xs text-slate-500">{sessionLastUpdated}</p>
             </div>
             <span
-              className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${sessionStatusTone}`}
+              className={`inline-flex items-center border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] ${sessionStatusTone}`}
             >
               {sessionStatusLabel}
             </span>
@@ -1000,20 +1008,20 @@ export default function HostLobbyForm({
           </div>
 
           {(!isConnected || !localTelemetry || overlayInMenus) && (
-            <div className="mt-4 rounded-md border border-slate-800 bg-slate-950/60 px-3 py-2 text-xs text-slate-300">
+            <div className={`mt-4 px-3 py-2 text-xs text-slate-300 ${panelInner}`}>
               No active session detected. Start MCC (EAC off) and enter Customs
               menus.
             </div>
           )}
 
           {isLive && (!localTelemetry || overlayInMenus || !isConnected) && (
-            <div className="mt-3 rounded-md border border-clay/40 bg-clay/10 px-3 py-2 text-xs text-clay">
+            <div className="mt-3 border border-[#5a2328] bg-[#2a0f13] px-3 py-2 text-xs text-[#ff9aa2]">
               Session details will populate once detected.
             </div>
           )}
 
           {sessionError && (
-            <p className="mt-3 text-xs font-semibold text-clay">
+            <p className="mt-3 text-xs font-semibold text-[#ff9aa2]">
               {sessionError}
             </p>
           )}
@@ -1033,7 +1041,7 @@ export default function HostLobbyForm({
                   type="button"
                   onClick={handleStopLive}
                   disabled={sessionBusy}
-                  className="inline-flex items-center gap-2 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-200 hover:bg-red-500/15 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="border border-[#5a2328] bg-transparent px-3 py-2 text-sm font-semibold text-[#ff9aa2] transition-colors hover:bg-[#2a0f13] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {sessionBusy ? "Stopping..." : "Stop"}
                 </button>
@@ -1042,7 +1050,7 @@ export default function HostLobbyForm({
                   type="button"
                   onClick={handleStartLive}
                   disabled={isSubmitting || sessionBusy}
-                  className="rounded-md bg-ink px-4 py-2 text-xs font-semibold text-sand hover:bg-ink/90 disabled:cursor-not-allowed disabled:bg-ink/60"
+                  className="border border-[#1b2a3a] bg-[#0b1a2a] px-4 py-2 text-xs font-semibold text-slate-100 hover:bg-[#0f2236] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isSubmitting ? "Going live..." : "Go Live"}
                 </button>
@@ -1058,11 +1066,11 @@ export default function HostLobbyForm({
         encType="multipart/form-data"
         onSubmit={handleSubmit}
         ref={formRef}
-        className="mt-6 rounded-xl border border-slate-800 bg-slate-950/40 p-4"
+        className={`mt-6 ${panelBase} p-4`}
       >
       {overlaySessionMode && (
         <div className="mb-3 flex items-center justify-between">
-          <p className="text-sm font-semibold tracking-wider uppercase text-slate-200">
+          <p className={sectionTitle}>
             Session Details
           </p>
         </div>
@@ -1075,75 +1083,76 @@ export default function HostLobbyForm({
         )}
 
         {!overlaySessionMode && enableTelemetryBinding && (
-          <div className="rounded-sm border border-ink/10 bg-mist p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-ink/50">
-                Overlay Telemetry
-              </p>
-              <p className="mt-1 text-xs text-ink/60">
-                {isConnected
-                  ? "Live telemetry connected. Fields stay in sync while live binding is on."
-                  : "Overlay not detected yet. Launch the overlay app to connect."}
-              </p>
+          <div className={`${panelInner} p-4`}>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
+                  Overlay Telemetry
+                </p>
+                <p className="mt-1 text-xs text-slate-400">
+                  {isConnected
+                    ? "Live telemetry connected. Fields stay in sync while live binding is on."
+                    : "Overlay not detected yet. Launch the overlay app to connect."}
+                </p>
+              </div>
+              <span
+                className={`border px-3 py-1 text-xs font-semibold ${
+                  isConnected
+                    ? "border-[#1b2a3a] bg-[#0b1a2a] text-slate-200"
+                    : "border-[#1b2a3a] bg-[#07111c] text-slate-500"
+                }`}
+              >
+                {isConnected ? "Live Connected" : "Disconnected"}
+              </span>
             </div>
-            <span
-              className={`rounded-sm border px-3 py-1 text-xs font-semibold ${
-                isConnected
-                  ? "border-ink/20 bg-sand text-ink"
-                  : "border-ink/10 bg-sand/60 text-ink/50"
-              }`}
-            >
-              {isConnected ? "Live Connected" : "Disconnected"}
-            </span>
-          </div>
 
-          <div className="mt-3 grid gap-2 text-xs text-ink/70 md:grid-cols-4">
-            <div>
-              Map{" "}
-              <span className="font-semibold text-ink">
-                {localTelemetry?.map ?? "Unknown"}
-              </span>
+            <div className="mt-3 grid gap-2 text-xs text-slate-400 md:grid-cols-4">
+              <div>
+                Map{" "}
+                <span className="font-semibold text-slate-200">
+                  {localTelemetry?.map ?? "Unknown"}
+                </span>
+              </div>
+              <div>
+                Mode{" "}
+                <span className="font-semibold text-slate-200">
+                  {localTelemetry?.mode ?? "Unknown"}
+                </span>
+              </div>
+              <div>
+                Players{" "}
+                <span className="font-semibold text-slate-200">
+                  {typeof localTelemetry?.currentPlayers === "number"
+                    ? localTelemetry.currentPlayers
+                    : 0}
+                  /
+                  {typeof slotsValue === "number" ||
+                  typeof slotsValue === "string"
+                    ? slotsValue
+                    : 0}
+                </span>
+              </div>
+              <div>
+                Status{" "}
+                <span className="font-semibold text-slate-200">
+                  {overlayStatus}
+                </span>
+              </div>
             </div>
-            <div>
-              Mode{" "}
-              <span className="font-semibold text-ink">
-                {localTelemetry?.mode ?? "Unknown"}
-              </span>
-            </div>
-            <div>
-              Players{" "}
-              <span className="font-semibold text-ink">
-                {typeof localTelemetry?.currentPlayers === "number"
-                  ? localTelemetry.currentPlayers
-                  : 0}
-                /
-                {typeof slotsValue === "number" || typeof slotsValue === "string"
-                  ? slotsValue
-                  : 0}
-              </span>
-            </div>
-            <div>
-              Status{" "}
-              <span className="font-semibold text-ink">
-                {overlayStatus}
-              </span>
-            </div>
-          </div>
 
-          <label className="mt-3 flex items-center gap-2 text-xs font-semibold text-ink/60">
-            <input
-              type="checkbox"
-              checked={!liveBindingPreference}
-              onChange={(event) =>
-                setLiveBindingPreference(!event.target.checked)
-              }
-              className="h-3.5 w-3.5 rounded border-ink/20"
-            />
-            Manual override (stop live binding)
-          </label>
-        </div>
-      )}
+            <label className="mt-3 flex items-center gap-2 text-xs font-semibold text-slate-400">
+              <input
+                type="checkbox"
+                checked={!liveBindingPreference}
+                onChange={(event) =>
+                  setLiveBindingPreference(!event.target.checked)
+                }
+                className="h-3.5 w-3.5 rounded-none border-[#1b2a3a] bg-[#0b1a2a]"
+              />
+              Manual override (stop live binding)
+            </label>
+          </div>
+        )}
 
         <label className="block text-sm font-semibold text-slate-100">
           {overlaySessionMode ? "Headline (optional)" : "Title"}
@@ -1151,7 +1160,7 @@ export default function HostLobbyForm({
             name="title"
             required={!overlaySessionMode}
             defaultValue={defaultValues?.title ?? ""}
-            className="mt-2 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-slate-500/40 focus:ring-2 focus:ring-slate-500/30"
+            className={`mt-2 w-full px-3 py-2 text-sm ${inputBase}`}
           />
         </label>
 
@@ -1165,7 +1174,7 @@ export default function HostLobbyForm({
               value={modeValue}
               onChange={(event) => setModeValue(event.target.value)}
               readOnly={liveBindingEnabled}
-              className="mt-2 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-slate-500/40 focus:ring-2 focus:ring-slate-500/30"
+              className={`mt-2 w-full px-3 py-2 text-sm ${inputBase}`}
             />
           </label>
             <label className="block text-sm font-semibold text-slate-100">
@@ -1176,7 +1185,7 @@ export default function HostLobbyForm({
               value={mapValue}
               onChange={(event) => setMapValue(event.target.value)}
               readOnly={liveBindingEnabled}
-              className="mt-2 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-slate-500/40 focus:ring-2 focus:ring-slate-500/30"
+              className={`mt-2 w-full px-3 py-2 text-sm ${inputBase}`}
             />
           </label>
           </div>
@@ -1189,7 +1198,7 @@ export default function HostLobbyForm({
             <select
               name="game"
               defaultValue={defaultValues?.game ?? Games[0]}
-              className="mt-2 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 focus:border-slate-500/40 focus:ring-2 focus:ring-slate-500/30"
+              className={`mt-2 w-full px-3 py-2 text-sm ${inputBase}`}
             >
               {Games.map((game) => (
                 <option key={game} value={game}>
@@ -1204,7 +1213,7 @@ export default function HostLobbyForm({
           <select
             name="region"
             defaultValue={defaultValues?.region ?? Regions[0]}
-            className="mt-2 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 focus:border-slate-500/40 focus:ring-2 focus:ring-slate-500/30"
+            className={`mt-2 w-full px-3 py-2 text-sm ${inputBase}`}
           >
             {Regions.map((region) => (
               <option key={region} value={region}>
@@ -1222,7 +1231,7 @@ export default function HostLobbyForm({
             <select
               name="voice"
               defaultValue={defaultValues?.voice ?? Voices[0]}
-              className="mt-2 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 focus:border-slate-500/40 focus:ring-2 focus:ring-slate-500/30"
+              className={`mt-2 w-full px-3 py-2 text-sm ${inputBase}`}
             >
               {Voices.map((voice) => (
                 <option key={voice} value={voice}>
@@ -1236,7 +1245,7 @@ export default function HostLobbyForm({
             <select
               name="vibe"
               defaultValue={defaultValues?.vibe ?? Vibes[0]}
-              className="mt-2 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 focus:border-slate-500/40 focus:ring-2 focus:ring-slate-500/30"
+              className={`mt-2 w-full px-3 py-2 text-sm ${inputBase}`}
             >
               {Vibes.map((vibe) => (
                 <option key={vibe} value={vibe}>
@@ -1249,9 +1258,11 @@ export default function HostLobbyForm({
       )}
 
         <label className="block text-sm font-semibold text-slate-100">
-        Tags
-        <TagsInput name="tags" defaultTags={defaultTags} />
-      </label>
+          Tags
+          <div className="[&_button]:border [&_button]:border-[#1b2a3a] [&_button]:bg-[#091827] [&_button]:text-slate-200 [&_button]:hover:bg-[#0b1a2a] [&_button]:rounded-none [&_input]:rounded-none [&_input]:border-[#1b2a3a] [&_input]:bg-[#0b1a2a] [&_input]:text-slate-100 [&_input]:placeholder:text-slate-500 [&_input]:focus:ring-2 [&_input]:focus:ring-white/10 [&_input]:focus:border-white/20 [&_p]:text-slate-500">
+            <TagsInput name="tags" defaultTags={defaultTags} />
+          </div>
+        </label>
 
         <label className="block text-sm font-semibold text-slate-100">
         {overlaySessionMode ? "Description (optional)" : "Rules note"}
@@ -1260,17 +1271,17 @@ export default function HostLobbyForm({
           required={!overlaySessionMode}
           rows={3}
           defaultValue={defaultValues?.rulesNote ?? ""}
-          className="mt-2 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-slate-500/40 focus:ring-2 focus:ring-slate-500/30"
+          className={`mt-2 w-full px-3 py-2 text-sm ${inputBase}`}
         />
       </label>
 
       {!overlaySessionMode && enableMapImage && (
-        <div className="rounded-sm border border-ink/10 bg-mist p-4">
-          <p className="text-sm font-semibold text-ink">Map image</p>
-          <p className="mt-1 text-xs text-ink/60">
+        <div className={`${panelInner} p-4`}>
+          <p className="text-sm font-semibold text-slate-100">Map image</p>
+          <p className="mt-1 text-xs text-slate-400">
             Optional. Enable only if you want a custom lobby image.
           </p>
-          <label className="mt-3 flex items-center gap-2 text-xs font-semibold text-ink/60">
+          <label className="mt-3 flex items-center gap-2 text-xs font-semibold text-slate-400">
             <input
               type="checkbox"
               checked={useCustomMapImage}
@@ -1283,7 +1294,7 @@ export default function HostLobbyForm({
                   setSubmitError(null);
                 }
               }}
-              className="h-3.5 w-3.5 rounded border-ink/20"
+              className="h-3.5 w-3.5 rounded-none border-[#1b2a3a] bg-[#0b1a2a]"
             />
             Use custom lobby image
           </label>
@@ -1326,19 +1337,19 @@ export default function HostLobbyForm({
               value={slotsValue}
               onChange={(event) => setSlotsValue(event.target.value)}
               required
-              className="mt-2 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-slate-500/40 focus:ring-2 focus:ring-slate-500/30"
+              className={`mt-2 w-full px-3 py-2 text-sm ${inputBase}`}
             />
           </label>
           </div>
       )}
 
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <label className="flex items-start gap-3 rounded-lg border border-slate-800 bg-slate-950/30 p-3">
+          <label className="flex items-start gap-3 border border-[#1b2a3a] bg-[#07111c] p-3">
             <input
               name="friendsOnly"
               type="checkbox"
               defaultChecked={defaultValues?.friendsOnly ?? false}
-              className="mt-0.5 h-4 w-4 rounded border-slate-600"
+              className="mt-0.5 h-4 w-4 rounded-none border-[#1b2a3a] bg-[#0b1a2a]"
             />
             <div>
               <p className="text-sm font-semibold text-slate-100">Friends only</p>
@@ -1347,13 +1358,13 @@ export default function HostLobbyForm({
               </p>
             </div>
           </label>
-          <label className="flex items-start gap-3 rounded-lg border border-slate-800 bg-slate-950/30 p-3">
+          <label className="flex items-start gap-3 border border-[#1b2a3a] bg-[#07111c] p-3">
             <input
               name="isModded"
               type="checkbox"
               checked={isModded}
               onChange={(event) => setIsModded(event.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-slate-600"
+              className="mt-0.5 h-4 w-4 rounded-none border-[#1b2a3a] bg-[#0b1a2a]"
             />
             <div>
               <p className="text-sm font-semibold text-slate-100">Mods required</p>
@@ -1366,28 +1377,28 @@ export default function HostLobbyForm({
 
       {isModded && (
         <>
-          <div className="rounded-sm border border-ink/10 bg-mist p-4">
+          <div className={`${panelInner} p-4`}>
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm font-semibold text-ink">Mod pack</p>
+              <p className="text-sm font-semibold text-slate-100">Mod pack</p>
               <button
                 type="button"
                 onClick={() => setShowPackCreator((prev) => !prev)}
-                className="rounded-sm border border-ink/20 px-3 py-1 text-xs font-semibold text-ink"
+                className="border border-[#1b2a3a] bg-[#0b1a2a] px-3 py-1 text-xs font-semibold text-slate-200 hover:bg-[#0f2236]"
               >
                 {showPackCreator ? "Close pack builder" : "Create new pack"}
               </button>
             </div>
-            <p className="mt-1 text-xs text-ink/60">
+            <p className="mt-1 text-xs text-slate-400">
               Attach a reusable set of required mods. Players will see a simple
               “Get Ready” checklist.
             </p>
-            <label className="mt-3 block text-sm font-semibold text-ink">
+            <label className="mt-3 block text-sm font-semibold text-slate-100">
               Select pack
               <select
                 name="modPackId"
                 value={selectedPackId}
                 onChange={(event) => setSelectedPackId(event.target.value)}
-                className="mt-2 w-full rounded-sm border border-ink/10 bg-sand px-3 py-2 text-sm"
+                className={`mt-2 w-full px-3 py-2 text-sm ${inputBase}`}
               >
                 <option value="">No pack selected</option>
                 {modPacks.map((pack) => (
@@ -1398,24 +1409,24 @@ export default function HostLobbyForm({
               </select>
             </label>
             {modPackLoading && (
-              <p className="mt-2 text-xs text-ink/50">Loading mod packs…</p>
+              <p className="mt-2 text-xs text-slate-500">Loading mod packs…</p>
             )}
             {modPackError && (
-              <p className="mt-2 text-xs font-semibold text-clay">
+              <p className="mt-2 text-xs font-semibold text-[#ff9aa2]">
                 {modPackError}
               </p>
             )}
             {selectedPack && (
-              <div className="mt-3 rounded-sm border border-ink/10 bg-sand px-3 py-2 text-xs text-ink/70">
-                <p className="text-xs font-semibold text-ink">
+              <div className={`mt-3 px-3 py-2 text-xs text-slate-300 ${panelInner}`}>
+                <p className="text-xs font-semibold text-slate-100">
                   {selectedPack.name}
                 </p>
                 {selectedPack.description && (
-                  <p className="mt-1 text-xs text-ink/60">
+                  <p className="mt-1 text-xs text-slate-400">
                     {selectedPack.description}
                   </p>
                 )}
-                <p className="mt-2 text-xs text-ink/60">
+                <p className="mt-2 text-xs text-slate-400">
                   {selectedPack.mods.filter((mod) => !mod.isOptional).length} required
                   mod{selectedPack.mods.length === 1 ? "" : "s"}
                 </p>
@@ -1423,34 +1434,34 @@ export default function HostLobbyForm({
             )}
 
             {showPackCreator && (
-              <div className="mt-4 rounded-sm border border-ink/10 bg-sand p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-ink/50">
+              <div className={`mt-4 ${panelInner} p-4`}>
+                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
                   New mod pack
                 </p>
-                <label className="mt-3 block text-sm font-semibold text-ink">
+                <label className="mt-3 block text-sm font-semibold text-slate-100">
                   Pack name
                   <input
                     value={packName}
                     onChange={(event) => setPackName(event.target.value)}
-                    className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
+                    className={`mt-2 w-full px-3 py-2 text-sm ${inputBase}`}
                     placeholder="e.g. Desert Bus Required Mods"
                   />
                 </label>
-                <label className="mt-3 block text-sm font-semibold text-ink">
+                <label className="mt-3 block text-sm font-semibold text-slate-100">
                   Description (optional)
                   <input
                     value={packDescription}
                     onChange={(event) => setPackDescription(event.target.value)}
-                    className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
+                    className={`mt-2 w-full px-3 py-2 text-sm ${inputBase}`}
                     placeholder="Short note for your pack."
                   />
                 </label>
-                <label className="mt-3 flex items-center gap-2 text-xs font-semibold text-ink/60">
+                <label className="mt-3 flex items-center gap-2 text-xs font-semibold text-slate-400">
                   <input
                     type="checkbox"
                     checked={packIsPublic}
                     onChange={(event) => setPackIsPublic(event.target.checked)}
-                    className="h-3.5 w-3.5 rounded border-ink/20"
+                    className="h-3.5 w-3.5 rounded-none border-[#1b2a3a] bg-[#0b1a2a]"
                   />
                   Make pack public
                 </label>
@@ -1458,14 +1469,14 @@ export default function HostLobbyForm({
                   {packMods.map((mod, index) => (
                     <div
                       key={`mod-${index}`}
-                      className="grid gap-2 rounded-sm border border-ink/10 bg-mist p-3 md:grid-cols-[1fr_1.4fr_auto]"
+                      className="grid gap-2 border border-[#1b2a3a] bg-[#091827] p-3 md:grid-cols-[1fr_1.4fr_auto]"
                     >
                       <input
                         value={mod.name}
                         onChange={(event) =>
                           updatePackMod(index, { name: event.target.value })
                         }
-                        className="rounded-sm border border-ink/10 bg-sand px-3 py-2 text-xs"
+                        className={`px-3 py-2 text-xs ${inputBase}`}
                         placeholder="Mod name (optional)"
                       />
                       <input
@@ -1473,18 +1484,18 @@ export default function HostLobbyForm({
                         onChange={(event) =>
                           updatePackMod(index, { workshopUrl: event.target.value })
                         }
-                        className="rounded-sm border border-ink/10 bg-sand px-3 py-2 text-xs"
+                        className={`px-3 py-2 text-xs ${inputBase}`}
                         placeholder="Mod URL"
                       />
                       <div className="flex items-center justify-between gap-2">
-                        <label className="flex items-center gap-2 text-[11px] font-semibold text-ink/60">
+                        <label className="flex items-center gap-2 text-[11px] font-semibold text-slate-400">
                           <input
                             type="checkbox"
                             checked={mod.isOptional}
                             onChange={(event) =>
                               updatePackMod(index, { isOptional: event.target.checked })
                             }
-                            className="h-3 w-3 rounded border-ink/20"
+                            className="h-3 w-3 rounded-none border-[#1b2a3a] bg-[#0b1a2a]"
                           />
                           Optional
                         </label>
@@ -1492,7 +1503,7 @@ export default function HostLobbyForm({
                           <button
                             type="button"
                             onClick={() => removePackMod(index)}
-                            className="text-[11px] font-semibold text-clay"
+                            className="text-[11px] font-semibold text-[#ff9aa2]"
                           >
                             Remove
                           </button>
@@ -1503,19 +1514,21 @@ export default function HostLobbyForm({
                   <button
                     type="button"
                     onClick={addPackMod}
-                    className="rounded-sm border border-ink/20 px-3 py-1 text-xs font-semibold text-ink"
+                    className="border border-[#1b2a3a] bg-[#0b1a2a] px-3 py-1 text-xs font-semibold text-slate-200 hover:bg-[#0f2236]"
                   >
                     Add another mod
                   </button>
                 </div>
                 {packError && (
-                  <p className="mt-3 text-xs font-semibold text-clay">{packError}</p>
+                  <p className="mt-3 text-xs font-semibold text-[#ff9aa2]">
+                    {packError}
+                  </p>
                 )}
                 <button
                   type="button"
                   onClick={createModPack}
                   disabled={packSaving}
-                  className="mt-4 w-full rounded-sm bg-ink px-4 py-2 text-sm font-semibold text-sand disabled:cursor-not-allowed disabled:bg-ink/60"
+                  className="mt-4 w-full border border-[#1b2a3a] bg-[#0b1a2a] px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-[#0f2236] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {packSaving ? "Saving pack..." : "Save mod pack"}
                 </button>
@@ -1524,33 +1537,33 @@ export default function HostLobbyForm({
           </div>
 
           <details
-            className="rounded-sm border border-ink/10 bg-mist p-4"
+            className={`${panelInner} p-4`}
             open={!selectedPackId}
           >
-            <summary className="cursor-pointer text-sm font-semibold text-ink">
+            <summary className="cursor-pointer text-sm font-semibold text-slate-100">
               Mod URLs
             </summary>
-            <p className="mt-2 text-xs text-ink/60">
+            <p className="mt-2 text-xs text-slate-400">
               Paste links to any mods you want players to install (one per line).
             </p>
-            <label className="mt-3 block text-sm font-semibold text-ink">
+            <label className="mt-3 block text-sm font-semibold text-slate-100">
               Mod URLs
               <textarea
                 name="modUrls"
                 rows={4}
                 defaultValue={defaultModUrls}
                 disabled={Boolean(selectedPackId)}
-                className="mt-2 w-full rounded-sm border border-ink/10 bg-sand px-3 py-2 text-sm disabled:opacity-60"
+                className={`mt-2 w-full px-3 py-2 text-sm ${inputBase} disabled:opacity-60`}
               />
             </label>
-            <label className="mt-4 block text-sm font-semibold text-ink">
+            <label className="mt-4 block text-sm font-semibold text-slate-100">
               Mod notes
               <textarea
                 name="modNotes"
                 rows={3}
                 defaultValue={defaultValues?.modNotes ?? ""}
                 disabled={Boolean(selectedPackId)}
-                className="mt-2 w-full rounded-sm border border-ink/10 bg-sand px-3 py-2 text-sm disabled:opacity-60"
+                className={`mt-2 w-full px-3 py-2 text-sm ${inputBase} disabled:opacity-60`}
               />
             </label>
           </details>
@@ -1561,16 +1574,16 @@ export default function HostLobbyForm({
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full rounded-sm bg-ink px-4 py-2 text-sm font-semibold text-sand hover:bg-ink/90"
+          className="w-full border border-[#1b2a3a] bg-[#0b1a2a] px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-[#0f2236] disabled:opacity-60"
         >
           {isSubmitting ? "Publishing..." : submitLabel}
         </button>
       )}
       {submitStatus && (
-        <p className="text-xs font-semibold text-moss">{submitStatus}</p>
+        <p className="text-xs font-semibold text-[#7ef0c0]">{submitStatus}</p>
       )}
       {submitError && (
-        <p className="text-xs font-semibold text-clay">{submitError}</p>
+        <p className="text-xs font-semibold text-[#ff9aa2]">{submitError}</p>
       )}
       </div>
       </form>

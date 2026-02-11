@@ -46,15 +46,17 @@ export default async function HostPage() {
   }));
 
   return (
-    <div className="mx-auto w-full max-w-[1200px] px-6 py-12 lg:px-8">
-      <HostPageHeader />
+    <div className="min-h-screen bg-[#050b12]">
+      <div className="mx-auto w-full max-w-6xl px-6 py-12 lg:px-8 [&_*]:rounded-none">
+        <HostPageHeader />
 
-      <HostDashboard
-        className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr,1fr]"
-        lobbies={serializedLobbies}
-        requests={serializedRequests}
-        hostUserId={user.id}
-      />
+        <HostDashboard
+          className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr,1fr]"
+          lobbies={serializedLobbies}
+          requests={serializedRequests}
+          hostUserId={user.id}
+        />
+      </div>
     </div>
   );
 }

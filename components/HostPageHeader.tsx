@@ -13,13 +13,13 @@ export default function HostPageHeader() {
 
   if (isOverlayEnv) {
     return (
-      <div className="border-b border-slate-800/80 pb-4 mb-6">
+      <div className="mb-6 border-b border-[#1b2a3a] pb-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-semibold text-ink tracking-tight">
+            <h1 className="text-3xl font-semibold text-slate-100 tracking-tight">
               My Session
             </h1>
-            <p className="mt-2 text-sm text-ink/70">
+            <p className="mt-2 text-sm text-slate-400">
               Go live to publish your current session. Details update
               automatically.
             </p>
@@ -30,19 +30,19 @@ export default function HostPageHeader() {
   }
 
   return (
-    <div className="border-b border-slate-800/80 pb-4 mb-6">
+    <div className="mb-6 border-b border-[#1b2a3a] pb-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold text-ink tracking-tight">
+          <h1 className="text-3xl font-semibold text-slate-100 tracking-tight">
             Host dashboard
           </h1>
-          <p className="mt-2 text-sm text-ink/70">
+          <p className="mt-2 text-sm text-slate-400">
             Publish opt-in listings and manage invite requests.
           </p>
         </div>
         <Link
           href="/host/new"
-          className="rounded-sm bg-ink px-6 py-2 text-sm font-semibold text-sand hover:bg-ink/90"
+          className="rounded-none border border-[#1b2a3a] bg-[#0b1a2a] px-6 py-2 text-sm font-semibold text-slate-100 hover:bg-[#0f2236]"
         >
           Create lobby
         </Link>

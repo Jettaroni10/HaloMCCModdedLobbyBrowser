@@ -87,6 +87,12 @@ export default function HostDashboard({
   hostUserId,
   className,
 }: HostDashboardProps) {
+  const panelBase =
+    "rounded-none border border-[#1b2a3a] bg-[#07111c] ring-1 ring-white/5";
+  const panelInner =
+    "rounded-none border border-[#1b2a3a] bg-[#091827] ring-1 ring-white/5";
+  const sectionTitle =
+    "text-sm font-semibold tracking-wider uppercase text-slate-200";
   const [hydrated, setHydrated] = useState(false);
   const [isOverlayEnv, setIsOverlayEnv] = useState(false);
   const [activeLobbies, setActiveLobbies] = useState<LobbySummary[]>(lobbies);
@@ -291,7 +297,7 @@ export default function HostDashboard({
         className={
           isOverlayEnv
             ? "space-y-4"
-            : "rounded-xl border border-slate-800 bg-slate-950/40 p-4"
+            : `${panelBase} p-4`
         }
       >
         {isOverlayEnv ? (
@@ -304,31 +310,31 @@ export default function HostDashboard({
         ) : (
           <>
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-ink">
+              <h2 className="text-lg font-semibold text-slate-100">
                 My Active Lobbies
               </h2>
             </div>
             <div className="mt-4 space-y-4">
               {activeLobbies.length === 0 && (
-                <p className="text-sm text-ink/60">
+                <p className="text-sm text-slate-400">
                   You have no active lobbies yet.
                 </p>
               )}
               {activeLobbies.map((lobby) => (
                 <div
                   key={lobby.id}
-                  className="rounded-sm border border-ink/10 bg-mist p-4"
+                  className={`${panelInner} p-4`}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm font-semibold text-ink">
+                      <p className="text-sm font-semibold text-slate-100">
                         {lobby.title}
                       </p>
-                      <p className="text-xs text-ink/60">
+                      <p className="text-xs text-slate-400">
                         {lobby.game} · {lobby.mode} · {lobby.map}
                       </p>
                       <p
-                        className="text-xs text-ink/50"
+                        className="text-xs text-slate-500"
                         suppressHydrationWarning
                       >
                         {hydrated
@@ -342,27 +348,27 @@ export default function HostDashboard({
                       <button
                         type="button"
                         onClick={() => sendHeartbeat(lobby.id)}
-                        className="rounded-sm border border-ink/20 px-3 py-1 text-xs font-semibold text-ink hover:border-ink/40"
+                        className="border border-[#1b2a3a] bg-[#0b1a2a] px-3 py-1 text-xs font-semibold text-slate-200 hover:bg-[#0f2236]"
                       >
                         Heartbeat
                       </button>
                       <a
                         href={`/host/lobbies/${lobby.id}/edit`}
-                        className="rounded-sm border border-ink/20 px-3 py-1 text-xs font-semibold text-ink hover:border-ink/40"
+                        className="border border-[#1b2a3a] bg-transparent px-3 py-1 text-xs font-semibold text-slate-200 hover:bg-[#0b1a2a]"
                       >
                         Edit
                       </a>
                       <button
                         type="button"
                         onClick={() => closeLobby(lobby.id)}
-                        className="rounded-sm border border-clay/40 px-3 py-1 text-xs font-semibold text-clay hover:border-clay/60"
+                        className="border border-[#5a2328] bg-transparent px-3 py-1 text-xs font-semibold text-[#ff9aa2] hover:bg-[#2a0f13]"
                       >
                         Close
                       </button>
                     </div>
                   </div>
                   {lobby.slotsTotal !== null && (
-                    <p className="mt-2 text-xs text-ink/60">
+                    <p className="mt-2 text-xs text-slate-400">
                       Slots {lobby.slotsOpen ?? "?"}/{lobby.slotsTotal}
                     </p>
                   )}
@@ -373,27 +379,25 @@ export default function HostDashboard({
         )}
       </section>
 
-      <section className="flex flex-col rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+      <section className={`flex flex-col ${panelBase} p-4`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <h2 className="text-sm font-semibold tracking-wider uppercase text-slate-200">
-              Join Requests
-            </h2>
-            <span className="rounded-full border border-slate-700 bg-slate-900/60 px-2.5 py-1 text-xs font-semibold text-slate-200">
+            <h2 className={sectionTitle}>Join Requests</h2>
+            <span className="border border-[#1b2a3a] bg-[#0b1a2a] px-2 py-0.5 text-xs font-semibold text-slate-200">
               {tabCountLabel}
             </span>
           </div>
         </div>
-        <div className="mt-3 inline-flex rounded-lg border border-slate-800 bg-slate-950/50 p-1">
+        <div className="mt-3 inline-flex border border-[#1b2a3a] bg-[#07111c]">
           {(["PENDING", "ACCEPTED", "DECLINED"] as const).map((value) => (
             <button
               key={value}
               type="button"
               onClick={() => handleTabClick(value)}
-              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+              className={`px-3 py-1.5 text-xs font-semibold tracking-wide uppercase transition-colors ${
                 tab === value
-                  ? "bg-slate-900/70 text-slate-100"
-                  : "text-slate-400 hover:bg-slate-900/40 hover:text-slate-200"
+                  ? "bg-[#0b1a2a] text-slate-100"
+                  : "text-slate-400 hover:bg-[#091827] hover:text-slate-200"
               }`}
             >
               {value}
@@ -408,7 +412,7 @@ export default function HostDashboard({
           {filteredRequests.map((request) => (
             <div
               key={request.id}
-              className="rounded-lg border border-slate-800 bg-slate-950/30 p-3 text-sm transition-colors hover:bg-slate-900/30"
+              className="border border-[#1b2a3a] bg-[#07111c] p-3 text-sm transition-colors hover:bg-[#091827]"
             >
               <div className="flex items-start gap-3">
                 <div className="min-w-0 flex-1">
@@ -417,7 +421,7 @@ export default function HostDashboard({
                       gamertag={request.requesterHandleText}
                       rank={request.requesterSrLevel ?? 1}
                       nametagColor={request.requesterNametagColor}
-                      className="border-slate-800 bg-slate-900/60 px-3 py-2"
+                      className="rounded-none border-[#1b2a3a] bg-[#091827] px-3 py-2"
                     />
                   </div>
                   <p className="mt-2 truncate text-xs text-slate-400">
@@ -430,27 +434,27 @@ export default function HostDashboard({
                   <button
                     type="button"
                     onClick={() => actOnRequest(request.id, "accept")}
-                    className="rounded-md bg-ink px-3 py-2 text-xs font-semibold text-sand hover:bg-ink/90"
+                    className="border border-[#1b2a3a] bg-[#0b1a2a] px-3 py-2 text-xs font-semibold text-slate-100 hover:bg-[#0f2236]"
                   >
                     Accept
                   </button>
                   <button
                     type="button"
                     onClick={() => actOnRequest(request.id, "decline")}
-                    className="rounded-md border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-slate-500/60"
+                    className="border border-[#1b2a3a] bg-transparent px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-[#0b1a2a]"
                   >
                     Decline
                   </button>
                   <button
                     type="button"
                     onClick={() => actOnRequest(request.id, "block")}
-                    className="rounded-md border border-red-500/40 px-3 py-2 text-xs font-semibold text-red-200 hover:border-red-400/70"
+                    className="border border-[#5a2328] bg-transparent px-3 py-2 text-xs font-semibold text-[#ff9aa2] hover:bg-[#2a0f13]"
                   >
                     Block
                   </button>
                 </div>
               )}
-              <div className="mt-2 flex justify-end text-right">
+              <div className="mt-2 flex justify-end text-right [&_button]:text-slate-400 [&_button]:underline [&_button]:decoration-white/20 [&_button]:hover:text-slate-200 [&_select]:border-[#1b2a3a] [&_select]:bg-[#0b1a2a] [&_select]:text-slate-100 [&_select]:placeholder:text-slate-500 [&_textarea]:border-[#1b2a3a] [&_textarea]:bg-[#0b1a2a] [&_textarea]:text-slate-100 [&_textarea]:placeholder:text-slate-500 [&_input]:border-[#1b2a3a] [&_input]:bg-[#0b1a2a] [&_input]:text-slate-100 [&_input]:placeholder:text-slate-500">
                 <ReportForm
                   targetType="USER"
                   targetId={request.requesterUserId}
@@ -469,18 +473,18 @@ export default function HostDashboard({
       </section>
 
       {checklist && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4">
-          <div className="w-full max-w-lg rounded-md bg-sand p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+          <div className={`w-full max-w-lg p-6 ${panelBase}`}>
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-lg font-semibold text-ink">
+                <h3 className="text-lg font-semibold text-slate-100">
                   Invite player
                 </h3>
-                <p className="mt-2 text-xs font-semibold uppercase tracking-[0.3em] text-ink/50">
+                <p className="mt-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
                   Gamertag
                 </p>
                 <div
-                  className="mt-1 rounded-sm border border-ink/10 bg-mist px-3 py-2 text-lg font-semibold text-ink"
+                  className={`mt-1 px-3 py-2 text-lg font-semibold ${panelInner}`}
                   style={{
                     color: resolveNametagColor(
                       checklist.requester.nametagColor
@@ -496,21 +500,21 @@ export default function HostDashboard({
                   onClick={() =>
                     navigator.clipboard.writeText(checklist.requester.gamertag)
                   }
-                  className="rounded-sm border border-ink/20 px-3 py-1 text-xs font-semibold text-ink"
+                  className="border border-[#1b2a3a] bg-[#0b1a2a] px-3 py-1 text-xs font-semibold text-slate-200 hover:bg-[#0f2236]"
                 >
                   Copy gamertag
                 </button>
                 <button
                   type="button"
                   onClick={() => setChecklist(null)}
-                  className="text-xs font-semibold text-ink/60"
+                  className="text-xs font-semibold text-slate-400 hover:text-slate-200"
                 >
                   Close
                 </button>
               </div>
             </div>
 
-            <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-ink/70">
+            <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-slate-400">
               <li>Open Halo MCC.</li>
               <li>
                 Find {checklist.requester.gamertag} on your friends list or
@@ -519,7 +523,7 @@ export default function HostDashboard({
               <li>Send an invite.</li>
             </ul>
 
-            <p className="mt-3 text-xs text-ink/60">
+            <p className="mt-3 text-xs text-slate-400">
               You can invite via Steam overlay or in-game roster.
             </p>
           </div>

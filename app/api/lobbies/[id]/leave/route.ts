@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { leaveLobbyMembership } from "@/lib/lobby-membership";
+import { leaveLobbyForUser } from "@/lib/lobby-membership";
 
 export async function POST(
   _request: Request,
@@ -23,10 +23,7 @@ export async function POST(
     return NextResponse.json({ error: "Lobby not found." }, { status: 404 });
   }
 
-  const result = await leaveLobbyMembership({
-    lobbyId: lobby.id,
-    userId: user.id,
-  });
+  const result = await leaveLobbyForUser({ lobbyId: lobby.id, userId: user.id });
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: result.status });
   }

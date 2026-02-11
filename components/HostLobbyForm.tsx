@@ -359,9 +359,11 @@ export default function HostLobbyForm({
         // ignore JSON parse errors
       }
       if (alreadyLobby) {
-        setCurrentLobby(alreadyLobby);
-        setPendingCreate({ payload, modCount });
-        setModalError(null);
+        if (!currentLobby) {
+          setCurrentLobby(alreadyLobby);
+          setPendingCreate({ payload, modCount });
+          setModalError(null);
+        }
         setIsSubmitting(false);
         return;
       }

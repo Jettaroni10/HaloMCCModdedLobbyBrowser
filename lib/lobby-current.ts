@@ -23,6 +23,25 @@ export type CurrentLobbyResult = {
   rosterCount: number;
 };
 
+export async function findRecentLobbyForUser(
+  userId: string,
+  windowMs = 8000
+): Promise<LobbyWithCount | null> {
+  const now = new Date();
+  const threshold = new Date(now.getTime() - windowMs);
+  const lobby = (await prisma.lobby.findFirst({
+    where: {
+      hostUserId: userId,
+      isActive: true,
+      createdAt: { gte: threshold },
+      expiresAt: { gt: now },
+    },
+    include: { _count: { select: { members: true } } },
+  })) as LobbyWithCount | null;
+
+  return lobby ?? null;
+}
+
 export async function findCurrentLobbyForUser(
   userId: string
 ): Promise<CurrentLobbyResult | null> {

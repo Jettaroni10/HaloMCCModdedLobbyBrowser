@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { prisma } from "@/lib/db";
 import { createLobbyFromPayload, LobbyCreateError } from "@/lib/lobby-create";
-import { findCurrentLobbyForUser } from "@/lib/lobby-current";
-import { leaveLobbyMembership } from "@/lib/lobby-membership";
+import { findRecentLobbyForUser } from "@/lib/lobby-current";
+import { leaveLobbyForUser } from "@/lib/lobby-membership";
 
 async function readBody(request: Request) {
   const contentType = request.headers.get("content-type") ?? "";
@@ -30,33 +29,17 @@ export async function POST(request: Request) {
   }
 
   const body = (await readBody(request)) as Record<string, unknown>;
-  const currentLobby = await findCurrentLobbyForUser(user.id);
+  const leaveResult = await leaveLobbyForUser({ userId: user.id });
+  if (!leaveResult.ok) {
+    return NextResponse.json(
+      { error: leaveResult.error },
+      { status: leaveResult.status }
+    );
+  }
 
-  if (currentLobby) {
-    if (currentLobby.isHost) {
-      await prisma.lobby.update({
-        where: { id: currentLobby.lobby.id },
-        data: { isActive: false },
-      });
-      await prisma.joinRequest.updateMany({
-        where: {
-          lobbyId: currentLobby.lobby.id,
-          status: "PENDING",
-        },
-        data: { status: "DECLINED", decidedAt: new Date() },
-      });
-    } else {
-      const result = await leaveLobbyMembership({
-        lobbyId: currentLobby.lobby.id,
-        userId: user.id,
-      });
-      if (!result.ok && result.status !== 404) {
-        return NextResponse.json(
-          { error: result.error },
-          { status: result.status }
-        );
-      }
-    }
+  const recentLobby = await findRecentLobbyForUser(user.id);
+  if (recentLobby) {
+    return NextResponse.json({ newLobbyId: recentLobby.id });
   }
 
   try {

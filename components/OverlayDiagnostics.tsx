@@ -9,8 +9,7 @@ const STALE_MS = 2000;
 function formatAge(ms: number | null) {
   if (ms === null) return "Never";
   if (ms < 0) return "0ms";
-  if (ms < 1000) return `${ms}ms`;
-  return `${(ms / 1000).toFixed(1)}s`;
+  return `${ms}ms`;
 }
 
 function formatNullableNumber(value: unknown) {
@@ -193,18 +192,12 @@ export default function OverlayDiagnostics() {
         {isHost && (
           <div>
             Last publish:{" "}
-            {telemetryState.lastPublishStatus?.statusCode !== null &&
-            telemetryState.lastPublishStatus?.statusCode !== undefined
-              ? telemetryState.lastPublishStatus.statusCode
-              : telemetryState.lastPublishStatus
+            {telemetryState.lastPublishStatus !== null
+              ? telemetryState.lastPublishStatus
+              : telemetryState.lastPublishAt
                 ? "error"
                 : "n/a"}{" "}
-            ·{" "}
-            {formatAge(
-              telemetryState.lastPublishStatus?.at
-                ? now - telemetryState.lastPublishStatus.at
-                : null
-            )}
+            · {formatAge(telemetryState.lastPublishAt ? now - telemetryState.lastPublishAt : null)}
           </div>
         )}
       </div>

@@ -33,11 +33,8 @@ export type OverlayTelemetrySnapshot = {
   displayTelemetry: DisplayTelemetryState | null;
   localLastReceiveAt: number | null;
   serverLastUpdateAt: number | null;
-  lastPublishStatus: {
-    statusCode: number | null;
-    ok: boolean | null;
-    at: number | null;
-  } | null;
+  lastPublishStatus: number | null;
+  lastPublishAt: number | null;
 };
 
 export const DEFAULT_OVERLAY_TELEMETRY_STATE: OverlayTelemetrySnapshot = {
@@ -54,6 +51,7 @@ export const DEFAULT_OVERLAY_TELEMETRY_STATE: OverlayTelemetrySnapshot = {
   localLastReceiveAt: null,
   serverLastUpdateAt: null,
   lastPublishStatus: null,
+  lastPublishAt: null,
 };
 
 type OverlayTelemetryContextValue = {

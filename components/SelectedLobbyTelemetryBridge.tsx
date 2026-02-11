@@ -73,6 +73,7 @@ export default function SelectedLobbyTelemetryBridge({
 }: SelectedLobbyTelemetryBridgeProps) {
   const { state: telemetryState, setState } = useOverlayTelemetryContext();
   const { liveBindingPreference } = useLiveBindingPreference(true);
+  const publishThrottleMs = 500;
   const normalizedInitial = useMemo(
     () => normalizeTelemetryInput(initialServerTelemetry ?? null),
     [initialServerTelemetry]
@@ -113,6 +114,7 @@ export default function SelectedLobbyTelemetryBridge({
       displayTelemetry,
       serverLastUpdateAt: lastUpdateAt,
       lastPublishStatus: isHost ? prev.lastPublishStatus : null,
+      lastPublishAt: isHost ? prev.lastPublishAt : null,
     }));
   }, [
     lobbyId,
@@ -138,12 +140,14 @@ export default function SelectedLobbyTelemetryBridge({
           localTelemetry: prev.localTelemetry,
           localLastReceiveAt: prev.localLastReceiveAt,
           lastPublishStatus: prev.lastPublishStatus,
+          lastPublishAt: prev.lastPublishAt,
         };
       });
     };
   }, [lobbyId, setState]);
 
   const lastPublishedSeqRef = useRef<number | null>(null);
+  const lastPublishAtRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!liveBindingEnabled) {
@@ -159,9 +163,15 @@ export default function SelectedLobbyTelemetryBridge({
         ? Number(telemetryState.localTelemetry.seq)
         : null;
     if (seq !== null && lastPublishedSeqRef.current === seq) return;
-    if (seq !== null) {
-      lastPublishedSeqRef.current = seq;
+    const now = Date.now();
+    if (
+      lastPublishAtRef.current !== null &&
+      now - lastPublishAtRef.current < publishThrottleMs
+    ) {
+      return;
     }
+    if (seq !== null) lastPublishedSeqRef.current = seq;
+    lastPublishAtRef.current = now;
 
     const payload = {
       mapName: telemetryState.localTelemetry.map ?? null,
@@ -183,21 +193,15 @@ export default function SelectedLobbyTelemetryBridge({
       .then((response) => {
         setState((prev) => ({
           ...prev,
-          lastPublishStatus: {
-            statusCode: response.status,
-            ok: response.ok,
-            at: Date.now(),
-          },
+          lastPublishStatus: response.status,
+          lastPublishAt: Date.now(),
         }));
       })
       .catch(() => {
         setState((prev) => ({
           ...prev,
-          lastPublishStatus: {
-            statusCode: null,
-            ok: false,
-            at: Date.now(),
-          },
+          lastPublishStatus: null,
+          lastPublishAt: Date.now(),
         }));
       });
   }, [
@@ -205,6 +209,7 @@ export default function SelectedLobbyTelemetryBridge({
     liveBindingEnabled,
     telemetryState.localTelemetry,
     lobbyId,
+    publishThrottleMs,
     setState,
   ]);
 

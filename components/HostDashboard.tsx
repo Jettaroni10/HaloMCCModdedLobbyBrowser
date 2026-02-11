@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import ReportForm from "./ReportForm";
+import HostLobbyForm from "./HostLobbyForm";
 import type {
   HostRequestCreatedEvent,
   HostLobbyExpiredEvent,
@@ -85,6 +86,7 @@ export default function HostDashboard({
   hostUserId,
 }: HostDashboardProps) {
   const [hydrated, setHydrated] = useState(false);
+  const [isOverlayEnv, setIsOverlayEnv] = useState(false);
   const [activeLobbies, setActiveLobbies] = useState<LobbySummary[]>(lobbies);
   const [allRequests, setAllRequests] = useState<JoinRequestSummary[]>(requests);
   const [tab, setTab] = useState<JoinRequestSummary["status"]>("PENDING");
@@ -98,6 +100,8 @@ export default function HostDashboard({
 
   useEffect(() => {
     setHydrated(true);
+    const bridge = (window as unknown as { hmccOverlay?: unknown }).hmccOverlay;
+    setIsOverlayEnv(Boolean(bridge));
   }, []);
 
   useEffect(() => {
@@ -277,69 +281,90 @@ export default function HostDashboard({
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-      <section className="rounded-md border border-ink/10 bg-sand p-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-ink">My Active Lobbies</h2>
-        </div>
-        <div className="mt-4 space-y-4">
-          {activeLobbies.length === 0 && (
-            <p className="text-sm text-ink/60">
-              You have no active lobbies yet.
-            </p>
-          )}
-          {activeLobbies.map((lobby) => (
-            <div
-              key={lobby.id}
-              className="rounded-sm border border-ink/10 bg-mist p-4"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-ink">{lobby.title}</p>
-                  <p className="text-xs text-ink/60">
-                    {lobby.game} · {lobby.mode} · {lobby.map}
-                  </p>
-                  <p
-                    className="text-xs text-ink/50"
-                    suppressHydrationWarning
-                  >
-                    {hydrated
-                      ? `${formatCountdown(lobby.expiresAt)} · ${formatUpdated(
-                          lobby.lastHeartbeatAt
-                        )}`
-                      : "Checking status…"}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => sendHeartbeat(lobby.id)}
-                    className="rounded-sm border border-ink/20 px-3 py-1 text-xs font-semibold text-ink hover:border-ink/40"
-                  >
-                    Heartbeat
-                  </button>
-                  <a
-                    href={`/host/lobbies/${lobby.id}/edit`}
-                    className="rounded-sm border border-ink/20 px-3 py-1 text-xs font-semibold text-ink hover:border-ink/40"
-                  >
-                    Edit
-                  </a>
-                  <button
-                    type="button"
-                    onClick={() => closeLobby(lobby.id)}
-                    className="rounded-sm border border-clay/40 px-3 py-1 text-xs font-semibold text-clay hover:border-clay/60"
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-              {lobby.slotsTotal !== null && (
-                <p className="mt-2 text-xs text-ink/60">
-                  Slots {lobby.slotsOpen ?? "?"}/{lobby.slotsTotal}
+      <section
+        className={
+          isOverlayEnv
+            ? "space-y-6"
+            : "rounded-md border border-ink/10 bg-sand p-6"
+        }
+      >
+        {isOverlayEnv ? (
+          <HostLobbyForm
+            submitLabel="Go Live"
+            enableMapImage={false}
+            enableTelemetryBinding={false}
+            sessionMode={true}
+          />
+        ) : (
+          <>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-ink">
+                My Active Lobbies
+              </h2>
+            </div>
+            <div className="mt-4 space-y-4">
+              {activeLobbies.length === 0 && (
+                <p className="text-sm text-ink/60">
+                  You have no active lobbies yet.
                 </p>
               )}
+              {activeLobbies.map((lobby) => (
+                <div
+                  key={lobby.id}
+                  className="rounded-sm border border-ink/10 bg-mist p-4"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-ink">
+                        {lobby.title}
+                      </p>
+                      <p className="text-xs text-ink/60">
+                        {lobby.game} · {lobby.mode} · {lobby.map}
+                      </p>
+                      <p
+                        className="text-xs text-ink/50"
+                        suppressHydrationWarning
+                      >
+                        {hydrated
+                          ? `${formatCountdown(
+                              lobby.expiresAt
+                            )} · ${formatUpdated(lobby.lastHeartbeatAt)}`
+                          : "Checking status…"}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => sendHeartbeat(lobby.id)}
+                        className="rounded-sm border border-ink/20 px-3 py-1 text-xs font-semibold text-ink hover:border-ink/40"
+                      >
+                        Heartbeat
+                      </button>
+                      <a
+                        href={`/host/lobbies/${lobby.id}/edit`}
+                        className="rounded-sm border border-ink/20 px-3 py-1 text-xs font-semibold text-ink hover:border-ink/40"
+                      >
+                        Edit
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => closeLobby(lobby.id)}
+                        className="rounded-sm border border-clay/40 px-3 py-1 text-xs font-semibold text-clay hover:border-clay/60"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </div>
+                  {lobby.slotsTotal !== null && (
+                    <p className="mt-2 text-xs text-ink/60">
+                      Slots {lobby.slotsOpen ?? "?"}/{lobby.slotsTotal}
+                    </p>
+                  )}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </>
+        )}
       </section>
 
       <section className="rounded-md border border-ink/10 bg-sand p-6">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Games, Regions, Vibes, Voices } from "@/lib/types";
 import TagsInput from "./TagsInput";
@@ -54,6 +54,7 @@ type HostLobbyFormProps = {
   onSubmit?: React.FormEventHandler<HTMLFormElement>;
   enableMapImage?: boolean;
   enableTelemetryBinding?: boolean;
+  sessionMode?: boolean;
 };
 
 type CurrentLobbyInfo = {
@@ -72,11 +73,15 @@ export default function HostLobbyForm({
   onSubmit,
   enableMapImage = false,
   enableTelemetryBinding = false,
+  sessionMode = false,
 }: HostLobbyFormProps) {
   const router = useRouter();
   const { state: telemetryState } = useOverlayTelemetryContext();
   const isConnected = telemetryState.overlayConnected;
   const localTelemetry = telemetryState.localTelemetry;
+  const localLastReceiveAt = telemetryState.localLastReceiveAt;
+  const [isOverlayEnv, setIsOverlayEnv] = useState(false);
+  const overlaySessionMode = sessionMode && isOverlayEnv;
   const defaultTags = useMemo(() => defaultValues?.tags ?? [], [defaultValues]);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -131,6 +136,20 @@ export default function HostLobbyForm({
     defaultValues?.workshopCollectionUrl,
     defaultValues?.workshopItemUrls,
   ]);
+  const [sessionState, setSessionState] = useState<{
+    status: "loading" | "none" | "host" | "member";
+    lobby: CurrentLobbyInfo | null;
+  }>({ status: "none", lobby: null });
+  const [sessionBusy, setSessionBusy] = useState(false);
+  const [sessionError, setSessionError] = useState<string | null>(null);
+  const lastPublishAtRef = useRef<number | null>(null);
+  const lastPublishedSeqRef = useRef<number | null>(null);
+  const formRef = useRef<HTMLFormElement | null>(null);
+
+  useEffect(() => {
+    const bridge = (window as unknown as { hmccOverlay?: unknown }).hmccOverlay;
+    setIsOverlayEnv(Boolean(bridge));
+  }, []);
 
   useEffect(() => {
     if (defaultValues?.modPackId) {
@@ -190,6 +209,54 @@ export default function HostLobbyForm({
     }
   }, [liveBindingEnabled, localTelemetry?.mode, localTelemetry?.map]);
 
+  useEffect(() => {
+    if (!overlaySessionMode || !localTelemetry) return;
+    if (typeof localTelemetry.mode === "string" && localTelemetry.mode.length > 0) {
+      setModeValue(localTelemetry.mode);
+    }
+    if (typeof localTelemetry.map === "string" && localTelemetry.map.length > 0) {
+      setMapValue(localTelemetry.map);
+    }
+  }, [overlaySessionMode, localTelemetry?.mode, localTelemetry?.map]);
+
+  async function loadSessionState() {
+    if (!overlaySessionMode) return;
+    setSessionError(null);
+    setSessionState({ status: "loading", lobby: null });
+    try {
+      const response = await fetch("/api/lobbies/current", {
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        setSessionState({ status: "none", lobby: null });
+        return;
+      }
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        isHost?: boolean;
+        lobby?: CurrentLobbyInfo | null;
+      };
+      if (payload?.ok && payload.lobby?.id) {
+        setSessionState({
+          status: payload.isHost ? "host" : "member",
+          lobby: payload.lobby,
+        });
+      } else {
+        setSessionState({ status: "none", lobby: null });
+      }
+    } catch (error) {
+      setSessionState({ status: "none", lobby: null });
+      setSessionError(
+        error instanceof Error ? error.message : "Unable to load session."
+      );
+    }
+  }
+
+  useEffect(() => {
+    if (!overlaySessionMode) return;
+    void loadSessionState();
+  }, [overlaySessionMode]);
+
   const selectedPack = useMemo(
     () => modPacks.find((pack) => pack.id === selectedPackId) ?? null,
     [modPacks, selectedPackId]
@@ -217,6 +284,118 @@ export default function HostLobbyForm({
 
   function removePackMod(index: number) {
     setPackMods((prev) => prev.filter((_, idx) => idx !== index));
+  }
+
+  const sessionStatusLabel = useMemo(() => {
+    if (!overlaySessionMode) return "";
+    if (!isConnected) return "OFFLINE";
+    const status = localTelemetry?.status ?? "inactive";
+    if (status === "active") return "IN MATCH";
+    if (status === "waiting") return "IN CUSTOM GAME";
+    if (status === "stale") return "STALE";
+    return "IN MENUS";
+  }, [overlaySessionMode, isConnected, localTelemetry?.status]);
+
+  const sessionStatusTone = useMemo(() => {
+    if (!overlaySessionMode) return "border-ink/20 bg-mist text-ink";
+    if (!isConnected) return "border-ink/10 bg-ink/50 text-sand/70";
+    if (localTelemetry?.status === "active") {
+      return "border-clay/50 bg-clay/20 text-sand";
+    }
+    if (localTelemetry?.status === "waiting") {
+      return "border-white/30 bg-white/10 text-sand";
+    }
+    if (localTelemetry?.status === "stale") {
+      return "border-red-400/50 bg-red-500/20 text-red-100";
+    }
+    return "border-ink/20 bg-mist text-ink";
+  }, [overlaySessionMode, isConnected, localTelemetry?.status]);
+
+  const sessionLastUpdated = useMemo(() => {
+    if (!overlaySessionMode || !localLastReceiveAt) return "No recent data";
+    const diffMs = Date.now() - localLastReceiveAt;
+    const seconds = Math.max(0, Math.round(diffMs / 1000));
+    if (seconds < 60) return `Updated ${seconds}s ago`;
+    const minutes = Math.round(seconds / 60);
+    return `Updated ${minutes}m ago`;
+  }, [overlaySessionMode, localLastReceiveAt]);
+
+  const sessionMap = mapValue || "Unknown";
+  const sessionModeValue = modeValue || "Unknown";
+  const sessionPlayers =
+    typeof localTelemetry?.currentPlayers === "number"
+      ? localTelemetry.currentPlayers
+      : 0;
+  const sessionMaxPlayers =
+    typeof localTelemetry?.maxPlayers === "number" && localTelemetry.maxPlayers > 0
+      ? localTelemetry.maxPlayers
+      : null;
+
+  const isLive = overlaySessionMode && sessionState.status === "host";
+  const isMember = overlaySessionMode && sessionState.status === "member";
+
+  useEffect(() => {
+    if (!overlaySessionMode || !isLive || !sessionState.lobby?.id) return;
+    if (!isConnected || !localTelemetry) return;
+    const seq = Number.isFinite(Number(localTelemetry.seq))
+      ? Number(localTelemetry.seq)
+      : null;
+    if (seq !== null && lastPublishedSeqRef.current === seq) return;
+    const now = Date.now();
+    if (lastPublishAtRef.current && now - lastPublishAtRef.current < 2000) {
+      return;
+    }
+    lastPublishAtRef.current = now;
+    if (seq !== null) lastPublishedSeqRef.current = seq;
+    const payload = {
+      mapName: sessionMap,
+      modeName: sessionModeValue,
+      playerCount: sessionPlayers,
+      status: localTelemetry.status ?? null,
+      seq,
+      emittedAt: localTelemetry.emittedAt ?? null,
+    };
+    fetch(`/api/lobbies/${sessionState.lobby.id}/telemetry`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).catch(() => {});
+  }, [
+    overlaySessionMode,
+    isLive,
+    sessionState.lobby?.id,
+    isConnected,
+    localTelemetry,
+    sessionMap,
+    sessionModeValue,
+    sessionPlayers,
+  ]);
+
+  async function handleStopLive() {
+    if (!sessionState.lobby?.id || sessionBusy) return;
+    setSessionBusy(true);
+    setSessionError(null);
+    try {
+      const response = await fetch(`/api/lobbies/${sessionState.lobby.id}/leave`, {
+        method: "POST",
+      });
+      if (!response.ok) {
+        throw new Error("Unable to stop live session.");
+      }
+      setSessionState({ status: "none", lobby: null });
+    } catch (error) {
+      setSessionError(
+        error instanceof Error ? error.message : "Unable to stop live session."
+      );
+    } finally {
+      setSessionBusy(false);
+    }
+  }
+
+  function handleStartLive() {
+    if (sessionBusy || isSubmitting) return;
+    setSessionError(null);
+    formRef.current?.requestSubmit();
   }
 
   async function createModPack() {
@@ -335,6 +514,38 @@ export default function HostLobbyForm({
             .filter(Boolean).length
       : 0;
 
+    if (overlaySessionMode) {
+      const trimmedTitle =
+        typeof payload.title === "string" ? payload.title.trim() : "";
+      if (!trimmedTitle) {
+        payload.title = "Live customs session";
+      }
+      const trimmedRules =
+        typeof payload.rulesNote === "string" ? payload.rulesNote.trim() : "";
+      if (!trimmedRules) {
+        payload.rulesNote = "Session details will populate once detected.";
+      }
+      payload.map = sessionMap;
+      payload.mode = sessionModeValue;
+      payload.maxPlayers = sessionMaxPlayers ?? 16;
+      payload.game =
+        typeof payload.game === "string" && payload.game.length > 0
+          ? payload.game
+          : Games[0];
+      payload.region =
+        typeof payload.region === "string" && payload.region.length > 0
+          ? payload.region
+          : Regions[0];
+      payload.voice =
+        typeof payload.voice === "string" && payload.voice.length > 0
+          ? payload.voice
+          : Voices[0];
+      payload.vibe =
+        typeof payload.vibe === "string" && payload.vibe.length > 0
+          ? payload.vibe
+          : Vibes[0];
+    }
+
     const response = await fetch(action, {
       method: method.toUpperCase(),
       headers: { "Content-Type": "application/json" },
@@ -375,12 +586,23 @@ export default function HostLobbyForm({
     }
 
     const created = (await response.json().catch(() => null)) as
-      | { id?: string }
+      | {
+          id?: string;
+          title?: string | null;
+          slotsTotal?: number | null;
+          status?: string | null;
+        }
       | null;
     const lobbyId = created?.id;
     let uploadError: string | null = null;
 
-    if (enableMapImage && useCustomMapImage && mapFile && lobbyId) {
+    if (
+      !overlaySessionMode &&
+      enableMapImage &&
+      useCustomMapImage &&
+      mapFile &&
+      lobbyId
+    ) {
       try {
         await uploadMapImage(lobbyId, mapFile);
       } catch (error) {
@@ -405,6 +627,31 @@ export default function HostLobbyForm({
     }
 
     setIsSubmitting(false);
+    if (overlaySessionMode) {
+      if (lobbyId) {
+        setSessionState({
+          status: "host",
+          lobby: {
+            id: lobbyId,
+            name:
+              typeof created?.title === "string"
+                ? created.title
+                : typeof payload.title === "string"
+                  ? payload.title
+                  : "Live customs session",
+            rosterCount: 1,
+            maxPlayers:
+              typeof created?.slotsTotal === "number"
+                ? created.slotsTotal
+                : sessionMaxPlayers ?? null,
+            status:
+              typeof created?.status === "string" ? created.status : null,
+          },
+        });
+        setSubmitStatus("Live session published.");
+      }
+      return;
+    }
     router.push("/host");
   }
 
@@ -439,7 +686,13 @@ export default function HostLobbyForm({
       }
       let uploadError: string | null = null;
 
-      if (enableMapImage && useCustomMapImage && mapFile && lobbyId) {
+      if (
+        !overlaySessionMode &&
+        enableMapImage &&
+        useCustomMapImage &&
+        mapFile &&
+        lobbyId
+      ) {
         try {
           await uploadMapImage(lobbyId, mapFile);
         } catch (error) {
@@ -461,6 +714,32 @@ export default function HostLobbyForm({
           is_modded: isModded,
           mod_count: pendingCreate.modCount,
         });
+      }
+
+      if (overlaySessionMode) {
+        setSessionState({
+          status: "host",
+          lobby: {
+            id: lobbyId,
+            name:
+              typeof pendingCreate.payload.title === "string"
+                ? pendingCreate.payload.title
+                : "Live customs session",
+            rosterCount: 1,
+            maxPlayers: Number.isFinite(Number(pendingCreate.payload.maxPlayers))
+              ? Number(pendingCreate.payload.maxPlayers)
+              : sessionMaxPlayers ?? null,
+            status: null,
+          },
+        });
+        setSubmitStatus(
+          payload.reused
+            ? "Lobby already created - you're live."
+            : "Live session published."
+        );
+        setCurrentLobby(null);
+        setPendingCreate(null);
+        return;
       }
 
       setCurrentLobby(null);
@@ -582,14 +861,125 @@ export default function HostLobbyForm({
         </div>
       )}
 
+      {overlaySessionMode && (
+        <section className="rounded-md border border-ink/10 bg-sand p-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-ink/50">
+                My Session
+              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <h2 className="text-lg font-semibold text-ink">
+                  {isLive
+                    ? "Live session"
+                    : isMember
+                      ? "Currently in a lobby"
+                      : "Session offline"}
+                </h2>
+                {sessionState.status === "loading" && (
+                  <span className="text-xs font-semibold text-ink/50">
+                    Checking status...
+                  </span>
+                )}
+              </div>
+              {sessionState.lobby?.name && (
+                <p className="mt-1 text-xs text-ink/60">
+                  Listing: {sessionState.lobby.name}
+                </p>
+              )}
+              <p className="mt-1 text-xs text-ink/50">{sessionLastUpdated}</p>
+            </div>
+            <span
+              className={`rounded-sm border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${sessionStatusTone}`}
+            >
+              {sessionStatusLabel}
+            </span>
+          </div>
+
+          <div className="mt-4 grid gap-3 text-sm text-ink/70 md:grid-cols-4">
+            <div>
+              Map <span className="font-semibold text-ink">{sessionMap}</span>
+            </div>
+            <div>
+              Mode{" "}
+              <span className="font-semibold text-ink">{sessionModeValue}</span>
+            </div>
+            <div>
+              Players{" "}
+              <span className="font-semibold text-ink">
+                {sessionPlayers}
+                {sessionMaxPlayers ? ` / ${sessionMaxPlayers}` : ""}
+              </span>
+            </div>
+            <div>
+              Status{" "}
+              <span className="font-semibold text-ink">{sessionStatusLabel}</span>
+            </div>
+          </div>
+
+          {(!isConnected || !localTelemetry || overlayInMenus) && (
+            <div className="mt-4 rounded-sm border border-ink/10 bg-mist px-3 py-2 text-xs text-ink/60">
+              No active session detected. Start MCC (EAC off) and enter Customs
+              menus.
+            </div>
+          )}
+
+          {isLive && (!localTelemetry || overlayInMenus || !isConnected) && (
+            <div className="mt-3 rounded-sm border border-clay/40 bg-clay/10 px-3 py-2 text-xs text-clay">
+              Session details will populate once detected.
+            </div>
+          )}
+
+          {sessionError && (
+            <p className="mt-3 text-xs font-semibold text-clay">
+              {sessionError}
+            </p>
+          )}
+
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            {isLive ? (
+              <button
+                type="button"
+                onClick={handleStopLive}
+                disabled={sessionBusy}
+                className="rounded-sm border border-clay/50 px-4 py-2 text-xs font-semibold text-clay hover:border-clay/70 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {sessionBusy ? "Stopping..." : "Stop"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleStartLive}
+                disabled={isSubmitting || sessionBusy}
+                className="rounded-sm bg-ink px-4 py-2 text-xs font-semibold text-sand hover:bg-ink/90 disabled:cursor-not-allowed disabled:bg-ink/60"
+              >
+                {isSubmitting ? "Going live..." : "Go Live"}
+              </button>
+            )}
+            {isMember && (
+              <p className="text-xs text-ink/60">
+                You&apos;re already in a lobby. Going live will leave it.
+              </p>
+            )}
+          </div>
+        </section>
+      )}
+
       <form
         action={action}
         method={method}
         encType="multipart/form-data"
         onSubmit={handleSubmit}
+        ref={formRef}
         className="mt-6 space-y-5 rounded-md border border-ink/10 bg-sand p-6"
       >
-      {enableTelemetryBinding && (
+      {overlaySessionMode && (
+        <button type="submit" className="hidden" aria-hidden="true">
+          Submit
+        </button>
+      )}
+
+      {!overlaySessionMode && enableTelemetryBinding && (
         <div className="rounded-sm border border-ink/10 bg-mist p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -661,57 +1051,61 @@ export default function HostLobbyForm({
       )}
 
       <label className="block text-sm font-semibold text-ink">
-        Title
+        {overlaySessionMode ? "Headline (optional)" : "Title"}
         <input
           name="title"
-          required
+          required={!overlaySessionMode}
           defaultValue={defaultValues?.title ?? ""}
           className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
         />
       </label>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <label className="block text-sm font-semibold text-ink">
-          Mode
-          <input
-            name="mode"
-            required
-            value={modeValue}
-            onChange={(event) => setModeValue(event.target.value)}
-            readOnly={liveBindingEnabled}
-            className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
-          />
-        </label>
-        <label className="block text-sm font-semibold text-ink">
-          Map
-          <input
-            name="map"
-            required
-            value={mapValue}
-            onChange={(event) => setMapValue(event.target.value)}
-            readOnly={liveBindingEnabled}
-            className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
-          />
-        </label>
-      </div>
+      {!overlaySessionMode && (
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="block text-sm font-semibold text-ink">
+            Mode
+            <input
+              name="mode"
+              required
+              value={modeValue}
+              onChange={(event) => setModeValue(event.target.value)}
+              readOnly={liveBindingEnabled}
+              className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
+            />
+          </label>
+          <label className="block text-sm font-semibold text-ink">
+            Map
+            <input
+              name="map"
+              required
+              value={mapValue}
+              onChange={(event) => setMapValue(event.target.value)}
+              readOnly={liveBindingEnabled}
+              className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
+            />
+          </label>
+        </div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-3">
+        {!overlaySessionMode && (
+          <label className="block text-sm font-semibold text-ink">
+            Game
+            <select
+              name="game"
+              defaultValue={defaultValues?.game ?? Games[0]}
+              className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
+            >
+              {Games.map((game) => (
+                <option key={game} value={game}>
+                  {game}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label className="block text-sm font-semibold text-ink">
-          Game
-          <select
-            name="game"
-            defaultValue={defaultValues?.game ?? Games[0]}
-            className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
-          >
-            {Games.map((game) => (
-              <option key={game} value={game}>
-                {game}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block text-sm font-semibold text-ink">
-          Region
+          {overlaySessionMode ? "Region (optional)" : "Region"}
           <select
             name="region"
             defaultValue={defaultValues?.region ?? Regions[0]}
@@ -726,36 +1120,38 @@ export default function HostLobbyForm({
         </label>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <label className="block text-sm font-semibold text-ink">
-          Voice
-          <select
-            name="voice"
-            defaultValue={defaultValues?.voice ?? Voices[0]}
-            className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
-          >
-            {Voices.map((voice) => (
-              <option key={voice} value={voice}>
-                {voice.replaceAll("_", " ")}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block text-sm font-semibold text-ink">
-          Vibe
-          <select
-            name="vibe"
-            defaultValue={defaultValues?.vibe ?? Vibes[0]}
-            className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
-          >
-            {Vibes.map((vibe) => (
-              <option key={vibe} value={vibe}>
-                {vibe.replaceAll("_", " ")}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+      {!overlaySessionMode && (
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="block text-sm font-semibold text-ink">
+            Voice
+            <select
+              name="voice"
+              defaultValue={defaultValues?.voice ?? Voices[0]}
+              className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
+            >
+              {Voices.map((voice) => (
+                <option key={voice} value={voice}>
+                  {voice.replaceAll("_", " ")}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-sm font-semibold text-ink">
+            Vibe
+            <select
+              name="vibe"
+              defaultValue={defaultValues?.vibe ?? Vibes[0]}
+              className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
+            >
+              {Vibes.map((vibe) => (
+                <option key={vibe} value={vibe}>
+                  {vibe.replaceAll("_", " ")}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
 
       <label className="block text-sm font-semibold text-ink">
         Tags
@@ -763,17 +1159,17 @@ export default function HostLobbyForm({
       </label>
 
       <label className="block text-sm font-semibold text-ink">
-        Rules note
+        {overlaySessionMode ? "Description (optional)" : "Rules note"}
         <textarea
           name="rulesNote"
-          required
+          required={!overlaySessionMode}
           rows={3}
           defaultValue={defaultValues?.rulesNote ?? ""}
           className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
         />
       </label>
 
-      {enableMapImage && (
+      {!overlaySessionMode && enableMapImage && (
         <div className="rounded-sm border border-ink/10 bg-mist p-4">
           <p className="text-sm font-semibold text-ink">Map image</p>
           <p className="mt-1 text-xs text-ink/60">
@@ -823,21 +1219,23 @@ export default function HostLobbyForm({
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <label className="block text-sm font-semibold text-ink">
-          Max players
-          <input
-            name="maxPlayers"
-            type="number"
-            min={2}
-            max={16}
-            value={slotsValue}
-            onChange={(event) => setSlotsValue(event.target.value)}
-            required
-            className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
-          />
-        </label>
-      </div>
+      {!overlaySessionMode && (
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="block text-sm font-semibold text-ink">
+            Max players
+            <input
+              name="maxPlayers"
+              type="number"
+              min={2}
+              max={16}
+              value={slotsValue}
+              onChange={(event) => setSlotsValue(event.target.value)}
+              required
+              className="mt-2 w-full rounded-sm border border-ink/10 bg-mist px-3 py-2 text-sm"
+            />
+          </label>
+        </div>
+      )}
 
       <label className="flex items-center gap-3 text-sm font-semibold text-ink">
         <input
@@ -1053,13 +1451,15 @@ export default function HostLobbyForm({
         </>
       )}
 
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="w-full rounded-sm bg-ink px-4 py-2 text-sm font-semibold text-sand hover:bg-ink/90"
-      >
-        {isSubmitting ? "Publishing..." : submitLabel}
-      </button>
+      {!overlaySessionMode && (
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="w-full rounded-sm bg-ink px-4 py-2 text-sm font-semibold text-sand hover:bg-ink/90"
+        >
+          {isSubmitting ? "Publishing..." : submitLabel}
+        </button>
+      )}
       {submitStatus && (
         <p className="text-xs font-semibold text-moss">{submitStatus}</p>
       )}

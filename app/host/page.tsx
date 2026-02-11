@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import HostDashboard from "@/components/HostDashboard";
 import { logPerf } from "@/lib/perf";
+import HostPageHeader from "@/components/HostPageHeader";
 
 export default async function HostPage() {
   const user = await requireAuth();
@@ -46,20 +46,7 @@ export default async function HostPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-12">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold text-ink">Host dashboard</h1>
-          <p className="mt-2 text-sm text-ink/70">
-            Publish opt-in listings and manage invite requests.
-          </p>
-        </div>
-        <Link
-          href="/host/new"
-          className="rounded-sm bg-ink px-6 py-2 text-sm font-semibold text-sand hover:bg-ink/90"
-        >
-          Create lobby
-        </Link>
-      </div>
+      <HostPageHeader />
 
       <HostDashboard
         lobbies={serializedLobbies}

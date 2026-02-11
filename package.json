@@ -8,6 +8,8 @@
     "telemetry:demo": "npm run telemetry:demo --prefix pc-app",
     "telemetry:receiver": "npm run telemetry:receiver --prefix pc-app",
     "build": "prisma generate && prisma migrate deploy && next build",
+    "build:netlify": "prisma generate && next build",
+    "migrate:deploy": "prisma migrate deploy",
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
